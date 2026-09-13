@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+
+# env / secrets — реальные ключи Supabase живут только локально
+.env
+.env*.local
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# generated native folders (expo prebuild regenerates)
+apps/mobile/ios/
+apps/mobile/android/
+
+# supabase CLI local state
+supabase/.temp/
+supabase/.branches/
+
+# macOS
+.DS_Store
+
+# logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
