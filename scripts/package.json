@@ -1,0 +1,11 @@
+{
+  "name": "bookspot-scripts",
+  "private": true,
+  "scripts": {
+    "seed": "node --env-file=.env seed.js",
+    "verify-booking": "node --env-file=.env verify-booking.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}
