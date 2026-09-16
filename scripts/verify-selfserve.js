@@ -123,6 +123,12 @@ async function main() {
     if (serviceId) await admin.from('services').delete().eq('id', serviceId);
     if (businessId) {
       await admin.from('business_members').delete().eq('business_id', businessId);
+      // profiles.business_id -> businesses и businesses.owner_id -> profiles
+      // образуют цикл с NO ACTION: без снятия ссылки через
+      // admin_unlink_business (0011) delete business упал бы молча —
+      // именно так эта проверка два раза подряд не удалила за собой тестовые
+      // бизнес и владельца, пока баг не вскрылся вручную.
+      await admin.rpc('admin_unlink_business', { p_business_id: businessId });
       await admin.from('businesses').delete().eq('id', businessId);
     }
     await admin.auth.admin.deleteUser(owner.uid);
