@@ -24,15 +24,24 @@ export async function savePushToken(token) {
   if (error) throw error;
 }
 
-export async function createBusiness({ name, categoryId, city, district, phone }) {
+export async function createBusiness({ name, categoryId, city, district, address, phone }) {
   const { data, error } = await supabase.rpc('create_business', {
     p_name: name,
     p_category_id: categoryId,
     p_city: city,
     p_district: district ?? null,
-    p_address: null,
+    p_address: address ?? null,
     p_phone: phone ?? null,
   });
   if (error) throw error;
   return { businessId: data };
+}
+
+export async function updateProfile(uid, { name, phone, lang }) {
+  const patch = {};
+  if (name !== undefined) patch.name = name;
+  if (phone !== undefined) patch.phone = phone;
+  if (lang !== undefined) patch.lang = lang;
+  const { error } = await supabase.from('profiles').update(patch).eq('id', uid);
+  if (error) throw error;
 }

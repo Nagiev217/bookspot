@@ -13,7 +13,7 @@ import { setCachedMode } from '@/utils/auth/roleCache';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 
 export default function ProfileScreen() {
-  const { uid, role, mode, setMode } = useAuthStore();
+  const { uid, role, businessId, mode, setMode } = useAuthStore();
   const isStaff = role === 'business_owner' || role === 'staff';
 
   async function switchMode() {
@@ -46,6 +46,12 @@ export default function ProfileScreen() {
       <View style={styles.group}>
         {isStaff && (
           <MenuRow label={mode === 'client' ? 'Переключиться в Business mode' : 'Переключиться в Client mode'} onPress={switchMode} />
+        )}
+        {role === 'business_owner' && (
+          <>
+            <MenuRow label="Услуги" onPress={() => router.push(`/services/${businessId}`)} />
+            <MenuRow label="Настройки бизнеса" onPress={() => router.push(`/business-settings/${businessId}`)} last />
+          </>
         )}
         {role === 'client' && (
           <MenuRow label="Стать партнёром" onPress={() => router.push('/(client-tabs)/become-partner')} last />

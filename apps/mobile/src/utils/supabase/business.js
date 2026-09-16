@@ -61,3 +61,122 @@ export async function isMasterOffOn(masterId, dateISO) {
   if (error) throw error;
   return !!data;
 }
+
+// Будущие выходные мастера — для календаря на несколько дней вперёд
+// (setMasterDayOff/isMasterOffOn выше уже общие по дате, ограничение на
+// "только сегодня" было только в UI team.jsx).
+export async function listUpcomingDaysOff(masterId, fromDateISO) {
+  const { data, error } = await supabase
+    .from('master_exceptions')
+    .select('date')
+    .eq('master_id', masterId)
+    .eq('type', 'day_off')
+    .gte('date', fromDateISO)
+    .order('date');
+  if (error) throw error;
+  return data.map((r) => r.date);
+}
+
+// ─── Услуги, мастера, расписание — управление бизнесом ────────────────────
+// Пишутся напрямую с клиента (не через RPC): RLS "*_member_write" в
+// 0001_init.sql уже разрешает участнику бизнеса полный CRUD, отдельный
+// эндпоинт тут не нужен.
+
+export async function listAllServices(businessId) {
+  const { data, error } = await supabase
+    .from('services')
+    .select('id, name, price, duration_min, active')
+    .eq('business_id', businessId)
+    .order('name');
+  if (error) throw error;
+  return data;
+}
+
+export async function createService({ businessId, name, price, durationMin }) {
+  const { data, error } = await supabase
+    .from('services')
+    .insert({ business_id: businessId, name, price, duration_min: durationMin })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateService(serviceId, patch) {
+  const { error } = await supabase.from('services').update(patch).eq('id', serviceId);
+  if (error) throw error;
+}
+
+export async function deleteService(serviceId) {
+  const { error } = await supabase.from('services').delete().eq('id', serviceId);
+  if (error) throw error;
+}
+
+export async function listServiceMasterIds(serviceId) {
+  const { data, error } = await supabase.from('service_masters').select('master_id').eq('service_id', serviceId);
+  if (error) throw error;
+  return data.map((r) => r.master_id);
+}
+
+// Полная замена привязки услуга↔мастера — проще и надёжнее диффа для формы
+// с чекбоксами, где количество мастеров у салона мало.
+export async function setServiceMasters(serviceId, masterIds) {
+  const { error: delErr } = await supabase.from('service_masters').delete().eq('service_id', serviceId);
+  if (delErr) throw delErr;
+  if (masterIds.length === 0) return;
+  const { error } = await supabase.from('service_masters').insert(masterIds.map((masterId) => ({ service_id: serviceId, master_id: masterId })));
+  if (error) throw error;
+}
+
+export async function getMaster(masterId) {
+  const { data, error } = await supabase.from('masters').select('id, name, active, business_id').eq('id', masterId).single();
+  if (error) throw error;
+  return data;
+}
+
+export async function listAllMasters(businessId) {
+  const { data, error } = await supabase
+    .from('masters')
+    .select('id, name, photo_url, active')
+    .eq('business_id', businessId)
+    .order('name');
+  if (error) throw error;
+  return data;
+}
+
+export async function createMaster({ businessId, name }) {
+  const { data, error } = await supabase.from('masters').insert({ business_id: businessId, name }).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateMaster(masterId, patch) {
+  const { error } = await supabase.from('masters').update(patch).eq('id', masterId);
+  if (error) throw error;
+}
+
+// Минуты от полуночи — та же конвенция, что в get_availability (0003_availability.sql).
+export async function getMasterSchedule(masterId) {
+  const { data, error } = await supabase
+    .from('master_schedule')
+    .select('id, day_of_week, start_min, end_min')
+    .eq('master_id', masterId)
+    .order('day_of_week');
+  if (error) throw error;
+  return data;
+}
+
+// Полная замена расписания на неделю — проще, чем диффить построчно
+// изменённую форму, а расписание правится редко и не гонится за апдейтами.
+export async function replaceMasterSchedule(masterId, rows) {
+  const { error: delErr } = await supabase.from('master_schedule').delete().eq('master_id', masterId);
+  if (delErr) throw delErr;
+  if (rows.length === 0) return;
+  const { error } = await supabase.from('master_schedule').insert(rows.map((r) => ({ master_id: masterId, ...r })));
+  if (error) throw error;
+}
+
+export async function updateBusiness(businessId, patch) {
+  const { error } = await supabase.from('businesses').update(patch).eq('id', businessId);
+  if (error) throw error;
+}
