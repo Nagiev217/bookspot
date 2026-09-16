@@ -2,7 +2,7 @@
 // зафиксировано (а не вычислено из расписаний всех мастеров) — простое,
 // но рабочее для типичного салона; # ponytail: если появится мастер с
 // более ранним/поздним стартом, окно нужно будет считать динамически.
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -34,6 +34,7 @@ function useCalendarData(businessId, view, selectedDate) {
   const [weekBookings, setWeekBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const loadedOnce = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -42,7 +43,10 @@ function useCalendarData(businessId, view, selectedDate) {
         return;
       }
       let cancelled = false;
-      setLoading(true);
+      // Спиннер на весь экран — только при первом заходе. Переключение
+      // дня/недели или возврат на вкладку обновляют данные на месте, без
+      // мигания пустым экраном (см. тот же приём в других вкладках).
+      if (!loadedOnce.current) setLoading(true);
       setError(null);
       const weekStart = bakuToday();
       Promise.all([
@@ -55,6 +59,7 @@ function useCalendarData(businessId, view, selectedDate) {
           setMasters(m);
           setBookings(bk);
           if (view === 'week') setWeekBookings(wk);
+          loadedOnce.current = true;
         })
         .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить'))
         .finally(() => !cancelled && setLoading(false));

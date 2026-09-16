@@ -4,6 +4,7 @@
 // shared/slots.js существует, но не подключён к Postgres).
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { Search } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -90,17 +91,22 @@ export default function Home() {
             <Text style={styles.emptyText}>Салонов пока нет — самое время «Стать партнёром».</Text>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandRow}>
-              {businesses.map((b) => (
-                <Pressable key={b.id} style={styles.brandCard} onPress={() => router.push(`/salon/${b.id}`)}>
-                  <View style={[styles.brandPhoto, { backgroundColor: tintFor(b.id)[0] }]}>
-                    <Text style={styles.photoLabel}>ФОТО</Text>
-                  </View>
-                  <Text style={styles.brandName}>{b.name}</Text>
-                  <Text style={styles.brandMeta}>
-                    {b.city}
-                    {b.district ? ` · ${b.district}` : ''}
-                  </Text>
-                </Pressable>
+              {businesses.map((b, i) => (
+                <Animated.View key={b.id} entering={FadeIn.duration(220).delay(i * 30)}>
+                  <Pressable
+                    style={({ pressed }) => [styles.brandCard, pressed && styles.cardPressed]}
+                    onPress={() => router.push(`/salon/${b.id}`)}
+                  >
+                    <View style={[styles.brandPhoto, { backgroundColor: tintFor(b.id)[0] }]}>
+                      <Text style={styles.photoLabel}>ФОТО</Text>
+                    </View>
+                    <Text style={styles.brandName}>{b.name}</Text>
+                    <Text style={styles.brandMeta}>
+                      {b.city}
+                      {b.district ? ` · ${b.district}` : ''}
+                    </Text>
+                  </Pressable>
+                </Animated.View>
               ))}
             </ScrollView>
           )}
@@ -153,6 +159,7 @@ const styles = StyleSheet.create({
   sectionLink: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: COLORS.indigo },
   brandRow: { gap: SPACING.md, paddingHorizontal: SPACING.xl, paddingBottom: SPACING.xxl },
   brandCard: { width: 238 },
+  cardPressed: { opacity: 0.7, transform: [{ scale: 0.98 }] },
   brandPhoto: { height: 150, borderRadius: RADIUS.lg, overflow: 'hidden' },
   photoLabel: { position: 'absolute', right: 12, bottom: 10, fontFamily: FONT.semibold, fontSize: 10, color: 'rgba(11,17,32,.32)', letterSpacing: 1 },
   brandName: { fontFamily: FONT.bold, fontSize: 15, color: COLORS.ink, marginTop: 11, letterSpacing: -0.2 },

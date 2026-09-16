@@ -2,7 +2,7 @@
 // строку master_exceptions(type='day_off') на сегодня — реальные данные,
 // не визуальная имитация. Полное редактирование (расписание, будущие
 // выходные, активность) — на экране master/[masterId].
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Plus } from 'lucide-react-native';
@@ -21,13 +21,14 @@ export default function BusinessTeam() {
   const [togglingId, setTogglingId] = useState(null);
   const [addingName, setAddingName] = useState(null); // null = форма закрыта
   const [saving, setSaving] = useState(false);
+  const loadedOnce = useRef(false);
 
   const load = useCallback(() => {
     if (!businessId) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!loadedOnce.current) setLoading(true);
     setError(null);
     listAllMasters(businessId)
       .then(async (list) => {
@@ -39,6 +40,7 @@ export default function BusinessTeam() {
           map[m.id] = flags[i];
         });
         setOffToday(map);
+        loadedOnce.current = true;
       })
       .catch((e) => setError(e.message || 'Не удалось загрузить'))
       .finally(() => setLoading(false));

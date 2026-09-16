@@ -1,7 +1,7 @@
 // Мои записи — реальные данные из Supabase. "Маршрут" — как в исходном
 // дизайне (открывает страницу салона; нет geo-координат/карты в схеме,
 // чтобы построить настоящий маршрут). Отмена перенесена на экран "Перенести".
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -21,12 +21,16 @@ export default function Bookings() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const loadedOnce = useRef(false);
 
   const load = useCallback(() => {
-    setLoading(true);
+    if (!loadedOnce.current) setLoading(true);
     setError(null);
     listMyBookings()
-      .then(setBookings)
+      .then((data) => {
+        setBookings(data);
+        loadedOnce.current = true;
+      })
       .catch((e) => setError(e.message || 'Не удалось загрузить записи'))
       .finally(() => setLoading(false));
   }, []);

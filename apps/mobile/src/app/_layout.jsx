@@ -91,8 +91,12 @@ export default function RootLayout() {
     <Stack screenOptions={{ headerShown: false, gestureEnabled: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(client-tabs)" />
-      <Stack.Screen name="(business-tabs)" />
+      {/* fade — переключение Client/Business mode (switchMode делает
+          router.replace между этими двумя группами) раньше менялось
+          мгновенным резким скачком экрана; с fade это читается как
+          осознанный переход, а не зависание/лаг. */}
+      <Stack.Screen name="(client-tabs)" options={{ animation: 'fade' }} />
+      <Stack.Screen name="(business-tabs)" options={{ animation: 'fade' }} />
       <Stack.Screen name="salon/[idx]" options={{ gestureEnabled: true }} />
       <Stack.Screen name="booking/[idx]" options={{ gestureEnabled: true }} />
       <Stack.Screen name="reschedule/[bookingId]" options={{ gestureEnabled: true }} />

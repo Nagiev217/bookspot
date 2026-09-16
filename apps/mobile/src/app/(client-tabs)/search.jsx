@@ -1,8 +1,9 @@
 // Список салонов — реальные данные из Supabase. Фильтры "Рейтинг/Цена/Км"
 // и режим карты из дизайна остаются заглушкой: нет ни отзывов (рейтинга),
 // ни geo-координат в схеме бизнеса ещё (Фаза 2 концепта).
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useLocalSearchParams, useFocusEffect, router } from 'expo-router';
 import { Map, List as ListIcon, Search as SearchIcon } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -16,13 +17,22 @@ export default function Search() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [mapMode, setMapMode] = useState(false);
+  const loadedOnce = useRef(false);
 
   const runSearch = useCallback(
     (signal) => {
-      setLoading(true);
+      // Спиннер на весь экран — только при самом первом открытии. При
+      // повторном фокусе или наборе текста список остаётся на месте, пока
+      // грузятся свежие данные — иначе каждое нажатие клавиши и каждое
+      // переключение вкладки мигает пустым экраном.
+      if (!loadedOnce.current) setLoading(true);
       setError(null);
       searchBusinesses(query, { categoryId: categoryId || undefined })
-        .then((data) => !signal.cancelled && setBusinesses(data))
+        .then((data) => {
+          if (signal.cancelled) return;
+          setBusinesses(data);
+          loadedOnce.current = true;
+        })
         .catch((e) => !signal.cancelled && setError(e.message || 'Не удалось загрузить список'))
         .finally(() => !signal.cancelled && setLoading(false));
     },
@@ -82,8 +92,9 @@ export default function Search() {
           {businesses.length === 0 ? (
             <Text style={styles.emptyText}>Ничего не найдено.</Text>
           ) : (
-            businesses.map((b) => (
-              <Pressable key={b.id} style={styles.card} onPress={() => router.push(`/salon/${b.id}`)}>
+            businesses.map((b, i) => (
+              <Animated.View key={b.id} entering={FadeIn.duration(220).delay(i * 30)}>
+              <Pressable style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} onPress={() => router.push(`/salon/${b.id}`)}>
                 <View style={[styles.photo, { backgroundColor: tintFor(b.id)[0] }]}>
                   <Text style={styles.photoLabel}>ФОТО</Text>
                 </View>
@@ -97,6 +108,7 @@ export default function Search() {
                   </View>
                 </View>
               </Pressable>
+              </Animated.View>
             ))
           )}
         </ScrollView>
@@ -143,6 +155,7 @@ const styles = StyleSheet.create({
   emptyText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub },
   list: { padding: SPACING.xl, gap: SPACING.md },
   card: {},
+  cardPressed: { opacity: 0.7, transform: [{ scale: 0.98 }] },
   photo: { height: 168, borderRadius: RADIUS.xl, overflow: 'hidden' },
   photoLabel: { position: 'absolute', right: 12, bottom: 10, fontFamily: FONT.semibold, fontSize: 10, color: 'rgba(11,17,32,.3)', letterSpacing: 1 },
   cardRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: SPACING.md, paddingTop: 11 },
