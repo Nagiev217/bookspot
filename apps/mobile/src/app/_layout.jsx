@@ -95,6 +95,8 @@ export default function RootLayout() {
       <Stack.Screen name="(business-tabs)" />
       <Stack.Screen name="salon/[idx]" options={{ gestureEnabled: true }} />
       <Stack.Screen name="booking/[idx]" options={{ gestureEnabled: true }} />
+      <Stack.Screen name="reschedule/[bookingId]" options={{ gestureEnabled: true }} />
+      <Stack.Screen name="manual-booking/[businessId]" options={{ gestureEnabled: true }} />
     </Stack>
   );
 }

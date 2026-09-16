@@ -20,7 +20,11 @@ export default function ProfileScreen() {
     const next = mode === 'client' ? 'business' : 'client';
     await setCachedMode(uid, next);
     setMode(next);
-    router.replace('/');
+    // Не router.replace('/') — у (client-tabs)/index и (business-tabs)/index
+    // группы не входят в URL, поэтому их путь тоже резолвится в "/". Если
+    // мы уже "на /", replace('/') становится no-op и гейт в index.jsx
+    // не перерендеривается. Переключаем на конкретную группу напрямую.
+    router.replace(next === 'business' ? '/(business-tabs)' : '/(client-tabs)');
   }
 
   async function handleSignOut() {

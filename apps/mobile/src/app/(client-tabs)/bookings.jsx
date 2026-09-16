@@ -1,13 +1,41 @@
-// Мои записи — перенесено из дизайн-canvas ("isBookings").
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { router } from 'expo-router';
-import StarBadge from '@/components/StarBadge';
+// Мои записи — реальные данные из Supabase. "Маршрут" — как в исходном
+// дизайне (открывает страницу салона; нет geo-координат/карты в схеме,
+// чтобы построить настоящий маршрут). Отмена перенесена на экран "Перенести".
+import { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
-import { UPCOMING, PAST, TINTS } from '@/data/salonMock';
+import { tintFor } from '@/utils/tint';
+import { listMyBookings } from '@/utils/supabase/booking';
+
+const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+const MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+
+function formatBaku(isoUtc) {
+  const d = new Date(new Date(isoUtc).getTime() + 4 * 3600000);
+  return `${DOW[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} · ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+}
 
 export default function Bookings() {
   const [tab, setTab] = useState('up');
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    listMyBookings()
+      .then(setBookings)
+      .catch((e) => setError(e.message || 'Не удалось загрузить записи'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useFocusEffect(load);
+
+  const now = Date.now();
+  const upcoming = bookings.filter((b) => b.status === 'confirmed' && new Date(b.starts_at).getTime() >= now);
+  const past = bookings.filter((b) => b.status !== 'confirmed' || new Date(b.starts_at).getTime() < now);
 
   return (
     <View style={styles.screen}>
@@ -23,65 +51,78 @@ export default function Bookings() {
         </View>
       </View>
 
-      {tab === 'up' ? (
+      {loading ? (
+        <ActivityIndicator style={{ marginTop: SPACING.xxl }} color={COLORS.indigo} />
+      ) : error ? (
+        <Text style={styles.errorText}>{error}</Text>
+      ) : tab === 'up' ? (
         <ScrollView contentContainerStyle={styles.list}>
-          {UPCOMING.map((b) => (
-            <View key={b.salon + b.when} style={styles.upcomingCard}>
-              <View style={styles.upcomingHeader}>
-                <View style={styles.dot} />
-                <Text style={styles.whenText}>{b.when}</Text>
-                <View style={{ flex: 1 }} />
-                <Text style={styles.statusText}>{b.status}</Text>
-              </View>
-              <Pressable style={styles.upcomingBody} onPress={() => router.push(`/salon/${b.idx}`)}>
-                <View style={[styles.thumb, { backgroundColor: TINTS[b.idx % TINTS.length][0] }]} />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.salonName}>{b.salon}</Text>
-                  <Text style={styles.subText}>{b.service}</Text>
-                  <Text style={styles.subText}>
-                    {b.master} · {b.address}
-                  </Text>
+          {upcoming.length === 0 ? (
+            <Text style={styles.emptyText}>Пока нет предстоящих записей.</Text>
+          ) : (
+            upcoming.map((b) => (
+              <View key={b.id} style={styles.upcomingCard}>
+                <View style={styles.upcomingHeader}>
+                  <View style={styles.dot} />
+                  <Text style={styles.whenText}>{formatBaku(b.starts_at)}</Text>
+                  <View style={{ flex: 1 }} />
+                  <Text style={styles.statusText}>Подтверждено</Text>
                 </View>
-                <Text style={styles.priceText}>{b.price} ₼</Text>
-              </Pressable>
-              <View style={styles.upcomingActions}>
-                <Pressable style={styles.outlineButton} onPress={() => router.push(`/salon/${b.idx}`)}>
-                  <Text style={styles.outlineButtonText}>Перенести</Text>
+                <Pressable style={styles.upcomingBody} onPress={() => router.push(`/salon/${b.business_id}`)}>
+                  <View style={[styles.thumb, { backgroundColor: tintFor(b.business_id)[0] }]} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.salonName}>{b.businesses?.name}</Text>
+                    <Text style={styles.subText}>{b.service_name}</Text>
+                  </View>
+                  <Text style={styles.priceText}>{b.price} ₼</Text>
                 </Pressable>
-                <Pressable style={styles.darkButton} onPress={() => router.push(`/salon/${b.idx}`)}>
-                  <Text style={styles.darkButtonText}>Маршрут</Text>
-                </Pressable>
+                <View style={styles.upcomingActions}>
+                  <Pressable style={styles.outlineButton} onPress={() => router.push(`/reschedule/${b.id}`)}>
+                    <Text style={styles.outlineButtonText}>Перенести</Text>
+                  </Pressable>
+                  <Pressable style={styles.darkButton} onPress={() => router.push(`/salon/${b.business_id}`)}>
+                    <Text style={styles.darkButtonText}>Маршрут</Text>
+                  </Pressable>
+                </View>
               </View>
-            </View>
-          ))}
-          <View style={styles.noticeCard}>
-            <Text style={styles.noticeText}>Отмена бесплатна не позднее чем за 4 часа до визита.</Text>
-            <Pressable style={styles.noticeButton} onPress={() => router.push('/(client-tabs)/search')}>
-              <Text style={styles.noticeButtonText}>Найти ещё</Text>
-            </Pressable>
-          </View>
+            ))
+          )}
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
-          {PAST.map((b) => (
-            <Pressable key={b.salon + b.when} style={styles.pastRow} onPress={() => router.push(`/salon/${b.idx}`)}>
-              <View style={[styles.pastThumb, { backgroundColor: TINTS[b.idx % TINTS.length][0] }]} />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.salonName}>{b.salon}</Text>
-                <Text style={styles.subText}>
-                  {b.service} · {b.when}
-                </Text>
-                <StarBadge rating={b.rated} style={{ marginTop: 6 }} />
-              </View>
-              <View style={styles.repeatButton}>
-                <Text style={styles.repeatButtonText}>Повторить</Text>
-              </View>
-            </Pressable>
-          ))}
+          {past.length === 0 ? (
+            <Text style={styles.emptyText}>Истории пока нет.</Text>
+          ) : (
+            past.map((b) => (
+              <Pressable key={b.id} style={styles.pastRow} onPress={() => router.push(`/salon/${b.business_id}`)}>
+                <View style={[styles.pastThumb, { backgroundColor: tintFor(b.business_id)[0] }]} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.salonName}>{b.businesses?.name}</Text>
+                  <Text style={styles.subText}>
+                    {b.service_name} · {formatBaku(b.starts_at)}
+                  </Text>
+                  <Text style={styles.statusMuted}>{statusLabel(b.status)}</Text>
+                </View>
+              </Pressable>
+            ))
+          )}
         </ScrollView>
       )}
     </View>
   );
+}
+
+function statusLabel(status) {
+  switch (status) {
+    case 'cancelled':
+      return 'Отменена';
+    case 'completed':
+      return 'Завершена';
+    case 'no_show':
+      return 'Неявка';
+    default:
+      return status;
+  }
 }
 
 const styles = StyleSheet.create({
@@ -93,6 +134,8 @@ const styles = StyleSheet.create({
   segTabOn: { backgroundColor: COLORS.white, shadowColor: '#0B1120', shadowOpacity: 0.1, shadowRadius: 3, shadowOffset: { width: 0, height: 1 } },
   segText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.sub },
   segTextOn: { color: COLORS.ink },
+  errorText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.danger, margin: SPACING.xl },
+  emptyText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, padding: SPACING.xl },
   list: { padding: SPACING.xl, gap: SPACING.md },
   upcomingCard: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.xl, overflow: 'hidden' },
   upcomingHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, padding: SPACING.md, paddingHorizontal: 16, backgroundColor: COLORS.indigo100 },
@@ -103,18 +146,13 @@ const styles = StyleSheet.create({
   thumb: { width: 58, height: 58, borderRadius: RADIUS.md },
   salonName: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.base, color: COLORS.ink },
   subText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginTop: 2 },
+  statusMuted: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.xs, color: COLORS.subLight, marginTop: 4 },
   priceText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.ink },
   upcomingActions: { flexDirection: 'row', gap: SPACING.sm, padding: 16, paddingTop: 0 },
   outlineButton: { flex: 1, height: 44, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(11,17,32,.12)', alignItems: 'center', justifyContent: 'center' },
   outlineButtonText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.ink },
   darkButton: { flex: 1, height: 44, borderRadius: 14, backgroundColor: COLORS.ink, alignItems: 'center', justifyContent: 'center' },
   darkButtonText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.white },
-  noticeCard: { padding: SPACING.lg, borderRadius: RADIUS.lg, backgroundColor: COLORS.surfaceAlt, flexDirection: 'row', alignItems: 'center', gap: 13 },
-  noticeText: { flex: 1, fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, lineHeight: 19 },
-  noticeButton: { height: 40, paddingHorizontal: 14, borderRadius: 13, backgroundColor: COLORS.white, alignItems: 'center', justifyContent: 'center' },
-  noticeButtonText: { fontFamily: FONT.bold, fontSize: 12.5, color: COLORS.indigo },
   pastRow: { flexDirection: 'row', gap: SPACING.md, alignItems: 'center', padding: SPACING.sm, borderWidth: 1, borderColor: COLORS.borderLight, borderRadius: RADIUS.md },
   pastThumb: { width: 54, height: 54, borderRadius: 17, opacity: 0.75 },
-  repeatButton: { height: 38, paddingHorizontal: 13, borderRadius: 13, borderWidth: 1, borderColor: 'rgba(11,17,32,.12)', alignItems: 'center', justifyContent: 'center' },
-  repeatButtonText: { fontFamily: FONT.bold, fontSize: 12.5, color: COLORS.ink },
 });

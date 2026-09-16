@@ -1,59 +1,170 @@
-// Booking flow (услуга → мастер → дата → время → подтверждение) —
-// перенесено из дизайн-canvas ("isBooking"/"isConfirm"). Один экран с
-// внутренним состоянием шага, как и в самом дизайне (там это тоже не
-// отдельные роуты, а sc-if внутри одного компонента).
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+// Booking flow — полностью реальные данные. Услуга/мастер из Supabase,
+// дата/время из get_availability, запись — через create_booking (RPC,
+// EXCLUDE-constraint на bookings защищает от двойного бронирования).
+import { useCallback, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Check } from 'lucide-react-native';
-import StarBadge from '@/components/StarBadge';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
-import { SALONS, SERVICES, MASTERS, DATES, TIME_GROUPS, TINTS } from '@/data/salonMock';
+import { tintFor } from '@/utils/tint';
+import { getBusiness, listServices, listMasters } from '@/utils/supabase/catalog';
+import { getAvailability, createBooking } from '@/utils/supabase/booking';
 
 const STEP_TITLES = ['Выберите услугу', 'Выберите мастера', 'Выберите дату', 'Выберите время'];
+const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+const DAYS_WINDOW = 14;
+
+// Азербайджан — UTC+4 без перехода на летнее время (см. shared/time.js);
+// та же арифметика здесь, потому что React Native не даёт надёжного
+// доступа к базе IANA-таймзон на клиенте.
+function bakuToday() {
+  return new Date(Date.now() + 4 * 3600000).toISOString().slice(0, 10);
+}
+function addDaysISO(iso, n) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+function dowOf(iso) {
+  return new Date(`${iso}T00:00:00Z`).getUTCDay();
+}
+function formatBakuDateTime(isoUtc) {
+  const d = new Date(new Date(isoUtc).getTime() + 4 * 3600000);
+  return {
+    dow: DOW[d.getUTCDay()],
+    day: d.getUTCDate(),
+    month: MONTHS[d.getUTCMonth()],
+    time: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
+  };
+}
 
 export default function Booking() {
   const params = useLocalSearchParams();
-  const salonIdx = Number(params.idx) || 0;
-  const salon = SALONS[salonIdx] ?? SALONS[0];
-  const tint = TINTS[salonIdx % TINTS.length][0];
+  const businessId = params.idx;
+
+  const [business, setBusiness] = useState(null);
+  const [services, setServices] = useState([]);
+  const [masters, setMasters] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      Promise.all([getBusiness(businessId), listServices(businessId), listMasters(businessId)])
+        .then(([b, s, m]) => {
+          if (cancelled) return;
+          setBusiness(b);
+          setServices(s);
+          setMasters(m);
+          const initial = params.serviceId ? s.findIndex((x) => x.id === params.serviceId) : 0;
+          setServiceIdx(initial >= 0 ? initial : 0);
+        })
+        .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить данные'))
+        .finally(() => !cancelled && setLoading(false));
+      return () => {
+        cancelled = true;
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [businessId])
+  );
 
   const [step, setStep] = useState(1);
-  const [serviceIdx, setServiceIdx] = useState(params.service !== undefined ? Number(params.service) : 0);
+  const [serviceIdx, setServiceIdx] = useState(0);
   const [masterIdx, setMasterIdx] = useState(null);
-  const [dateIdx, setDateIdx] = useState(1);
+  const [selectedDate, setSelectedDate] = useState(null);
   const [time, setTime] = useState(null);
-  const [confirmed, setConfirmed] = useState(false);
+  const [availability, setAvailability] = useState(null);
+  const [availLoading, setAvailLoading] = useState(false);
+  const [availError, setAvailError] = useState(null);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmError, setConfirmError] = useState(null);
+  const [confirmed, setConfirmed] = useState(null);
 
-  const service = SERVICES[serviceIdx];
-  const master = masterIdx === null ? null : MASTERS[masterIdx];
-  const date = DATES[dateIdx];
+  const master = masterIdx === null ? null : masters[masterIdx];
+  const service = services[serviceIdx] ?? services[0];
 
-  const canNext = step === 1 ? true : step === 2 ? master !== null : step === 3 ? true : time !== null;
+  const loadAvailability = useCallback(() => {
+    if (!master || !service) return;
+    setAvailLoading(true);
+    setAvailError(null);
+    getAvailability({ masterId: master.id, serviceId: service.id, from: bakuToday(), days: DAYS_WINDOW })
+      .then((map) => {
+        setAvailability(map);
+        if (!selectedDate) {
+          const firstFree = Object.keys(map).sort()[0];
+          setSelectedDate(firstFree || bakuToday());
+        }
+      })
+      .catch((e) => setAvailError(e.message || 'Не удалось загрузить свободное время'))
+      .finally(() => setAvailLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [master?.id, service?.id]);
+
+  useEffect(() => {
+    if (step === 3 && !availability) loadAvailability();
+  }, [step, availability, loadAvailability]);
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={COLORS.indigo} />
+      </View>
+    );
+  }
+  if (error || !business || services.length === 0) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>{error || 'В этом салоне пока нет услуг'}</Text>
+      </View>
+    );
+  }
+
+  const tint = tintFor(business.id);
+  const dateList = Array.from({ length: DAYS_WINDOW }, (_, i) => addDaysISO(bakuToday(), i));
+  const timesForSelected = (selectedDate && availability?.[selectedDate]) || [];
+
+  const canNext = step === 1 ? true : step === 2 ? master !== null : step === 3 ? !!selectedDate : !!time;
 
   function stepBack() {
     if (step === 1) router.back();
     else setStep((s) => s - 1);
   }
 
-  function stepNext() {
+  async function stepNext() {
     if (!canNext) return;
-    if (step === 4) setConfirmed(true);
-    else setStep((s) => s + 1);
+    if (step === 4) {
+      setConfirming(true);
+      setConfirmError(null);
+      try {
+        const booking = await createBooking({
+          businessId: business.id,
+          masterId: master.id,
+          serviceId: service.id,
+          date: selectedDate,
+          start: time,
+        });
+        setConfirmed(booking);
+      } catch (e) {
+        if (e.code === '23P01') {
+          setConfirmError('Этот слот только что заняли — выберите другое время.');
+          setTime(null);
+          setAvailability(null); // перезагрузится при возврате на шаг 3→4
+          setStep(3);
+        } else {
+          setConfirmError(e.message || 'Не удалось создать бронь');
+        }
+      } finally {
+        setConfirming(false);
+      }
+    } else {
+      setStep((s) => s + 1);
+    }
   }
 
   if (confirmed) {
-    return (
-      <ConfirmScreen
-        salon={salon}
-        tint={tint}
-        service={service}
-        master={master}
-        date={date}
-        time={time}
-        onDone={() => router.replace('/(client-tabs)')}
-      />
-    );
+    return <ConfirmScreen business={business} tint={tint} booking={confirmed} onDone={() => router.replace('/(client-tabs)')} />;
   }
 
   return (
@@ -66,7 +177,7 @@ export default function Booking() {
           <View style={{ flex: 1 }}>
             <Text style={styles.stepTitle}>{STEP_TITLES[step - 1]}</Text>
             <Text style={styles.stepSub}>
-              Шаг {step} из 4 · {salon.name}
+              Шаг {step} из 4 · {business.name}
             </Text>
           </View>
         </View>
@@ -78,17 +189,15 @@ export default function Booking() {
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
+        {confirmError && <Text style={styles.errorInline}>{confirmError}</Text>}
+
         {step === 1 && (
           <View style={{ gap: SPACING.sm }}>
-            {SERVICES.map((v, i) => (
-              <Pressable
-                key={v.name}
-                style={[styles.row, serviceIdx === i && styles.rowActive]}
-                onPress={() => setServiceIdx(i)}
-              >
+            {services.map((v, i) => (
+              <Pressable key={v.id} style={[styles.row, serviceIdx === i && styles.rowActive]} onPress={() => setServiceIdx(i)}>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.rowName}>{v.name}</Text>
-                  <Text style={styles.rowSub}>{v.dur}</Text>
+                  <Text style={styles.rowSub}>{v.duration_min} мин</Text>
                 </View>
                 <Text style={styles.rowPrice}>{v.price} ₼</Text>
               </Pressable>
@@ -98,93 +207,95 @@ export default function Booking() {
 
         {step === 2 && (
           <View style={{ gap: SPACING.sm }}>
-            {MASTERS.map((m, i) => (
-              <Pressable
-                key={m.name}
-                style={[styles.row, masterIdx === i && styles.rowActive]}
-                onPress={() => setMasterIdx(i)}
-              >
-                <View style={[styles.masterThumb, { backgroundColor: TINTS[(i + 1) % TINTS.length][0] }]} />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.rowName}>{m.name}</Text>
-                  <Text style={styles.rowSub}>
-                    {m.role} · {m.exp}
-                  </Text>
-                </View>
-                <StarBadge rating={m.rating} />
-              </Pressable>
-            ))}
-          </View>
-        )}
-
-        {step === 3 && (
-          <View>
-            <Text style={styles.monthLabel}>Сентябрь 2026</Text>
-            <View style={styles.dateGrid}>
-              {DATES.map((d, i) => (
-                <Pressable
-                  key={`${d.dow}-${d.num}`}
-                  disabled={d.off}
-                  style={[styles.dateCell, dateIdx === i && styles.dateCellActive, d.off && styles.dateCellOff]}
-                  onPress={() => setDateIdx(i)}
-                >
-                  <Text style={[styles.dateDow, dateIdx === i && styles.dateTextActive]}>{d.dow}</Text>
-                  <Text style={[styles.dateNum, dateIdx === i && styles.dateTextActive, d.off && styles.dateTextOff]}>{d.num}</Text>
-                  <Text style={[styles.dateFree, dateIdx === i && styles.dateTextActive, d.off && styles.dateTextOff]}>{d.free}</Text>
+            {masters.length === 0 ? (
+              <Text style={styles.rowSub}>В этом салоне пока нет мастеров.</Text>
+            ) : (
+              masters.map((m, i) => (
+                <Pressable key={m.id} style={[styles.row, masterIdx === i && styles.rowActive]} onPress={() => setMasterIdx(i)}>
+                  <View style={[styles.masterThumb, { backgroundColor: tintFor(m.id)[0] }]} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.rowName}>{m.name}</Text>
+                  </View>
                 </Pressable>
-              ))}
-            </View>
+              ))
+            )}
           </View>
         )}
 
-        {step === 4 && (
-          <View style={{ gap: SPACING.xxl }}>
-            {TIME_GROUPS.map((g) => (
-              <View key={g.label}>
-                <Text style={styles.timeLabel}>{g.label}</Text>
-                <View style={styles.timeGrid}>
-                  {g.slots.map((t) => {
-                    const off = g.off.includes(t);
-                    const on = time === t;
-                    return (
-                      <Pressable
-                        key={t}
-                        disabled={off}
-                        style={[styles.timeSlot, on && styles.timeSlotActive, off && styles.timeSlotOff]}
-                        onPress={() => setTime(t)}
-                      >
-                        <Text style={[styles.timeText, on && styles.timeTextActive, off && styles.timeTextOff]}>{t}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
+        {step === 3 &&
+          (availLoading ? (
+            <ActivityIndicator color={COLORS.indigo} style={{ marginTop: SPACING.xl }} />
+          ) : availError ? (
+            <Text style={styles.errorInline}>{availError}</Text>
+          ) : (
+            <View style={styles.dateGrid}>
+              {dateList.map((iso) => {
+                const count = availability?.[iso]?.length ?? 0;
+                const off = count === 0;
+                const on = selectedDate === iso;
+                return (
+                  <Pressable
+                    key={iso}
+                    disabled={off}
+                    style={[styles.dateCell, on && styles.dateCellActive, off && styles.dateCellOff]}
+                    onPress={() => {
+                      setSelectedDate(iso);
+                      setTime(null);
+                    }}
+                  >
+                    <Text style={[styles.dateDow, on && styles.dateTextActive]}>{DOW[dowOf(iso)]}</Text>
+                    <Text style={[styles.dateNum, on && styles.dateTextActive, off && styles.dateTextOff]}>{iso.slice(8, 10)}</Text>
+                    <Text style={[styles.dateFree, on && styles.dateTextActive, off && styles.dateTextOff]}>
+                      {off ? '—' : `${count} слот${count === 1 ? '' : count < 5 ? 'а' : 'ов'}`}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+
+        {step === 4 &&
+          (timesForSelected.length === 0 ? (
+            <Text style={styles.rowSub}>На этот день свободного времени не осталось.</Text>
+          ) : (
+            <View style={styles.timeGrid}>
+              {timesForSelected.map((t) => {
+                const on = time === t;
+                return (
+                  <Pressable key={t} style={[styles.timeSlot, on && styles.timeSlotActive]} onPress={() => setTime(t)}>
+                    <Text style={[styles.timeText, on && styles.timeTextActive]}>{t}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
       </ScrollView>
 
       <View style={styles.ctaBar}>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryText} numberOfLines={1}>
-            {[service.name, master?.name, step >= 3 ? `${date.num} сент` : null, time].filter(Boolean).join(' · ') || 'Выберите услугу'}
+            {[service.name, master?.name, step >= 3 ? selectedDate : null, time].filter(Boolean).join(' · ') || 'Выберите услугу'}
           </Text>
           <Text style={styles.summaryPrice}>{service.price} ₼</Text>
         </View>
-        <Pressable style={[styles.ctaButton, !canNext && styles.ctaButtonOff]} onPress={stepNext} disabled={!canNext}>
-          <Text style={[styles.ctaText, !canNext && styles.ctaTextOff]}>{step === 4 ? 'Подтвердить запись' : 'Далее'}</Text>
+        <Pressable style={[styles.ctaButton, (!canNext || confirming) && styles.ctaButtonOff]} onPress={stepNext} disabled={!canNext || confirming}>
+          {confirming ? (
+            <ActivityIndicator color={COLORS.white} />
+          ) : (
+            <Text style={[styles.ctaText, !canNext && styles.ctaTextOff]}>{step === 4 ? 'Подтвердить запись' : 'Далее'}</Text>
+          )}
         </Pressable>
       </View>
     </View>
   );
 }
 
-function ConfirmScreen({ salon, tint, service, master, date, time, onDone }) {
+function ConfirmScreen({ business, tint, booking, onDone }) {
+  const start = formatBakuDateTime(booking.starts_at);
   const receipt = [
-    { k: 'Услуга', v: `${service.name} · ${service.dur}` },
-    { k: 'Мастер', v: master ? `${master.name}, ${master.role}` : 'Любой свободный' },
-    { k: 'Дата', v: `${date.dow}, ${date.num} сентября` },
-    { k: 'Время', v: time || '18:00' },
+    { k: 'Услуга', v: booking.service_name },
+    { k: 'Дата', v: `${start.dow}, ${start.day} ${start.month}` },
+    { k: 'Время', v: start.time },
   ];
 
   return (
@@ -193,14 +304,17 @@ function ConfirmScreen({ salon, tint, service, master, date, time, onDone }) {
         <Check size={30} color={COLORS.indigo} strokeWidth={2.2} />
       </View>
       <Text style={styles.confirmTitle}>Вы записаны</Text>
-      <Text style={styles.confirmSub}>Мы напомним за 2 часа до визита. Оплата на месте.</Text>
+      <Text style={styles.confirmSub}>Оплата на месте.</Text>
 
       <View style={styles.receiptCard}>
         <View style={styles.receiptHeader}>
-          <View style={[styles.receiptThumb, { backgroundColor: tint }]} />
+          <View style={[styles.receiptThumb, { backgroundColor: tint[0] }]} />
           <View>
-            <Text style={styles.rowName}>{salon.name}</Text>
-            <Text style={styles.rowSub}>{salon.meta}</Text>
+            <Text style={styles.rowName}>{business.name}</Text>
+            <Text style={styles.rowSub}>
+              {business.city}
+              {business.district ? ` · ${business.district}` : ''}
+            </Text>
           </View>
         </View>
         <View style={styles.divider} />
@@ -213,7 +327,7 @@ function ConfirmScreen({ salon, tint, service, master, date, time, onDone }) {
         <View style={styles.divider} />
         <View style={[styles.receiptRow, styles.receiptTotal]}>
           <Text style={styles.rowName}>Итого</Text>
-          <Text style={styles.confirmPrice}>{service.price} ₼</Text>
+          <Text style={styles.confirmPrice}>{booking.price} ₼</Text>
         </View>
       </View>
 
@@ -221,15 +335,15 @@ function ConfirmScreen({ salon, tint, service, master, date, time, onDone }) {
       <Pressable style={styles.ctaButton} onPress={onDone}>
         <Text style={styles.ctaText}>Готово</Text>
       </Pressable>
-      <Pressable style={styles.secondaryButton} onPress={onDone}>
-        <Text style={styles.secondaryButtonText}>Добавить в календарь</Text>
-      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.white },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.white },
+  errorText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.danger, padding: SPACING.xl, textAlign: 'center' },
+  errorInline: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.danger, marginBottom: SPACING.md },
   headerBar: { paddingTop: 52, paddingHorizontal: SPACING.xl, paddingBottom: SPACING.md },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
   backButton: { width: 38, height: 38, borderRadius: RADIUS.sm, backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center' },
@@ -253,7 +367,6 @@ const styles = StyleSheet.create({
   rowSub: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginTop: 3 },
   rowPrice: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.ink },
   masterThumb: { width: 52, height: 52, borderRadius: 17 },
-  monthLabel: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginBottom: SPACING.md },
   dateGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
   dateCell: {
     width: '22.5%',
@@ -268,10 +381,9 @@ const styles = StyleSheet.create({
   dateCellOff: { borderColor: COLORS.border },
   dateDow: { fontFamily: FONT.semibold, fontSize: 11, color: COLORS.ink, opacity: 0.6 },
   dateNum: { fontFamily: FONT.extrabold, fontSize: 18, color: COLORS.ink, marginTop: 7, letterSpacing: -0.3 },
-  dateFree: { fontFamily: FONT.semibold, fontSize: 10, color: COLORS.ink, opacity: 0.6, marginTop: 7 },
-  dateTextActive: { color: COLORS.white },
+  dateFree: { fontFamily: FONT.semibold, fontSize: 9.5, color: COLORS.ink, opacity: 0.6, marginTop: 6 },
+  dateTextActive: { color: COLORS.white, opacity: 1 },
   dateTextOff: { color: '#C3C8D4' },
-  timeLabel: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginBottom: 11 },
   timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
   timeSlot: {
     width: '22.5%',
@@ -284,10 +396,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   timeSlotActive: { backgroundColor: COLORS.indigo, borderColor: COLORS.indigo },
-  timeSlotOff: { backgroundColor: COLORS.surfaceAlt, borderColor: COLORS.border },
   timeText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.ink },
   timeTextActive: { color: COLORS.white },
-  timeTextOff: { color: '#C3C8D4' },
   ctaBar: {
     position: 'absolute',
     left: 0,
@@ -321,6 +431,4 @@ const styles = StyleSheet.create({
   receiptVal: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.ink, textAlign: 'right' },
   receiptTotal: { backgroundColor: COLORS.surfaceAlt, paddingVertical: 15 },
   confirmPrice: { fontFamily: FONT.extrabold, fontSize: 16, color: COLORS.ink },
-  secondaryButton: { height: 52, borderRadius: RADIUS.md, borderWidth: 1, borderColor: 'rgba(11,17,32,.12)', backgroundColor: COLORS.white, alignItems: 'center', justifyContent: 'center', marginTop: SPACING.sm },
-  secondaryButtonText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.ink },
 });

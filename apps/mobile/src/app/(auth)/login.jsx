@@ -97,12 +97,12 @@ const styles = StyleSheet.create({
   },
   error: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.danger, marginBottom: SPACING.md },
   button: {
-    backgroundColor: COLORS.blue,
+    backgroundColor: COLORS.indigo,
     borderRadius: RADIUS.sm,
     padding: SPACING.md,
     alignItems: 'center',
     marginTop: SPACING.xs,
   },
   buttonText: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.md, color: COLORS.white },
-  link: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.blue, textAlign: 'center', marginTop: SPACING.lg },
+  link: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.indigo, textAlign: 'center', marginTop: SPACING.lg },
 });

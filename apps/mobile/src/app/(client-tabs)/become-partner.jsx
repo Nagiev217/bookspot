@@ -78,6 +78,6 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   error: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.danger, marginBottom: SPACING.md },
-  button: { backgroundColor: COLORS.blue, borderRadius: RADIUS.sm, padding: SPACING.md, alignItems: 'center' },
+  button: { backgroundColor: COLORS.indigo, borderRadius: RADIUS.sm, padding: SPACING.md, alignItems: 'center' },
   buttonText: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.md, color: COLORS.white },
 });
