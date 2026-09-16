@@ -6,6 +6,7 @@ import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Heart } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { tintFor } from '@/utils/tint';
+import PressableScale from '@/components/PressableScale';
 import { getBusiness, listServices, listMasters } from '@/utils/supabase/catalog';
 import { isFavorite, addFavorite, removeFavorite } from '@/utils/supabase/favorites';
 import { useAuthStore } from '@/utils/auth/store';
@@ -143,13 +144,13 @@ export default function SalonDetail() {
       </ScrollView>
 
       <View style={styles.ctaBar}>
-        <Pressable
-          style={({ pressed }) => [styles.ctaButton, services.length === 0 && styles.ctaButtonOff, pressed && styles.ctaButtonPressed]}
+        <PressableScale
+          style={[styles.ctaButton, services.length === 0 && styles.ctaButtonOff]}
           disabled={services.length === 0}
           onPress={() => router.push(`/booking/${business.id}`)}
         >
           <Text style={styles.ctaText}>Записаться</Text>
-        </Pressable>
+        </PressableScale>
       </View>
     </View>
   );
@@ -226,6 +227,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   ctaButtonOff: { backgroundColor: '#E7E9F0' },
-  ctaButtonPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   ctaText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.base, color: COLORS.white },
 });

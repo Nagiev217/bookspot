@@ -2,8 +2,9 @@
 // зафиксировано (а не вычислено из расписаний всех мастеров) — простое,
 // но рабочее для типичного салона; # ponytail: если появится мастер с
 // более ранним/поздним стартом, окно нужно будет считать динамически.
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { useAuthStore } from '@/utils/auth/store';
@@ -12,6 +13,7 @@ import { listBusinessBookings } from '@/utils/supabase/business';
 import { bakuToday, addDaysISO } from '@/components/DateTimeGrid';
 
 const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+const EASE_IN_OUT = Easing.bezier(0.77, 0, 0.175, 1); // пилюля движется по экрану, не входит/выходит
 const DISPLAY_START = 9 * 60;
 const DISPLAY_END = 21 * 60;
 const HOUR_H = 76;
@@ -76,6 +78,18 @@ export default function BusinessCalendar() {
   const businessId = useAuthStore((s) => s.businessId);
   const [view, setView] = useState('day');
   const [dayIdx, setDayIdx] = useState(0);
+  const [segLayouts, setSegLayouts] = useState({}); // измерено onLayout, не пересчитывается на каждый кадр
+  const pillX = useSharedValue(0);
+  const pillW = useSharedValue(0);
+
+  useEffect(() => {
+    const l = segLayouts[view];
+    if (!l) return;
+    pillX.set(withTiming(l.x, { duration: 250, easing: EASE_IN_OUT }));
+    pillW.set(withTiming(l.width, { duration: 250, easing: EASE_IN_OUT }));
+  }, [view, segLayouts]);
+
+  const pillStyle = useAnimatedStyle(() => ({ transform: [{ translateX: pillX.get() }], width: pillW.get() }));
 
   const dateList = Array.from({ length: 7 }, (_, i) => addDaysISO(bakuToday(), i));
   const selectedDate = dateList[dayIdx];
@@ -103,10 +117,25 @@ export default function BusinessCalendar() {
         <View style={styles.headerRow}>
           <Text style={styles.title}>Расписание</Text>
           <View style={styles.segment}>
-            <Pressable style={[styles.segTab, view === 'day' && styles.segTabOn]} onPress={() => setView('day')}>
+            {segLayouts.day && segLayouts.week && <Animated.View style={[styles.segPill, pillStyle]} />}
+            <Pressable
+              style={styles.segTab}
+              onLayout={(e) => {
+                const { x, width } = e.nativeEvent.layout;
+                setSegLayouts((s) => ({ ...s, day: { x, width } }));
+              }}
+              onPress={() => setView('day')}
+            >
               <Text style={[styles.segText, view === 'day' && styles.segTextOn]}>День</Text>
             </Pressable>
-            <Pressable style={[styles.segTab, view === 'week' && styles.segTabOn]} onPress={() => setView('week')}>
+            <Pressable
+              style={styles.segTab}
+              onLayout={(e) => {
+                const { x, width } = e.nativeEvent.layout;
+                setSegLayouts((s) => ({ ...s, week: { x, width } }));
+              }}
+              onPress={() => setView('week')}
+            >
               <Text style={[styles.segText, view === 'week' && styles.segTextOn]}>Неделя</Text>
             </Pressable>
           </View>
@@ -206,9 +235,12 @@ const styles = StyleSheet.create({
   headerBar: { paddingTop: 54, paddingHorizontal: SPACING.xl, paddingBottom: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.borderLight },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACING.md },
   title: { fontFamily: FONT.extrabold, fontSize: 22, color: COLORS.ink, letterSpacing: -0.5 },
-  segment: { flexDirection: 'row', gap: 4, padding: 4, backgroundColor: COLORS.surface, borderRadius: 13 },
+  segment: { flexDirection: 'row', gap: 4, padding: 4, backgroundColor: COLORS.surface, borderRadius: 13, position: 'relative' },
+  // Пилюля абсолютно спозиционирована без детей — это тот самый разрешённый
+  // случай для анимации width (recipe "Tab / segmented indicator"): ничего
+  // вокруг не перестраивается, а borderRadius не смазывается, как при scaleX.
+  segPill: { position: 'absolute', top: 4, bottom: 4, left: 0, backgroundColor: COLORS.white, borderRadius: 10, shadowColor: '#0B1120', shadowOpacity: 0.12, shadowRadius: 3, shadowOffset: { width: 0, height: 1 } },
   segTab: { height: 32, paddingHorizontal: 14, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  segTabOn: { backgroundColor: COLORS.white, shadowColor: '#0B1120', shadowOpacity: 0.12, shadowRadius: 3, shadowOffset: { width: 0, height: 1 } },
   segText: { fontFamily: FONT.bold, fontSize: 12.5, color: COLORS.sub },
   segTextOn: { color: COLORS.ink },
   daysRow: { gap: SPACING.sm, marginTop: SPACING.md, paddingBottom: 2 },

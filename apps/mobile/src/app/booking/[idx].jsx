@@ -9,6 +9,7 @@ import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { tintFor } from '@/utils/tint';
 import { getBusiness, listServices, listMasters } from '@/utils/supabase/catalog';
 import { getAvailability, createBooking } from '@/utils/supabase/booking';
+import PressableScale from '@/components/PressableScale';
 
 const STEP_TITLES = ['Выберите услугу', 'Выберите мастера', 'Выберите дату', 'Выберите время'];
 const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
@@ -278,8 +279,8 @@ export default function Booking() {
           </Text>
           <Text style={styles.summaryPrice}>{service.price} ₼</Text>
         </View>
-        <Pressable
-          style={({ pressed }) => [styles.ctaButton, (!canNext || confirming) && styles.ctaButtonOff, pressed && styles.ctaButtonPressed]}
+        <PressableScale
+          style={[styles.ctaButton, (!canNext || confirming) && styles.ctaButtonOff]}
           onPress={stepNext}
           disabled={!canNext || confirming}
         >
@@ -288,7 +289,7 @@ export default function Booking() {
           ) : (
             <Text style={[styles.ctaText, !canNext && styles.ctaTextOff]}>{step === 4 ? 'Подтвердить запись' : 'Далее'}</Text>
           )}
-        </Pressable>
+        </PressableScale>
       </View>
     </View>
   );
@@ -336,9 +337,9 @@ function ConfirmScreen({ business, tint, booking, onDone }) {
       </View>
 
       <View style={{ flex: 1 }} />
-      <Pressable style={({ pressed }) => [styles.ctaButton, pressed && styles.ctaButtonPressed]} onPress={onDone}>
+      <PressableScale style={styles.ctaButton} onPress={onDone}>
         <Text style={styles.ctaText}>Готово</Text>
-      </Pressable>
+      </PressableScale>
     </View>
   );
 }
@@ -419,7 +420,6 @@ const styles = StyleSheet.create({
   summaryPrice: { fontFamily: FONT.extrabold, fontSize: TEXT_SIZE.base, color: COLORS.ink },
   ctaButton: { height: 54, borderRadius: RADIUS.md, backgroundColor: COLORS.indigo, alignItems: 'center', justifyContent: 'center' },
   ctaButtonOff: { backgroundColor: '#E7E9F0' },
-  ctaButtonPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   ctaText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.base, color: COLORS.white },
   ctaTextOff: { color: '#A9B0BE' },
 

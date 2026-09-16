@@ -10,6 +10,7 @@ import { useAuthStore } from '@/utils/auth/store';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { getMyBusiness, listBusinessBookings } from '@/utils/supabase/business';
 import { bakuToday } from '@/components/DateTimeGrid';
+import PressableScale from '@/components/PressableScale';
 
 const DOW_FULL = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
 const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
@@ -114,12 +115,9 @@ export default function BusinessToday() {
         </View>
       </View>
 
-      <Pressable
-        style={({ pressed }) => [styles.quickButton, pressed && styles.quickButtonPressed]}
-        onPress={() => router.push(`/manual-booking/${businessId}`)}
-      >
+      <PressableScale style={styles.quickButton} onPress={() => router.push(`/manual-booking/${businessId}`)}>
         <Text style={styles.quickButtonText}>+ Запись вручную</Text>
-      </Pressable>
+      </PressableScale>
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>
@@ -163,7 +161,6 @@ const styles = StyleSheet.create({
   kpiValue: { fontFamily: FONT.extrabold, fontSize: 19, color: COLORS.ink, letterSpacing: -0.3 },
   kpiLabel: { fontFamily: FONT.medium, fontSize: 11, color: COLORS.sub, marginTop: 6 },
   quickButton: { height: 46, marginTop: SPACING.md, marginHorizontal: SPACING.xl, borderRadius: RADIUS.md, borderWidth: 1, borderColor: 'rgba(11,17,32,.1)', alignItems: 'center', justifyContent: 'center' },
-  quickButtonPressed: { backgroundColor: COLORS.surface },
   quickButtonText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.ink },
   sectionHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: SPACING.xxl, marginBottom: SPACING.md, paddingHorizontal: SPACING.xl },
   sectionTitle: { fontFamily: FONT.bold, fontSize: 17, color: COLORS.ink, letterSpacing: -0.3 },
