@@ -13,10 +13,12 @@ import { supabase, IS_SUPABASE_READY } from '@/utils/supabase/config';
 import { getMyProfile } from '@/utils/supabase/profile';
 import { useAuthStore } from '@/utils/auth/store';
 import { getCachedRole, setCachedRole, getCachedMode } from '@/utils/auth/roleCache';
+import { useReducedMotion } from '@/utils/useReducedMotion';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
+  const reducedMotion = useReducedMotion();
   const [fontsLoaded] = useFonts({
     Manrope_400Regular,
     Manrope_500Medium,
@@ -95,15 +97,19 @@ export default function RootLayout() {
           router.replace между этими двумя группами) раньше менялось
           мгновенным резким скачком экрана; с fade это читается как
           осознанный переход, а не зависание/лаг. */}
-      <Stack.Screen name="(client-tabs)" options={{ animation: 'fade' }} />
-      <Stack.Screen name="(business-tabs)" options={{ animation: 'fade' }} />
+      <Stack.Screen name="(client-tabs)" options={{ animation: reducedMotion ? 'none' : 'fade' }} />
+      <Stack.Screen name="(business-tabs)" options={{ animation: reducedMotion ? 'none' : 'fade' }} />
+      {/* Просмотр/дрилл-даун — обычный push. */}
       <Stack.Screen name="salon/[idx]" options={{ gestureEnabled: true }} />
       <Stack.Screen name="booking/[idx]" options={{ gestureEnabled: true }} />
-      <Stack.Screen name="reschedule/[bookingId]" options={{ gestureEnabled: true }} />
-      <Stack.Screen name="manual-booking/[businessId]" options={{ gestureEnabled: true }} />
-      <Stack.Screen name="services/[businessId]" options={{ gestureEnabled: true }} />
-      <Stack.Screen name="business-settings/[businessId]" options={{ gestureEnabled: true }} />
-      <Stack.Screen name="master/[masterId]" options={{ gestureEnabled: true }} />
+      {/* Формы — модально, снизу вверх: по apple-design (п.7, "Spatial
+          consistency") форма поверх текущего экрана должна выглядеть и
+          закрываться как форма, а не как ещё один уровень навигации push. */}
+      <Stack.Screen name="reschedule/[bookingId]" options={{ presentation: 'modal', gestureEnabled: true }} />
+      <Stack.Screen name="manual-booking/[businessId]" options={{ presentation: 'modal', gestureEnabled: true }} />
+      <Stack.Screen name="services/[businessId]" options={{ presentation: 'modal', gestureEnabled: true }} />
+      <Stack.Screen name="business-settings/[businessId]" options={{ presentation: 'modal', gestureEnabled: true }} />
+      <Stack.Screen name="master/[masterId]" options={{ presentation: 'modal', gestureEnabled: true }} />
     </Stack>
   );
 }

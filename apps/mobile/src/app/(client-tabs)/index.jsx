@@ -11,12 +11,14 @@ import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { iconFor } from '@/data/categoryIcons';
 import { tintFor } from '@/utils/tint';
 import { listCategories, listBusinesses } from '@/utils/supabase/catalog';
+import { useReducedMotion } from '@/utils/useReducedMotion';
 
 export default function Home() {
   const [categories, setCategories] = useState([]);
   const [businesses, setBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const reducedMotion = useReducedMotion();
 
   const load = useCallback(async () => {
     setError(null);
@@ -92,7 +94,7 @@ export default function Home() {
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandRow}>
               {businesses.map((b, i) => (
-                <Animated.View key={b.id} entering={FadeIn.duration(220).delay(i * 30)}>
+                <Animated.View key={b.id} entering={reducedMotion ? undefined : FadeIn.duration(220).delay(i * 30)}>
                   <Pressable
                     style={({ pressed }) => [styles.brandCard, pressed && styles.cardPressed]}
                     onPress={() => router.push(`/salon/${b.id}`)}

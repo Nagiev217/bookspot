@@ -9,6 +9,7 @@ import { Map, List as ListIcon, Search as SearchIcon } from 'lucide-react-native
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { tintFor } from '@/utils/tint';
 import { searchBusinesses } from '@/utils/supabase/catalog';
+import { useReducedMotion } from '@/utils/useReducedMotion';
 
 export default function Search() {
   const { title, categoryId, q: initialQuery } = useLocalSearchParams();
@@ -18,6 +19,7 @@ export default function Search() {
   const [error, setError] = useState(null);
   const [mapMode, setMapMode] = useState(false);
   const loadedOnce = useRef(false);
+  const reducedMotion = useReducedMotion();
 
   const runSearch = useCallback(
     (signal) => {
@@ -93,7 +95,7 @@ export default function Search() {
             <Text style={styles.emptyText}>Ничего не найдено.</Text>
           ) : (
             businesses.map((b, i) => (
-              <Animated.View key={b.id} entering={FadeIn.duration(220).delay(i * 30)}>
+              <Animated.View key={b.id} entering={reducedMotion ? undefined : FadeIn.duration(220).delay(i * 30)}>
               <Pressable style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} onPress={() => router.push(`/salon/${b.id}`)}>
                 <View style={[styles.photo, { backgroundColor: tintFor(b.id)[0] }]}>
                   <Text style={styles.photoLabel}>ФОТО</Text>

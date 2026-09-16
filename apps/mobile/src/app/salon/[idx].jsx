@@ -144,7 +144,7 @@ export default function SalonDetail() {
 
       <View style={styles.ctaBar}>
         <Pressable
-          style={[styles.ctaButton, services.length === 0 && styles.ctaButtonOff]}
+          style={({ pressed }) => [styles.ctaButton, services.length === 0 && styles.ctaButtonOff, pressed && styles.ctaButtonPressed]}
           disabled={services.length === 0}
           onPress={() => router.push(`/booking/${business.id}`)}
         >
@@ -226,5 +226,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   ctaButtonOff: { backgroundColor: '#E7E9F0' },
+  ctaButtonPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   ctaText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.base, color: COLORS.white },
 });

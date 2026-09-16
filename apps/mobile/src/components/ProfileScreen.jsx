@@ -58,7 +58,7 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      <Pressable style={styles.signOutButton} onPress={handleSignOut}>
+      <Pressable style={({ pressed }) => [styles.signOutButton, pressed && styles.rowPressed]} onPress={handleSignOut}>
         <LogOut size={18} color={COLORS.danger} />
         <Text style={styles.signOutText}>Выйти</Text>
       </Pressable>
@@ -69,7 +69,7 @@ export default function ProfileScreen() {
 
 function MenuRow({ label, onPress, last }) {
   return (
-    <Pressable style={[styles.menuRow, last && styles.menuRowLast]} onPress={onPress}>
+    <Pressable style={({ pressed }) => [styles.menuRow, last && styles.menuRowLast, pressed && styles.rowPressed]} onPress={onPress}>
       <Text style={styles.menuLabel}>{label}</Text>
       <ChevronRight size={15} color="#C3C8D4" />
     </Pressable>
@@ -104,6 +104,7 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.borderLight,
   },
   menuRowLast: { borderBottomWidth: 0 },
+  rowPressed: { backgroundColor: COLORS.surface },
   menuLabel: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.md, color: COLORS.ink },
   signOutButton: {
     flexDirection: 'row',

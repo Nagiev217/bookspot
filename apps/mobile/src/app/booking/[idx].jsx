@@ -278,7 +278,11 @@ export default function Booking() {
           </Text>
           <Text style={styles.summaryPrice}>{service.price} ₼</Text>
         </View>
-        <Pressable style={[styles.ctaButton, (!canNext || confirming) && styles.ctaButtonOff]} onPress={stepNext} disabled={!canNext || confirming}>
+        <Pressable
+          style={({ pressed }) => [styles.ctaButton, (!canNext || confirming) && styles.ctaButtonOff, pressed && styles.ctaButtonPressed]}
+          onPress={stepNext}
+          disabled={!canNext || confirming}
+        >
           {confirming ? (
             <ActivityIndicator color={COLORS.white} />
           ) : (
@@ -332,7 +336,7 @@ function ConfirmScreen({ business, tint, booking, onDone }) {
       </View>
 
       <View style={{ flex: 1 }} />
-      <Pressable style={styles.ctaButton} onPress={onDone}>
+      <Pressable style={({ pressed }) => [styles.ctaButton, pressed && styles.ctaButtonPressed]} onPress={onDone}>
         <Text style={styles.ctaText}>Готово</Text>
       </Pressable>
     </View>
@@ -415,6 +419,7 @@ const styles = StyleSheet.create({
   summaryPrice: { fontFamily: FONT.extrabold, fontSize: TEXT_SIZE.base, color: COLORS.ink },
   ctaButton: { height: 54, borderRadius: RADIUS.md, backgroundColor: COLORS.indigo, alignItems: 'center', justifyContent: 'center' },
   ctaButtonOff: { backgroundColor: '#E7E9F0' },
+  ctaButtonPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   ctaText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.base, color: COLORS.white },
   ctaTextOff: { color: '#A9B0BE' },
 

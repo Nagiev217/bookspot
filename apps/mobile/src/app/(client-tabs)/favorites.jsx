@@ -9,6 +9,7 @@ import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { tintFor } from '@/utils/tint';
 import { useAuthStore } from '@/utils/auth/store';
 import { listFavoriteBusinesses } from '@/utils/supabase/favorites';
+import { useReducedMotion } from '@/utils/useReducedMotion';
 
 export default function Favorites() {
   const uid = useAuthStore((s) => s.uid);
@@ -16,6 +17,7 @@ export default function Favorites() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const loadedOnce = useRef(false);
+  const reducedMotion = useReducedMotion();
 
   useFocusEffect(
     useCallback(() => {
@@ -61,7 +63,7 @@ export default function Favorites() {
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
           {businesses.map((b, i) => (
-            <Animated.View key={b.id} entering={FadeIn.duration(220).delay(i * 30)}>
+            <Animated.View key={b.id} entering={reducedMotion ? undefined : FadeIn.duration(220).delay(i * 30)}>
               <Pressable style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} onPress={() => router.push(`/salon/${b.id}`)}>
                 <View style={[styles.photo, { backgroundColor: tintFor(b.id)[0] }]}>
                   <Text style={styles.photoLabel}>ФОТО</Text>
