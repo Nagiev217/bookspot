@@ -129,7 +129,7 @@ export async function setServiceMasters(serviceId, masterIds) {
 }
 
 export async function getMaster(masterId) {
-  const { data, error } = await supabase.from('masters').select('id, name, active, business_id').eq('id', masterId).single();
+  const { data, error } = await supabase.from('masters').select('id, name, active, business_id, photo_url').eq('id', masterId).single();
   if (error) throw error;
   return data;
 }
@@ -179,4 +179,36 @@ export async function replaceMasterSchedule(masterId, rows) {
 export async function updateBusiness(businessId, patch) {
   const { error } = await supabase.from('businesses').update(patch).eq('id', businessId);
   if (error) throw error;
+}
+
+// base64 → ArrayBuffer вручную: RN'ный fetch(uri).blob() на некоторых
+// устройствах отдаёт в Supabase Storage битый/нулевой файл (известная
+// проблема react-native+supabase-js), а expo-image-picker и так умеет
+// вернуть base64 напрямую — лишняя зависимость не нужна.
+function base64ToArrayBuffer(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+async function uploadPhoto(path, base64, contentType) {
+  const { error: upErr } = await supabase.storage
+    .from('photos')
+    .upload(path, base64ToArrayBuffer(base64), { contentType, upsert: true });
+  if (upErr) throw upErr;
+  const { data } = supabase.storage.from('photos').getPublicUrl(path);
+  return `${data.publicUrl}?t=${Date.now()}`; // кэш-бастер: путь фиксированный, upsert перезаписывает
+}
+
+export async function uploadBusinessPhoto(businessId, base64, ext = 'jpg') {
+  const url = await uploadPhoto(`business/${businessId}/logo.${ext}`, base64, `image/${ext === 'jpg' ? 'jpeg' : ext}`);
+  await updateBusiness(businessId, { logo_url: url });
+  return url;
+}
+
+export async function uploadMasterPhoto(masterId, base64, ext = 'jpg') {
+  const url = await uploadPhoto(`master/${masterId}/photo.${ext}`, base64, `image/${ext === 'jpg' ? 'jpeg' : ext}`);
+  await updateMaster(masterId, { photo_url: url });
+  return url;
 }

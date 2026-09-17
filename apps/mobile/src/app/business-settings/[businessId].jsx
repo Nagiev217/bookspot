@@ -4,11 +4,13 @@
 // сих пор были колонками без единого экрана.
 import { useCallback, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import PressableScale from '@/components/PressableScale';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, Camera } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
-import { getMyBusiness, updateBusiness } from '@/utils/supabase/business';
+import { getMyBusiness, updateBusiness, uploadBusinessPhoto } from '@/utils/supabase/business';
 import { listCategories } from '@/utils/supabase/catalog';
 
 export default function BusinessSettingsScreen() {
@@ -19,6 +21,8 @@ export default function BusinessSettingsScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [info, setInfo] = useState(null);
+  const [photoUrl, setPhotoUrl] = useState(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -28,6 +32,7 @@ export default function BusinessSettingsScreen() {
         .then(([b, cats]) => {
           if (cancelled) return;
           setCategories(cats);
+          setPhotoUrl(b.logo_url);
           setForm({
             name: b.name,
             categoryId: b.category_id,
@@ -48,6 +53,30 @@ export default function BusinessSettingsScreen() {
       };
     }, [businessId])
   );
+
+  async function handlePickPhoto() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return setError('Нет доступа к галерее');
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.6,
+      base64: true,
+    });
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    setUploadingPhoto(true);
+    setError(null);
+    try {
+      const url = await uploadBusinessPhoto(businessId, asset.base64);
+      setPhotoUrl(url);
+    } catch (e) {
+      setError(e.message || 'Не удалось загрузить фото');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
 
   async function handleSave() {
     setError(null);
@@ -103,6 +132,14 @@ export default function BusinessSettingsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        <PressableScale style={styles.photoBox} onPress={handlePickPhoto} disabled={uploadingPhoto}>
+          {photoUrl ? <Image source={{ uri: photoUrl }} style={styles.photoImg} contentFit="cover" /> : null}
+          <View style={styles.photoOverlay}>
+            {uploadingPhoto ? <ActivityIndicator color={COLORS.white} /> : <Camera size={20} color={COLORS.white} />}
+            <Text style={styles.photoOverlayText}>{photoUrl ? 'Сменить фото' : 'Добавить фото'}</Text>
+          </View>
+        </PressableScale>
+
         <TextInput style={styles.input} placeholder="Название" placeholderTextColor={COLORS.sub} value={form.name} onChangeText={(v) => setForm((f) => ({ ...f, name: v }))} />
 
         <Text style={styles.label}>Категория</Text>
@@ -172,6 +209,10 @@ const styles = StyleSheet.create({
   backButton: { width: 38, height: 38, borderRadius: RADIUS.sm, backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center' },
   title: { flex: 1, fontFamily: FONT.extrabold, fontSize: 20, color: COLORS.ink, letterSpacing: -0.4 },
   content: { padding: SPACING.xl, paddingTop: SPACING.sm, gap: SPACING.md },
+  photoBox: { height: 150, borderRadius: RADIUS.xl, backgroundColor: COLORS.surface, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  photoImg: { ...StyleSheet.absoluteFillObject },
+  photoOverlay: { alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: 'rgba(11,17,32,.35)', ...StyleSheet.absoluteFillObject },
+  photoOverlayText: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: COLORS.white },
   input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, padding: SPACING.md, fontFamily: FONT.regular, fontSize: TEXT_SIZE.md, color: COLORS.text },
   textarea: { minHeight: 80, textAlignVertical: 'top' },
   label: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginBottom: SPACING.sm },

@@ -2,6 +2,7 @@
 // [idx] теперь принимает uuid бизнеса, а не индекс мок-массива.
 import { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Heart } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -79,6 +80,7 @@ export default function SalonDetail() {
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={{ paddingBottom: 104 }}>
         <View style={[styles.hero, { backgroundColor: tint[0] }]}>
+          {business.logo_url && <Image source={{ uri: business.logo_url }} style={StyleSheet.absoluteFillObject} contentFit="cover" />}
           <PressableScale style={styles.backButton} onPress={() => router.back()}>
             <ArrowLeft size={17} color={COLORS.ink} />
           </PressableScale>
@@ -134,7 +136,9 @@ export default function SalonDetail() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: SPACING.md }}>
               {masters.map((m) => (
                 <View key={m.id} style={styles.masterCard}>
-                  <View style={[styles.masterAvatar, { backgroundColor: tintFor(m.id)[0] }]} />
+                  <View style={[styles.masterAvatar, { backgroundColor: tintFor(m.id)[0] }]}>
+                    {m.photo_url && <Image source={{ uri: m.photo_url }} style={StyleSheet.absoluteFillObject} contentFit="cover" />}
+                  </View>
                   <Text style={styles.masterName}>{m.name}</Text>
                 </View>
               ))}
@@ -205,7 +209,7 @@ const styles = StyleSheet.create({
   serviceDur: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginTop: 3 },
   servicePrice: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.ink },
   masterCard: { width: 92, alignItems: 'center' },
-  masterAvatar: { width: 92, height: 92, borderRadius: RADIUS.lg },
+  masterAvatar: { width: 92, height: 92, borderRadius: RADIUS.lg, overflow: 'hidden' },
   masterName: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.ink, marginTop: 9 },
   ctaBar: {
     position: 'absolute',

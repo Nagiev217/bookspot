@@ -4,6 +4,7 @@
 // выходные, активность) — на экране master/[masterId].
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import PressableScale from '@/components/PressableScale';
 import { router, useFocusEffect } from 'expo-router';
 import { Plus } from 'lucide-react-native';
@@ -133,7 +134,9 @@ export default function BusinessTeam() {
             return (
               <PressableScale key={m.id} style={styles.card} onPress={() => router.push(`/master/${m.id}`)}>
                 <View style={styles.cardTop}>
-                  <View style={[styles.avatar, { backgroundColor: tintFor(m.id)[0] }]} />
+                  <View style={[styles.avatar, { backgroundColor: tintFor(m.id)[0] }]}>
+                    {m.photo_url && <Image source={{ uri: m.photo_url }} style={StyleSheet.absoluteFillObject} contentFit="cover" />}
+                  </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={[styles.name, !m.active && styles.nameOff]}>{m.name}</Text>
                     <Text style={styles.sub}>
@@ -175,7 +178,7 @@ const styles = StyleSheet.create({
   addSaveText: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: COLORS.white },
   card: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.xl, padding: SPACING.lg },
   cardTop: { flexDirection: 'row', gap: 13, alignItems: 'center' },
-  avatar: { width: 54, height: 54, borderRadius: RADIUS.md },
+  avatar: { width: 54, height: 54, borderRadius: RADIUS.md, overflow: 'hidden' },
   name: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.base, color: COLORS.ink },
   nameOff: { color: COLORS.sub },
   sub: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginTop: 3 },

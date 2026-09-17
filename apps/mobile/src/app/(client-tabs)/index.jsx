@@ -4,6 +4,7 @@
 // shared/slots.js существует, но не подключён к Postgres).
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
+import { Image } from 'expo-image';
 import PressableScale from '@/components/PressableScale';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
@@ -101,7 +102,11 @@ export default function Home() {
                     onPress={() => router.push(`/salon/${b.id}`)}
                   >
                     <View style={[styles.brandPhoto, { backgroundColor: tintFor(b.id)[0] }]}>
-                      <Text style={styles.photoLabel}>ФОТО</Text>
+                      {b.logo_url ? (
+                        <Image source={{ uri: b.logo_url }} style={StyleSheet.absoluteFillObject} contentFit="cover" />
+                      ) : (
+                        <Text style={styles.photoLabel}>ФОТО</Text>
+                      )}
                     </View>
                     <Text style={styles.brandName}>{b.name}</Text>
                     <Text style={styles.brandMeta}>

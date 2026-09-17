@@ -3,6 +3,7 @@
 // пока не стоит: два места, разница только в источнике данных).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import PressableScale from '@/components/PressableScale';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
@@ -73,7 +74,11 @@ export default function Favorites() {
             <Animated.View key={b.id} entering={reducedMotion ? undefined : FadeIn.duration(220).delay(i * 30)}>
               <PressableScale style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} onPress={() => router.push(`/salon/${b.id}`)}>
                 <View style={[styles.photo, { backgroundColor: tintFor(b.id)[0] }]}>
-                  <Text style={styles.photoLabel}>ФОТО</Text>
+                  {b.logo_url ? (
+                    <Image source={{ uri: b.logo_url }} style={StyleSheet.absoluteFillObject} contentFit="cover" />
+                  ) : (
+                    <Text style={styles.photoLabel}>ФОТО</Text>
+                  )}
                 </View>
                 <Text style={styles.cardName}>{b.name}</Text>
                 <Text style={styles.cardMeta}>

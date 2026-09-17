@@ -4,9 +4,11 @@
 // типа "custom_hours" для него не нужно.
 import { useCallback, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator, Switch } from 'react-native';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import PressableScale from '@/components/PressableScale';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { ArrowLeft, Plus, X } from 'lucide-react-native';
+import { ArrowLeft, Plus, X, Camera } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import {
   getMaster,
@@ -15,6 +17,7 @@ import {
   replaceMasterSchedule,
   listUpcomingDaysOff,
   setMasterDayOff,
+  uploadMasterPhoto,
 } from '@/utils/supabase/business';
 import { bakuToday, addDaysISO } from '@/components/DateTimeGrid';
 
@@ -36,6 +39,8 @@ export default function MasterDetail() {
   const { masterId } = useLocalSearchParams();
   const [name, setName] = useState('');
   const [active, setActive] = useState(true);
+  const [photoUrl, setPhotoUrl] = useState(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [week, setWeek] = useState(emptyWeek());
   const [daysOff, setDaysOff] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +57,7 @@ export default function MasterDetail() {
           if (cancelled) return;
           setName(master.name);
           setActive(master.active);
+          setPhotoUrl(master.photo_url);
           const w = emptyWeek();
           schedule.forEach((row) => {
             w[row.day_of_week] = [...(w[row.day_of_week] || []), { start: toHHMM(row.start_min), end: toHHMM(row.end_min) }];
@@ -75,6 +81,29 @@ export default function MasterDetail() {
   }
   function updateRange(dow, idx, field, value) {
     setWeek((w) => ({ ...w, [dow]: w[dow].map((r, i) => (i === idx ? { ...r, [field]: value } : r)) }));
+  }
+
+  async function handlePickPhoto() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return setError('Нет доступа к галерее');
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.6,
+      base64: true,
+    });
+    if (result.canceled) return;
+    setUploadingPhoto(true);
+    setError(null);
+    try {
+      const url = await uploadMasterPhoto(masterId, result.assets[0].base64);
+      setPhotoUrl(url);
+    } catch (e) {
+      setError(e.message || 'Не удалось загрузить фото');
+    } finally {
+      setUploadingPhoto(false);
+    }
   }
 
   async function handleSaveProfile() {
@@ -149,6 +178,13 @@ export default function MasterDetail() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        <PressableScale style={styles.photoBox} onPress={handlePickPhoto} disabled={uploadingPhoto}>
+          {photoUrl ? <Image source={{ uri: photoUrl }} style={styles.photoImg} contentFit="cover" /> : null}
+          <View style={styles.photoOverlay}>
+            {uploadingPhoto ? <ActivityIndicator color={COLORS.white} /> : <Camera size={18} color={COLORS.white} />}
+          </View>
+        </PressableScale>
+
         <TextInput style={styles.input} placeholder="Имя" placeholderTextColor={COLORS.sub} value={name} onChangeText={setName} />
         <View style={styles.switchRow}>
           <Text style={styles.switchLabel}>Активен (принимает записи)</Text>
@@ -217,6 +253,9 @@ const styles = StyleSheet.create({
   backButton: { width: 38, height: 38, borderRadius: RADIUS.sm, backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center' },
   title: { flex: 1, fontFamily: FONT.extrabold, fontSize: 20, color: COLORS.ink, letterSpacing: -0.4 },
   content: { padding: SPACING.xl, paddingTop: SPACING.sm, gap: SPACING.md },
+  photoBox: { alignSelf: 'center', width: 90, height: 90, borderRadius: 45, backgroundColor: COLORS.surface, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  photoImg: { ...StyleSheet.absoluteFillObject },
+  photoOverlay: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(11,17,32,.35)', ...StyleSheet.absoluteFillObject },
   input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, padding: SPACING.md, fontFamily: FONT.regular, fontSize: TEXT_SIZE.md, color: COLORS.text },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   switchLabel: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.text },

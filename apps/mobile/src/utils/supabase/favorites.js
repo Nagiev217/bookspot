@@ -5,7 +5,7 @@ import { supabase } from './config';
 export async function listFavoriteBusinesses(uid) {
   const { data, error } = await supabase
     .from('favorites')
-    .select('business:businesses(id, name, city, district, category_id, status)')
+    .select('business:businesses(id, name, city, district, category_id, status, logo_url)')
     .eq('user_id', uid)
     .order('created_at', { ascending: false });
   if (error) throw error;
