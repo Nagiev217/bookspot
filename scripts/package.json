@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "seed": "node --env-file=.env seed.js",
+    "seed-baku": "node --env-file=.env seed-baku-salons.js",
     "verify-booking": "node --env-file=.env verify-booking.js",
     "verify-selfserve": "node --env-file=.env verify-selfserve.js"
   },
