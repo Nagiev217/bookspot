@@ -4,7 +4,8 @@ import { COLORS } from '@/theme/tokens';
 
 export default function BusinessTabsLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: COLORS.indigo, tabBarInactiveTintColor: '#A3AAB8' }}>
+    // lazy: false — см. тот же комментарий в (client-tabs)/_layout.jsx.
+    <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: COLORS.indigo, tabBarInactiveTintColor: '#A3AAB8', lazy: false }}>
       <Tabs.Screen
         name="index"
         options={{ title: 'Сегодня', tabBarIcon: ({ color, size }) => <House color={color} size={size} /> }}

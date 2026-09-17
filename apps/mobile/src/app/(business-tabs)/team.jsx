@@ -2,7 +2,7 @@
 // строку master_exceptions(type='day_off') на сегодня — реальные данные,
 // не визуальная имитация. Полное редактирование (расписание, будущие
 // выходные, активность) — на экране master/[masterId].
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import PressableScale from '@/components/PressableScale';
 import { router, useFocusEffect } from 'expo-router';
@@ -46,6 +46,11 @@ export default function BusinessTeam() {
       .catch((e) => setError(e.message || 'Не удалось загрузить'))
       .finally(() => setLoading(false));
   }, [businessId]);
+
+  // Отдельно от useFocusEffect: с lazy:false вкладка монтируется сразу
+  // после входа, но useFocusEffect не срабатывает, пока пользователь
+  // реально не переключится на неё.
+  useEffect(() => load(), [load]);
 
   useFocusEffect(load);
 

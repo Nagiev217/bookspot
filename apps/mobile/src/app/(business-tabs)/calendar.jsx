@@ -39,38 +39,43 @@ function useCalendarData(businessId, view, selectedDate) {
   const [error, setError] = useState(null);
   const loadedOnce = useRef(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!businessId) {
-        setLoading(false);
-        return;
-      }
-      let cancelled = false;
-      // Спиннер на весь экран — только при первом заходе. Переключение
-      // дня/недели или возврат на вкладку обновляют данные на месте, без
-      // мигания пустым экраном (см. тот же приём в других вкладках).
-      if (!loadedOnce.current) setLoading(true);
-      setError(null);
-      const weekStart = bakuToday();
-      Promise.all([
-        listMasters(businessId),
-        listBusinessBookings({ businessId, from: selectedDate, days: 1 }),
-        view === 'week' ? listBusinessBookings({ businessId, from: weekStart, days: 7 }) : Promise.resolve([]),
-      ])
-        .then(([m, bk, wk]) => {
-          if (cancelled) return;
-          setMasters(m);
-          setBookings(bk);
-          if (view === 'week') setWeekBookings(wk);
-          loadedOnce.current = true;
-        })
-        .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить'))
-        .finally(() => !cancelled && setLoading(false));
-      return () => {
-        cancelled = true;
-      };
-    }, [businessId, view, selectedDate])
-  );
+  const load = useCallback(() => {
+    if (!businessId) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    // Спиннер на весь экран — только при первом заходе. Переключение
+    // дня/недели или возврат на вкладку обновляют данные на месте, без
+    // мигания пустым экраном (см. тот же приём в других вкладках).
+    if (!loadedOnce.current) setLoading(true);
+    setError(null);
+    const weekStart = bakuToday();
+    Promise.all([
+      listMasters(businessId),
+      listBusinessBookings({ businessId, from: selectedDate, days: 1 }),
+      view === 'week' ? listBusinessBookings({ businessId, from: weekStart, days: 7 }) : Promise.resolve([]),
+    ])
+      .then(([m, bk, wk]) => {
+        if (cancelled) return;
+        setMasters(m);
+        setBookings(bk);
+        if (view === 'week') setWeekBookings(wk);
+        loadedOnce.current = true;
+      })
+      .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить'))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [businessId, view, selectedDate]);
+
+  // Отдельно от useFocusEffect: с lazy:false вкладка монтируется сразу
+  // после входа, но useFocusEffect не срабатывает, пока пользователь
+  // реально не переключится на неё.
+  useEffect(() => load(), [load]);
+
+  useFocusEffect(load);
 
   return { masters, bookings, weekBookings, loading, error };
 }

@@ -4,7 +4,12 @@ import { COLORS } from '@/theme/tokens';
 
 export default function ClientTabsLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: COLORS.indigo, tabBarInactiveTintColor: '#A3AAB8' }}>
+    // lazy: false — все вкладки монтируются и начинают грузить данные сразу
+    // после входа, а не по первому заходу на каждую. Иначе первое
+    // переключение на новую вкладку всегда показывает спиннер (см. тот же
+    // приём loadedOnce в самих экранах — он защищает от повторного
+    // мигания, но не от самого первого захода).
+    <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: COLORS.indigo, tabBarInactiveTintColor: '#A3AAB8', lazy: false }}>
       <Tabs.Screen
         name="index"
         options={{ title: 'Главная', tabBarIcon: ({ color, size }) => <House color={color} size={size} /> }}

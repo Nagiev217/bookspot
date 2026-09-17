@@ -1,7 +1,7 @@
 // Избранное — реальный список, сохранённый через favorites (0009_favorites.sql).
 // Карточка — тот же стиль, что и в search.jsx (переиспользовать компонент
 // пока не стоит: два места, разница только в источнике данных).
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import PressableScale from '@/components/PressableScale';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -20,28 +20,34 @@ export default function Favorites() {
   const loadedOnce = useRef(false);
   const reducedMotion = useReducedMotion();
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!uid) {
-        setLoading(false);
-        return;
-      }
-      let cancelled = false;
-      if (!loadedOnce.current) setLoading(true);
-      setError(null);
-      listFavoriteBusinesses(uid)
-        .then((data) => {
-          if (cancelled) return;
-          setBusinesses(data);
-          loadedOnce.current = true;
-        })
-        .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить избранное'))
-        .finally(() => !cancelled && setLoading(false));
-      return () => {
-        cancelled = true;
-      };
-    }, [uid])
-  );
+  const load = useCallback(() => {
+    if (!uid) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    if (!loadedOnce.current) setLoading(true);
+    setError(null);
+    listFavoriteBusinesses(uid)
+      .then((data) => {
+        if (cancelled) return;
+        setBusinesses(data);
+        loadedOnce.current = true;
+      })
+      .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить избранное'))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [uid]);
+
+  // Отдельно от useFocusEffect: с lazy:false вкладка монтируется сразу
+  // после входа, но useFocusEffect не срабатывает, пока пользователь
+  // реально не переключится на неё — без этого первый переход всё равно
+  // ждал бы сеть.
+  useEffect(() => load(), [load]);
+
+  useFocusEffect(load);
 
   if (loading) {
     return (

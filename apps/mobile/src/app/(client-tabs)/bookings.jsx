@@ -1,7 +1,7 @@
 // Мои записи — реальные данные из Supabase. "Маршрут" — как в исходном
 // дизайне (открывает страницу салона; нет geo-координат/карты в схеме,
 // чтобы построить настоящий маршрут). Отмена перенесена на экран "Перенести".
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import PressableScale from '@/components/PressableScale';
 import { router, useFocusEffect } from 'expo-router';
@@ -35,6 +35,15 @@ export default function Bookings() {
       .catch((e) => setError(e.message || 'Не удалось загрузить записи'))
       .finally(() => setLoading(false));
   }, []);
+
+  // Отдельно от useFocusEffect: с lazy:false в (client-tabs)/_layout.jsx
+  // эта вкладка монтируется сразу после входа, но useFocusEffect не
+  // срабатывает, пока пользователь реально на неё не переключится — без
+  // этого эффекта первый переход всё равно ждал бы сеть. useFocusEffect
+  // ниже по-прежнему обновляет список при каждом возврате на вкладку.
+  useEffect(() => {
+    load();
+  }, [load]);
 
   useFocusEffect(load);
 
