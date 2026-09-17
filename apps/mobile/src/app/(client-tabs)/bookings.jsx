@@ -2,7 +2,8 @@
 // дизайне (открывает страницу салона; нет geo-координат/карты в схеме,
 // чтобы построить настоящий маршрут). Отмена перенесена на экран "Перенести".
 import { useCallback, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 import { router, useFocusEffect } from 'expo-router';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { tintFor } from '@/utils/tint';
@@ -46,12 +47,12 @@ export default function Bookings() {
       <View style={styles.header}>
         <Text style={styles.title}>Мои записи</Text>
         <View style={styles.segment}>
-          <Pressable style={[styles.segTab, tab === 'up' && styles.segTabOn]} onPress={() => setTab('up')}>
+          <PressableScale style={[styles.segTab, tab === 'up' && styles.segTabOn]} onPress={() => setTab('up')}>
             <Text style={[styles.segText, tab === 'up' && styles.segTextOn]}>Предстоящие</Text>
-          </Pressable>
-          <Pressable style={[styles.segTab, tab === 'past' && styles.segTabOn]} onPress={() => setTab('past')}>
+          </PressableScale>
+          <PressableScale style={[styles.segTab, tab === 'past' && styles.segTabOn]} onPress={() => setTab('past')}>
             <Text style={[styles.segText, tab === 'past' && styles.segTextOn]}>История</Text>
-          </Pressable>
+          </PressableScale>
         </View>
       </View>
 
@@ -72,21 +73,21 @@ export default function Bookings() {
                   <View style={{ flex: 1 }} />
                   <Text style={styles.statusText}>Подтверждено</Text>
                 </View>
-                <Pressable style={styles.upcomingBody} onPress={() => router.push(`/salon/${b.business_id}`)}>
+                <PressableScale style={styles.upcomingBody} onPress={() => router.push(`/salon/${b.business_id}`)}>
                   <View style={[styles.thumb, { backgroundColor: tintFor(b.business_id)[0] }]} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.salonName}>{b.businesses?.name}</Text>
                     <Text style={styles.subText}>{b.service_name}</Text>
                   </View>
                   <Text style={styles.priceText}>{b.price} ₼</Text>
-                </Pressable>
+                </PressableScale>
                 <View style={styles.upcomingActions}>
-                  <Pressable style={styles.outlineButton} onPress={() => router.push(`/reschedule/${b.id}`)}>
+                  <PressableScale style={styles.outlineButton} onPress={() => router.push(`/reschedule/${b.id}`)}>
                     <Text style={styles.outlineButtonText}>Перенести</Text>
-                  </Pressable>
-                  <Pressable style={styles.darkButton} onPress={() => router.push(`/salon/${b.business_id}`)}>
+                  </PressableScale>
+                  <PressableScale style={styles.darkButton} onPress={() => router.push(`/salon/${b.business_id}`)}>
                     <Text style={styles.darkButtonText}>Маршрут</Text>
-                  </Pressable>
+                  </PressableScale>
                 </View>
               </View>
             ))
@@ -98,7 +99,7 @@ export default function Bookings() {
             <Text style={styles.emptyText}>Истории пока нет.</Text>
           ) : (
             past.map((b) => (
-              <Pressable key={b.id} style={styles.pastRow} onPress={() => router.push(`/salon/${b.business_id}`)}>
+              <PressableScale key={b.id} style={styles.pastRow} onPress={() => router.push(`/salon/${b.business_id}`)}>
                 <View style={[styles.pastThumb, { backgroundColor: tintFor(b.business_id)[0] }]} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.salonName}>{b.businesses?.name}</Text>
@@ -107,7 +108,7 @@ export default function Bookings() {
                   </Text>
                   <Text style={styles.statusMuted}>{statusLabel(b.status)}</Text>
                 </View>
-              </Pressable>
+              </PressableScale>
             ))
           )}
         </ScrollView>

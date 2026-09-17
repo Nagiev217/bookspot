@@ -4,6 +4,7 @@
 // более ранним/поздним стартом, окно нужно будет считать динамически.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -143,10 +144,10 @@ export default function BusinessCalendar() {
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daysRow}>
           {dateList.map((iso, i) => (
-            <Pressable key={iso} style={[styles.dayChip, dayIdx === i && styles.dayChipOn]} onPress={() => setDayIdx(i)}>
+            <PressableScale key={iso} style={[styles.dayChip, dayIdx === i && styles.dayChipOn]} onPress={() => setDayIdx(i)}>
               <Text style={[styles.dayDow, dayIdx === i && styles.dayTextOn]}>{DOW[dowOf(iso)]}</Text>
               <Text style={[styles.dayNum, dayIdx === i && styles.dayTextOn]}>{iso.slice(8, 10)}</Text>
-            </Pressable>
+            </PressableScale>
           ))}
         </ScrollView>
       </View>

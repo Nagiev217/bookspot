@@ -4,7 +4,7 @@
 // вручную), а точечное закрытие слота — отдельная задача под
 // master_exceptions/custom_hours, ещё не построена.
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '@/utils/auth/store';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -123,9 +123,9 @@ export default function BusinessToday() {
         <Text style={styles.sectionTitle}>
           {showingNextDay ? `Ближайшая запись — ${formatDateLabel(nextDay.date)}` : 'Расписание на сегодня'}
         </Text>
-        <Pressable onPress={() => router.push('/(business-tabs)/calendar')}>
+        <PressableScale onPress={() => router.push('/(business-tabs)/calendar')}>
           <Text style={styles.sectionLink}>Календарь</Text>
-        </Pressable>
+        </PressableScale>
       </View>
 
       {bookings.length === 0 ? (

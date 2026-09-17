@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 import { Link } from 'expo-router';
 import { supabase, IS_SUPABASE_READY } from '@/utils/supabase/config';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -62,9 +63,9 @@ export default function Login() {
 
       {error && <Text style={styles.error}>{error}</Text>}
 
-      <Pressable style={styles.button} onPress={handleLogin} disabled={busy}>
+      <PressableScale style={styles.button} onPress={handleLogin} disabled={busy}>
         {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.buttonText}>Войти</Text>}
-      </Pressable>
+      </PressableScale>
 
       <Link href="/(auth)/register" style={styles.link}>
         Нет аккаунта? Зарегистрироваться

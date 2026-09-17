@@ -2,7 +2,8 @@
 // и режим карты из дизайна остаются заглушкой: нет ни отзывов (рейтинга),
 // ни geo-координат в схеме бизнеса ещё (Фаза 2 концепта).
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useLocalSearchParams, useFocusEffect, router } from 'expo-router';
 import { Map, List as ListIcon, Search as SearchIcon } from 'lucide-react-native';
@@ -79,10 +80,10 @@ export default function Search() {
           />
         </View>
         <Text style={styles.count}>{businesses.length} салон(ов) · Баку</Text>
-        <Pressable style={styles.mapToggle} onPress={() => setMapMode((v) => !v)}>
+        <PressableScale style={styles.mapToggle} onPress={() => setMapMode((v) => !v)}>
           {mapMode ? <ListIcon size={13} color={COLORS.white} /> : <Map size={13} color={COLORS.white} />}
           <Text style={styles.mapToggleText}>{mapMode ? 'Списком' : 'На карте (заглушка)'}</Text>
-        </Pressable>
+        </PressableScale>
       </View>
 
       {loading ? (
@@ -96,7 +97,7 @@ export default function Search() {
           ) : (
             businesses.map((b, i) => (
               <Animated.View key={b.id} entering={reducedMotion ? undefined : FadeIn.duration(220).delay(i * 30)}>
-              <Pressable style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} onPress={() => router.push(`/salon/${b.id}`)}>
+              <PressableScale style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} onPress={() => router.push(`/salon/${b.id}`)}>
                 <View style={[styles.photo, { backgroundColor: tintFor(b.id)[0] }]}>
                   <Text style={styles.photoLabel}>ФОТО</Text>
                 </View>
@@ -109,7 +110,7 @@ export default function Search() {
                     </Text>
                   </View>
                 </View>
-              </Pressable>
+              </PressableScale>
               </Animated.View>
             ))
           )}

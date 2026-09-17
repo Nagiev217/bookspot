@@ -3,7 +3,8 @@
 // не визуальная имитация. Полное редактирование (расписание, будущие
 // выходные, активность) — на экране master/[masterId].
 import { useCallback, useRef, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 import { router, useFocusEffect } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -95,9 +96,9 @@ export default function BusinessTeam() {
     <View style={styles.screen}>
       <View style={styles.header}>
         <Text style={styles.title}>Команда</Text>
-        <Pressable style={styles.addButton} onPress={() => setAddingName((v) => (v === null ? '' : null))}>
+        <PressableScale style={styles.addButton} onPress={() => setAddingName((v) => (v === null ? '' : null))}>
           <Plus size={18} color={COLORS.white} />
-        </Pressable>
+        </PressableScale>
       </View>
 
       {error && <Text style={styles.errorText}>{error}</Text>}
@@ -113,9 +114,9 @@ export default function BusinessTeam() {
               onChangeText={setAddingName}
               autoFocus
             />
-            <Pressable style={styles.addSaveButton} onPress={handleAddMaster} disabled={saving}>
+            <PressableScale style={styles.addSaveButton} onPress={handleAddMaster} disabled={saving}>
               {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.addSaveText}>Добавить</Text>}
-            </Pressable>
+            </PressableScale>
           </View>
         )}
 
@@ -125,7 +126,7 @@ export default function BusinessTeam() {
           masters.map((m) => {
             const isOn = !offToday[m.id];
             return (
-              <Pressable key={m.id} style={styles.card} onPress={() => router.push(`/master/${m.id}`)}>
+              <PressableScale key={m.id} style={styles.card} onPress={() => router.push(`/master/${m.id}`)}>
                 <View style={styles.cardTop}>
                   <View style={[styles.avatar, { backgroundColor: tintFor(m.id)[0] }]} />
                   <View style={{ flex: 1, minWidth: 0 }}>
@@ -134,7 +135,7 @@ export default function BusinessTeam() {
                       {!m.active ? 'Отключён' : isOn ? 'Работает сегодня' : 'Выходной сегодня'}
                     </Text>
                   </View>
-                  <Pressable
+                  <PressableScale
                     disabled={togglingId === m.id}
                     style={[styles.switchTrack, { backgroundColor: isOn ? COLORS.indigo : '#E2E5EC', justifyContent: isOn ? 'flex-end' : 'flex-start' }]}
                     onPress={(e) => {
@@ -143,9 +144,9 @@ export default function BusinessTeam() {
                     }}
                   >
                     {togglingId === m.id ? <ActivityIndicator size="small" color={COLORS.white} /> : <View style={styles.switchKnob} />}
-                  </Pressable>
+                  </PressableScale>
                 </View>
-              </Pressable>
+              </PressableScale>
             );
           })
         )}

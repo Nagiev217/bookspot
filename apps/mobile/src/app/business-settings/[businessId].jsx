@@ -3,7 +3,8 @@
 // бронирования (slot_step_min/buffer_min/cancel_window_hours), которые до
 // сих пор были колонками без единого экрана.
 import { useCallback, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -95,9 +96,9 @@ export default function BusinessSettingsScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
+        <PressableScale style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={17} color={COLORS.ink} />
-        </Pressable>
+        </PressableScale>
         <Text style={styles.title}>Настройки бизнеса</Text>
       </View>
 
@@ -107,13 +108,13 @@ export default function BusinessSettingsScreen() {
         <Text style={styles.label}>Категория</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
           {categories.map((c) => (
-            <Pressable
+            <PressableScale
               key={c.id}
               style={[styles.chip, form.categoryId === c.id && styles.chipActive]}
               onPress={() => setForm((f) => ({ ...f, categoryId: c.id }))}
             >
               <Text style={[styles.chipText, form.categoryId === c.id && styles.chipTextActive]}>{c.name_ru}</Text>
-            </Pressable>
+            </PressableScale>
           ))}
         </ScrollView>
 
@@ -156,9 +157,9 @@ export default function BusinessSettingsScreen() {
         {error && <Text style={styles.error}>{error}</Text>}
         {info && <Text style={styles.info}>{info}</Text>}
 
-        <Pressable style={styles.saveButton} onPress={handleSave} disabled={saving}>
+        <PressableScale style={styles.saveButton} onPress={handleSave} disabled={saving}>
           {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.saveButtonText}>Сохранить</Text>}
-        </Pressable>
+        </PressableScale>
       </ScrollView>
     </View>
   );

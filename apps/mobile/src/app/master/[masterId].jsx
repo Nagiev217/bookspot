@@ -3,7 +3,8 @@
 // расписании — это просто второй интервал в том же дне недели, отдельного
 // типа "custom_hours" для него не нужно.
 import { useCallback, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator, Switch } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Plus, X } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -141,9 +142,9 @@ export default function MasterDetail() {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
+        <PressableScale style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={17} color={COLORS.ink} />
-        </Pressable>
+        </PressableScale>
         <Text style={styles.title}>Мастер</Text>
       </View>
 
@@ -153,9 +154,9 @@ export default function MasterDetail() {
           <Text style={styles.switchLabel}>Активен (принимает записи)</Text>
           <Switch value={active} onValueChange={setActive} trackColor={{ true: COLORS.indigo }} />
         </View>
-        <Pressable style={styles.smallSaveButton} onPress={handleSaveProfile} disabled={saving}>
+        <PressableScale style={styles.smallSaveButton} onPress={handleSaveProfile} disabled={saving}>
           <Text style={styles.smallSaveText}>Сохранить</Text>
-        </Pressable>
+        </PressableScale>
 
         <Text style={styles.sectionTitle}>Расписание по дням недели</Text>
         {Object.keys(week)
@@ -165,9 +166,9 @@ export default function MasterDetail() {
             <View key={dow} style={styles.dayBlock}>
               <View style={styles.dayHeader}>
                 <Text style={styles.dayName}>{DOW[dow]}</Text>
-                <Pressable style={styles.addRangeButton} onPress={() => addRange(dow)}>
+                <PressableScale style={styles.addRangeButton} onPress={() => addRange(dow)}>
                   <Plus size={14} color={COLORS.indigo} />
-                </Pressable>
+                </PressableScale>
               </View>
               {week[dow].length === 0 ? (
                 <Text style={styles.dayOffText}>Выходной</Text>
@@ -177,27 +178,27 @@ export default function MasterDetail() {
                     <TextInput style={styles.timeInput} value={r.start} onChangeText={(v) => updateRange(dow, idx, 'start', v)} placeholder="09:00" />
                     <Text style={styles.rangeDash}>—</Text>
                     <TextInput style={styles.timeInput} value={r.end} onChangeText={(v) => updateRange(dow, idx, 'end', v)} placeholder="18:00" />
-                    <Pressable onPress={() => removeRange(dow, idx)} style={styles.removeRangeButton}>
+                    <PressableScale onPress={() => removeRange(dow, idx)} style={styles.removeRangeButton}>
                       <X size={14} color={COLORS.sub} />
-                    </Pressable>
+                    </PressableScale>
                   </View>
                 ))
               )}
             </View>
           ))}
-        <Pressable style={styles.saveButton} onPress={handleSaveSchedule} disabled={saving}>
+        <PressableScale style={styles.saveButton} onPress={handleSaveSchedule} disabled={saving}>
           {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.saveButtonText}>Сохранить расписание</Text>}
-        </Pressable>
+        </PressableScale>
 
         <Text style={styles.sectionTitle}>Выходные на ближайшие 2 недели</Text>
         <View style={styles.dateGrid}>
           {nextDays.map((iso) => {
             const isOff = daysOff.includes(iso);
             return (
-              <Pressable key={iso} disabled={saving} style={[styles.dateCell, isOff && styles.dateCellOff]} onPress={() => toggleDayOff(iso)}>
+              <PressableScale key={iso} disabled={saving} style={[styles.dateCell, isOff && styles.dateCellOff]} onPress={() => toggleDayOff(iso)}>
                 <Text style={[styles.dateDow, isOff && styles.dateTextOff]}>{DOW[new Date(`${iso}T00:00:00Z`).getUTCDay()]}</Text>
                 <Text style={[styles.dateNum, isOff && styles.dateTextOff]}>{iso.slice(8, 10)}</Text>
-              </Pressable>
+              </PressableScale>
             );
           })}
         </View>

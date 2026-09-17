@@ -2,7 +2,8 @@
 // (модерации в Фазе 0 нет). После успеха роль становится business_owner
 // и index.jsx на следующем заходе отправит в (business-tabs).
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 import { router } from 'expo-router';
 import { createBusiness } from '@/utils/supabase/profile';
 import { listCategories } from '@/utils/supabase/catalog';
@@ -66,9 +67,9 @@ export default function BecomePartner() {
       <Text style={styles.label}>Категория</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
         {categories.map((c) => (
-          <Pressable key={c.id} style={[styles.chip, categoryId === c.id && styles.chipActive]} onPress={() => setCategoryId(c.id)}>
+          <PressableScale key={c.id} style={[styles.chip, categoryId === c.id && styles.chipActive]} onPress={() => setCategoryId(c.id)}>
             <Text style={[styles.chipText, categoryId === c.id && styles.chipTextActive]}>{c.name_ru}</Text>
-          </Pressable>
+          </PressableScale>
         ))}
       </ScrollView>
 
@@ -80,9 +81,9 @@ export default function BecomePartner() {
 
       {error && <Text style={styles.error}>{error}</Text>}
 
-      <Pressable style={styles.button} onPress={handleSubmit} disabled={busy}>
+      <PressableScale style={styles.button} onPress={handleSubmit} disabled={busy}>
         {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.buttonText}>Создать бизнес</Text>}
-      </Pressable>
+      </PressableScale>
     </ScrollView>
   );
 }

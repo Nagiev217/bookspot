@@ -2,7 +2,8 @@
 // Используется в ручной записи бизнеса (manual-booking). booking/[idx].jsx
 // и reschedule/[bookingId].jsx реализуют тот же паттерн инлайн — оставлены
 // как есть, не трогаем уже протестированный рабочий код ради рефакторинга.
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 
 const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
@@ -34,7 +35,7 @@ export default function DateTimeGrid({ loading, availability, selectedDate, onSe
           const off = count === 0;
           const on = selectedDate === iso;
           return (
-            <Pressable
+            <PressableScale
               key={iso}
               disabled={off}
               style={[styles.dateCell, on && styles.dateCellActive, off && styles.dateCellOff]}
@@ -42,7 +43,7 @@ export default function DateTimeGrid({ loading, availability, selectedDate, onSe
             >
               <Text style={[styles.dateDow, on && styles.dateTextActive]}>{DOW[dowOf(iso)]}</Text>
               <Text style={[styles.dateNum, on && styles.dateTextActive, off && styles.dateTextOff]}>{iso.slice(8, 10)}</Text>
-            </Pressable>
+            </PressableScale>
           );
         })}
       </View>
@@ -55,9 +56,9 @@ export default function DateTimeGrid({ loading, availability, selectedDate, onSe
           {timesForSelected.map((t) => {
             const on = time === t;
             return (
-              <Pressable key={t} style={[styles.timeSlot, on && styles.timeSlotActive]} onPress={() => onSelectTime(t)}>
+              <PressableScale key={t} style={[styles.timeSlot, on && styles.timeSlotActive]} onPress={() => onSelectTime(t)}>
                 <Text style={[styles.timeText, on && styles.timeTextActive]}>{t}</Text>
-              </Pressable>
+              </PressableScale>
             );
           })}
         </View>

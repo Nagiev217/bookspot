@@ -2,7 +2,7 @@
 // дата/время из get_availability, запись — через create_booking (RPC,
 // EXCLUDE-constraint на bookings защищает от двойного бронирования).
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Check } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -172,9 +172,9 @@ export default function Booking() {
     <View style={styles.screen}>
       <View style={styles.headerBar}>
         <View style={styles.headerRow}>
-          <Pressable style={styles.backButton} onPress={stepBack}>
+          <PressableScale style={styles.backButton} onPress={stepBack}>
             <ArrowLeft size={17} color={COLORS.ink} />
-          </Pressable>
+          </PressableScale>
           <View style={{ flex: 1 }}>
             <Text style={styles.stepTitle}>{STEP_TITLES[step - 1]}</Text>
             <Text style={styles.stepSub}>
@@ -195,13 +195,13 @@ export default function Booking() {
         {step === 1 && (
           <View style={{ gap: SPACING.sm }}>
             {services.map((v, i) => (
-              <Pressable key={v.id} style={[styles.row, serviceIdx === i && styles.rowActive]} onPress={() => setServiceIdx(i)}>
+              <PressableScale key={v.id} style={[styles.row, serviceIdx === i && styles.rowActive]} onPress={() => setServiceIdx(i)}>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.rowName}>{v.name}</Text>
                   <Text style={styles.rowSub}>{v.duration_min} мин</Text>
                 </View>
                 <Text style={styles.rowPrice}>{v.price} ₼</Text>
-              </Pressable>
+              </PressableScale>
             ))}
           </View>
         )}
@@ -212,12 +212,12 @@ export default function Booking() {
               <Text style={styles.rowSub}>В этом салоне пока нет мастеров.</Text>
             ) : (
               masters.map((m, i) => (
-                <Pressable key={m.id} style={[styles.row, masterIdx === i && styles.rowActive]} onPress={() => setMasterIdx(i)}>
+                <PressableScale key={m.id} style={[styles.row, masterIdx === i && styles.rowActive]} onPress={() => setMasterIdx(i)}>
                   <View style={[styles.masterThumb, { backgroundColor: tintFor(m.id)[0] }]} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.rowName}>{m.name}</Text>
                   </View>
-                </Pressable>
+                </PressableScale>
               ))
             )}
           </View>
@@ -235,7 +235,7 @@ export default function Booking() {
                 const off = count === 0;
                 const on = selectedDate === iso;
                 return (
-                  <Pressable
+                  <PressableScale
                     key={iso}
                     disabled={off}
                     style={[styles.dateCell, on && styles.dateCellActive, off && styles.dateCellOff]}
@@ -249,7 +249,7 @@ export default function Booking() {
                     <Text style={[styles.dateFree, on && styles.dateTextActive, off && styles.dateTextOff]}>
                       {off ? '—' : `${count} слот${count === 1 ? '' : count < 5 ? 'а' : 'ов'}`}
                     </Text>
-                  </Pressable>
+                  </PressableScale>
                 );
               })}
             </View>
@@ -263,9 +263,9 @@ export default function Booking() {
               {timesForSelected.map((t) => {
                 const on = time === t;
                 return (
-                  <Pressable key={t} style={[styles.timeSlot, on && styles.timeSlotActive]} onPress={() => setTime(t)}>
+                  <PressableScale key={t} style={[styles.timeSlot, on && styles.timeSlotActive]} onPress={() => setTime(t)}>
                     <Text style={[styles.timeText, on && styles.timeTextActive]}>{t}</Text>
-                  </Pressable>
+                  </PressableScale>
                 );
               })}
             </View>

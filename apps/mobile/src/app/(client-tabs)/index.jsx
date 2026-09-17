@@ -3,7 +3,8 @@
 // только после getAvailability (RPC для генерации слотов ещё не написан,
 // shared/slots.js существует, но не подключён к Postgres).
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { Search } from 'lucide-react-native';
@@ -53,10 +54,10 @@ export default function Home() {
         <View style={styles.avatarPlaceholder} />
       </View>
 
-      <Pressable style={styles.searchBar} onPress={() => router.push('/(client-tabs)/search')}>
+      <PressableScale style={styles.searchBar} onPress={() => router.push('/(client-tabs)/search')}>
         <Search size={18} color={COLORS.sub} />
         <Text style={styles.searchPlaceholder}>Услуга, салон или мастер</Text>
-      </Pressable>
+      </PressableScale>
 
       {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -68,7 +69,7 @@ export default function Home() {
             {categories.map((c) => {
               const Icon = iconFor(c.id);
               return (
-                <Pressable
+                <PressableScale
                   key={c.id}
                   style={styles.catItem}
                   onPress={() => router.push({ pathname: '/(client-tabs)/search', params: { categoryId: c.id, title: c.name_ru } })}
@@ -77,16 +78,16 @@ export default function Home() {
                     <Icon size={24} color={COLORS.indigo} strokeWidth={1.6} />
                   </View>
                   <Text style={styles.catName}>{c.name_ru}</Text>
-                </Pressable>
+                </PressableScale>
               );
             })}
           </ScrollView>
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Салоны</Text>
-            <Pressable onPress={() => router.push({ pathname: '/(client-tabs)/search', params: { title: 'Все салоны' } })}>
+            <PressableScale onPress={() => router.push({ pathname: '/(client-tabs)/search', params: { title: 'Все салоны' } })}>
               <Text style={styles.sectionLink}>Все</Text>
-            </Pressable>
+            </PressableScale>
           </View>
 
           {businesses.length === 0 ? (
@@ -95,7 +96,7 @@ export default function Home() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandRow}>
               {businesses.map((b, i) => (
                 <Animated.View key={b.id} entering={reducedMotion ? undefined : FadeIn.duration(220).delay(i * 30)}>
-                  <Pressable
+                  <PressableScale
                     style={({ pressed }) => [styles.brandCard, pressed && styles.cardPressed]}
                     onPress={() => router.push(`/salon/${b.id}`)}
                   >
@@ -107,7 +108,7 @@ export default function Home() {
                       {b.city}
                       {b.district ? ` · ${b.district}` : ''}
                     </Text>
-                  </Pressable>
+                  </PressableScale>
                 </Animated.View>
               ))}
             </ScrollView>

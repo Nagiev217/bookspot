@@ -2,7 +2,8 @@
 // reschedule_booking (сохраняет исходную длительность услуги, EXCLUDE
 // constraint защищает от переноса на уже занятое время).
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -130,9 +131,9 @@ export default function Reschedule() {
     <View style={styles.screen}>
       <View style={styles.headerBar}>
         <View style={styles.headerRow}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <PressableScale style={styles.backButton} onPress={() => router.back()}>
             <ArrowLeft size={17} color={COLORS.ink} />
-          </Pressable>
+          </PressableScale>
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>Перенести запись</Text>
             <Text style={styles.sub}>{booking.service_name}</Text>
@@ -154,7 +155,7 @@ export default function Reschedule() {
                 const off = count === 0;
                 const on = selectedDate === iso;
                 return (
-                  <Pressable
+                  <PressableScale
                     key={iso}
                     disabled={off}
                     style={[styles.dateCell, on && styles.dateCellActive, off && styles.dateCellOff]}
@@ -165,7 +166,7 @@ export default function Reschedule() {
                   >
                     <Text style={[styles.dateDow, on && styles.dateTextActive]}>{DOW[dowOf(iso)]}</Text>
                     <Text style={[styles.dateNum, on && styles.dateTextActive, off && styles.dateTextOff]}>{iso.slice(8, 10)}</Text>
-                  </Pressable>
+                  </PressableScale>
                 );
               })}
             </View>
@@ -178,9 +179,9 @@ export default function Reschedule() {
                 {timesForSelected.map((t) => {
                   const on = time === t;
                   return (
-                    <Pressable key={t} style={[styles.timeSlot, on && styles.timeSlotActive]} onPress={() => setTime(t)}>
+                    <PressableScale key={t} style={[styles.timeSlot, on && styles.timeSlotActive]} onPress={() => setTime(t)}>
                       <Text style={[styles.timeText, on && styles.timeTextActive]}>{t}</Text>
-                    </Pressable>
+                    </PressableScale>
                   );
                 })}
               </View>
@@ -190,12 +191,12 @@ export default function Reschedule() {
       </ScrollView>
 
       <View style={styles.ctaBar}>
-        <Pressable style={[styles.ctaButton, (!time || saving) && styles.ctaButtonOff]} disabled={!time || saving} onPress={handleSave}>
+        <PressableScale style={[styles.ctaButton, (!time || saving) && styles.ctaButtonOff]} disabled={!time || saving} onPress={handleSave}>
           {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.ctaText}>Перенести на выбранное время</Text>}
-        </Pressable>
-        <Pressable style={styles.cancelButton} disabled={cancelling} onPress={handleCancel}>
+        </PressableScale>
+        <PressableScale style={styles.cancelButton} disabled={cancelling} onPress={handleCancel}>
           {cancelling ? <ActivityIndicator color={COLORS.danger} /> : <Text style={styles.cancelText}>Отменить запись</Text>}
-        </Pressable>
+        </PressableScale>
       </View>
     </View>
   );

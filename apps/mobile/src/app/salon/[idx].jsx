@@ -1,7 +1,7 @@
 // Страница салона — реальные данные из Supabase (businesses/services/masters).
 // [idx] теперь принимает uuid бизнеса, а не индекс мок-массива.
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Heart } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -79,13 +79,13 @@ export default function SalonDetail() {
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={{ paddingBottom: 104 }}>
         <View style={[styles.hero, { backgroundColor: tint[0] }]}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <PressableScale style={styles.backButton} onPress={() => router.back()}>
             <ArrowLeft size={17} color={COLORS.ink} />
-          </Pressable>
+          </PressableScale>
           {uid && (
-            <Pressable style={styles.favButton} onPress={toggleFavorite}>
+            <PressableScale style={styles.favButton} onPress={toggleFavorite}>
               <Heart size={18} color={favorite ? COLORS.danger : COLORS.ink} fill={favorite ? COLORS.danger : 'transparent'} />
-            </Pressable>
+            </PressableScale>
           )}
         </View>
 
@@ -112,7 +112,7 @@ export default function SalonDetail() {
           ) : (
             <View style={{ gap: SPACING.sm }}>
               {services.map((v) => (
-                <Pressable
+                <PressableScale
                   key={v.id}
                   style={styles.serviceRow}
                   onPress={() => router.push({ pathname: `/booking/${business.id}`, params: { serviceId: v.id } })}
@@ -122,7 +122,7 @@ export default function SalonDetail() {
                     <Text style={styles.serviceDur}>{v.duration_min} мин</Text>
                   </View>
                   <Text style={styles.servicePrice}>{v.price} ₼</Text>
-                </Pressable>
+                </PressableScale>
               ))}
             </View>
           )}

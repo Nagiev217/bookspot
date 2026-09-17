@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 import { Link, router } from 'expo-router';
 import { supabase } from '@/utils/supabase/config';
 import { getMyProfile } from '@/utils/supabase/profile';
@@ -90,22 +91,22 @@ export default function Register() {
 
       <View style={styles.langRow}>
         {LANGS.map((l) => (
-          <Pressable
+          <PressableScale
             key={l.code}
             style={[styles.langChip, lang === l.code && styles.langChipActive]}
             onPress={() => setLang(l.code)}
           >
             <Text style={[styles.langChipText, lang === l.code && styles.langChipTextActive]}>{l.label}</Text>
-          </Pressable>
+          </PressableScale>
         ))}
       </View>
 
       {error && <Text style={styles.error}>{error}</Text>}
       {info && <Text style={styles.info}>{info}</Text>}
 
-      <Pressable style={styles.button} onPress={handleRegister} disabled={busy}>
+      <PressableScale style={styles.button} onPress={handleRegister} disabled={busy}>
         {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.buttonText}>Зарегистрироваться</Text>}
-      </Pressable>
+      </PressableScale>
 
       <Link href="/(auth)/login" style={styles.link}>
         Уже есть аккаунт? Войти

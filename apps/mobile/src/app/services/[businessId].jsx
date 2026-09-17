@@ -2,7 +2,8 @@
 // одном экране (не отдельный роут на форму: полей мало, лишний переход
 // туда-обратно ничего не даёт).
 import { useCallback, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator, Switch } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -105,13 +106,13 @@ export default function ServicesScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
+        <PressableScale style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={17} color={COLORS.ink} />
-        </Pressable>
+        </PressableScale>
         <Text style={styles.title}>Услуги</Text>
-        <Pressable style={styles.addButton} onPress={() => setForm(emptyForm)}>
+        <PressableScale style={styles.addButton} onPress={() => setForm(emptyForm)}>
           <Plus size={18} color={COLORS.white} />
-        </Pressable>
+        </PressableScale>
       </View>
 
       {loading ? (
@@ -124,7 +125,7 @@ export default function ServicesScreen() {
             <Text style={styles.emptyText}>Пока нет ни одной услуги — добавьте первую.</Text>
           ) : (
             services.map((s) => (
-              <Pressable key={s.id} style={styles.row} onPress={() => openEdit(s)}>
+              <PressableScale key={s.id} style={styles.row} onPress={() => openEdit(s)}>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={[styles.rowName, !s.active && styles.rowNameOff]}>{s.name}</Text>
                   <Text style={styles.rowMeta}>
@@ -132,7 +133,7 @@ export default function ServicesScreen() {
                   </Text>
                 </View>
                 <Text style={styles.rowPrice}>{s.price} ₼</Text>
-              </Pressable>
+              </PressableScale>
             ))
           )}
 
@@ -172,10 +173,10 @@ export default function ServicesScreen() {
               ) : (
                 <View style={{ gap: SPACING.sm }}>
                   {masters.map((m) => (
-                    <Pressable key={m.id} style={styles.masterRow} onPress={() => toggleFormMaster(m.id)}>
+                    <PressableScale key={m.id} style={styles.masterRow} onPress={() => toggleFormMaster(m.id)}>
                       <View style={[styles.checkbox, form.masterIds.includes(m.id) && styles.checkboxOn]} />
                       <Text style={styles.masterName}>{m.name}</Text>
-                    </Pressable>
+                    </PressableScale>
                   ))}
                 </View>
               )}
@@ -184,16 +185,16 @@ export default function ServicesScreen() {
 
               <View style={styles.formButtons}>
                 {form.id && (
-                  <Pressable style={styles.deleteButton} onPress={() => handleDelete(form.id)} disabled={saving}>
+                  <PressableScale style={styles.deleteButton} onPress={() => handleDelete(form.id)} disabled={saving}>
                     <Trash2 size={16} color={COLORS.danger} />
-                  </Pressable>
+                  </PressableScale>
                 )}
-                <Pressable style={styles.cancelButton} onPress={() => setForm(null)} disabled={saving}>
+                <PressableScale style={styles.cancelButton} onPress={() => setForm(null)} disabled={saving}>
                   <Text style={styles.cancelButtonText}>Отмена</Text>
-                </Pressable>
-                <Pressable style={styles.saveButton} onPress={handleSave} disabled={saving}>
+                </PressableScale>
+                <PressableScale style={styles.saveButton} onPress={handleSave} disabled={saving}>
                   {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.saveButtonText}>Сохранить</Text>}
-                </Pressable>
+                </PressableScale>
               </View>
             </View>
           )}

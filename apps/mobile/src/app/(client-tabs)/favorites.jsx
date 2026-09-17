@@ -2,7 +2,8 @@
 // Карточка — тот же стиль, что и в search.jsx (переиспользовать компонент
 // пока не стоит: два места, разница только в источнике данных).
 import { useCallback, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -64,7 +65,7 @@ export default function Favorites() {
         <ScrollView contentContainerStyle={styles.list}>
           {businesses.map((b, i) => (
             <Animated.View key={b.id} entering={reducedMotion ? undefined : FadeIn.duration(220).delay(i * 30)}>
-              <Pressable style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} onPress={() => router.push(`/salon/${b.id}`)}>
+              <PressableScale style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} onPress={() => router.push(`/salon/${b.id}`)}>
                 <View style={[styles.photo, { backgroundColor: tintFor(b.id)[0] }]}>
                   <Text style={styles.photoLabel}>ФОТО</Text>
                 </View>
@@ -73,7 +74,7 @@ export default function Favorites() {
                   {b.city}
                   {b.district ? ` · ${b.district}` : ''}
                 </Text>
-              </Pressable>
+              </PressableScale>
             </Animated.View>
           ))}
         </ScrollView>

@@ -2,7 +2,8 @@
 // Та же услуга→мастер→дата→время последовательность, что в booking flow
 // клиента, плюс форма имени/телефона в конце.
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TextInput } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -113,9 +114,9 @@ export default function ManualBooking() {
   return (
     <View style={styles.screen}>
       <View style={styles.headerBar}>
-        <Pressable style={styles.backButton} onPress={() => (step === 1 ? router.back() : setStep((s) => s - 1))}>
+        <PressableScale style={styles.backButton} onPress={() => (step === 1 ? router.back() : setStep((s) => s - 1))}>
           <ArrowLeft size={17} color={COLORS.ink} />
-        </Pressable>
+        </PressableScale>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>Запись вручную</Text>
           <Text style={styles.sub}>
@@ -130,17 +131,17 @@ export default function ManualBooking() {
         {step === 1 && (
           <View style={{ gap: SPACING.sm }}>
             {services.map((v, i) => (
-              <Pressable key={v.id} style={[styles.row, serviceIdx === i && styles.rowActive]} onPress={() => setServiceIdx(i)}>
+              <PressableScale key={v.id} style={[styles.row, serviceIdx === i && styles.rowActive]} onPress={() => setServiceIdx(i)}>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.rowName}>{v.name}</Text>
                   <Text style={styles.rowSub}>{v.duration_min} мин</Text>
                 </View>
                 <Text style={styles.rowPrice}>{v.price} ₼</Text>
-              </Pressable>
+              </PressableScale>
             ))}
-            <Pressable style={styles.nextButton} onPress={() => setStep(2)}>
+            <PressableScale style={styles.nextButton} onPress={() => setStep(2)}>
               <Text style={styles.nextButtonText}>Далее</Text>
-            </Pressable>
+            </PressableScale>
           </View>
         )}
 
@@ -150,15 +151,15 @@ export default function ManualBooking() {
               <Text style={styles.rowSub}>Нет мастеров.</Text>
             ) : (
               masters.map((m, i) => (
-                <Pressable key={m.id} style={[styles.row, masterIdx === i && styles.rowActive]} onPress={() => setMasterIdx(i)}>
+                <PressableScale key={m.id} style={[styles.row, masterIdx === i && styles.rowActive]} onPress={() => setMasterIdx(i)}>
                   <View style={[styles.masterThumb, { backgroundColor: tintFor(m.id)[0] }]} />
                   <Text style={styles.rowName}>{m.name}</Text>
-                </Pressable>
+                </PressableScale>
               ))
             )}
-            <Pressable style={[styles.nextButton, masterIdx === null && styles.nextButtonOff]} disabled={masterIdx === null} onPress={goToTimeStep}>
+            <PressableScale style={[styles.nextButton, masterIdx === null && styles.nextButtonOff]} disabled={masterIdx === null} onPress={goToTimeStep}>
               <Text style={styles.nextButtonText}>Далее</Text>
-            </Pressable>
+            </PressableScale>
           </View>
         )}
 
@@ -175,9 +176,9 @@ export default function ManualBooking() {
               time={time}
               onSelectTime={setTime}
             />
-            <Pressable style={[styles.nextButton, !time && styles.nextButtonOff]} disabled={!time} onPress={() => setStep(4)}>
+            <PressableScale style={[styles.nextButton, !time && styles.nextButtonOff]} disabled={!time} onPress={() => setStep(4)}>
               <Text style={styles.nextButtonText}>Далее</Text>
-            </Pressable>
+            </PressableScale>
           </View>
         )}
 
@@ -198,9 +199,9 @@ export default function ManualBooking() {
               value={clientPhone}
               onChangeText={setClientPhone}
             />
-            <Pressable style={styles.nextButton} disabled={saving} onPress={handleSubmit}>
+            <PressableScale style={styles.nextButton} disabled={saving} onPress={handleSubmit}>
               {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.nextButtonText}>Создать запись</Text>}
-            </Pressable>
+            </PressableScale>
           </View>
         )}
       </ScrollView>
