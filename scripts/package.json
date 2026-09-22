@@ -4,6 +4,7 @@
   "scripts": {
     "seed": "node --env-file=.env seed.js",
     "seed-baku": "node --env-file=.env seed-baku-salons.js",
+    "add-photos": "node --env-file=.env add-category-photos.js",
     "verify-booking": "node --env-file=.env verify-booking.js",
     "verify-selfserve": "node --env-file=.env verify-selfserve.js"
   },
