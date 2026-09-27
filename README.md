@@ -1,221 +1,221 @@
 # SalonHub
 
-**Онлайн-запись в салоны Баку — только на реально свободное время.**
+**Online booking for Baku salons — only genuinely free time slots.**
 
-SalonHub — мобильное приложение-маркетплейс для салонов красоты и барбершопов Баку. Клиент находит салон, выбирает услугу, мастера и время, которое действительно свободно, и получает подтверждение пушем. Салон видит запись сразу в своём календаре — в том же приложении, в бизнес-режиме.
+SalonHub is a mobile marketplace for beauty salons and barbershops in Baku. A client finds a salon, picks a service, a master and a time that is actually free, and gets a push confirmation. The salon sees the booking straight away in its own calendar — in the same app, in business mode.
 
-> Рабочее название в коде и в имени репозитория — **BookSpot**; SalonHub — название продукта для релиза.
+> The working name in the code and in the repository is **BookSpot**; SalonHub is the product name for release.
 
 <p align="center">
   <a href="docs/media/salonhub-promo.mp4">
-    <img src="docs/media/salonhub-promo.jpg" alt="Промо-видео SalonHub — нажмите, чтобы посмотреть" width="300">
+    <img src="docs/media/salonhub-promo.jpg" alt="SalonHub promo video — click to watch" width="300">
   </a>
   <br>
-  <sub>▶ Промо-ролик (20 сек, 1080×1920) — нажмите на картинку</sub>
+  <sub>▶ Promo video (20 s, 1080×1920) — click the image</sub>
 </p>
 
 ---
 
-## Содержание
+## Contents
 
-- [Зачем это нужно](#зачем-это-нужно)
-- [Что умеет приложение](#что-умеет-приложение)
-- [Технологии](#технологии)
-- [Как устроено](#как-устроено)
-- [Структура репозитория](#структура-репозитория)
-- [Запуск](#запуск)
-- [База данных и миграции](#база-данных-и-миграции)
-- [Push-уведомления](#push-уведомления)
-- [Проверочные скрипты](#проверочные-скрипты)
-- [Соглашения проекта](#соглашения-проекта)
-- [Статус и что осталось до релиза](#статус-и-что-осталось-до-релиза)
+- [Why it exists](#why-it-exists)
+- [Features](#features)
+- [Tech stack](#tech-stack)
+- [How it works](#how-it-works)
+- [Repository structure](#repository-structure)
+- [Getting started](#getting-started)
+- [Database and migrations](#database-and-migrations)
+- [Push notifications](#push-notifications)
+- [Verification scripts](#verification-scripts)
+- [Project conventions](#project-conventions)
+- [Status and release checklist](#status-and-release-checklist)
 
 ---
 
-## Зачем это нужно
+## Why it exists
 
-Сегодня запись в салон в Баку — это звонок, «перезвоните позже» и переписка в мессенджере. SalonHub меняет модель:
+Booking a salon in Baku today means a phone call, "call back later" and chatting in a messenger. SalonHub changes that:
 
-- **для клиента** — «найди свободное время, а не просто салон»: приложение показывает только те слоты, в которые мастер действительно может принять, с учётом его расписания, выходных и уже занятых записей;
-- **для салона** — «заполни расписание, а не просто получи заявку»: запись сразу попадает в календарь, неявки и завершённые визиты отмечаются в пару тапов, а отзывы клиентов формируют рейтинг.
+- **for clients** — "find free time, not just a salon": the app shows only the slots a master can really take, based on their schedule, days off and existing bookings;
+- **for salons** — "fill the schedule, not just collect requests": bookings land in the calendar instantly, no-shows and completed visits are marked in a couple of taps, and client reviews build the salon's rating.
 
-Подробная продуктовая концепция, дорожная карта и модель монетизации — в [`product-concept.md`](product-concept.md).
+The full product concept, roadmap and monetization model are in [`product-concept.md`](product-concept.md) (in Russian).
 
-## Что умеет приложение
+## Features
 
-Одно приложение, два режима. Любой пользователь — клиент; если у аккаунта есть бизнес, в профиле появляется переключатель **Client ⇄ Business**.
+One app, two modes. Every user is a client; if the account owns a business, a **Client ⇄ Business** switch appears in the profile.
 
-### Клиент
+### Client
 
-| Возможность | Где в коде |
+| Feature | Where in the code |
 |---|---|
-| Каталог салонов по категориям (Barber, Beauty, Nails, Lashes, Massage, Tattoo), поиск по названию и услуге | `(client-tabs)/index.jsx`, `search.jsx` |
-| **Гостевой просмотр** — каталог и свободное время доступны без регистрации | `0014_guest_catalog.sql`, `SignInPrompt.jsx` |
-| Страница салона: фото, услуги с ценой и длительностью, мастера, рейтинг и отзывы | `salon/[idx].jsx` |
-| Запись в 4 шага: услуга → мастер → дата → время (только реально свободные слоты) | `booking/[idx].jsx` |
-| Перенос и отмена записи (с учётом окна отмены салона) | `reschedule/[bookingId].jsx` |
-| «Мои записи»: предстоящие и история | `(client-tabs)/bookings.jsx` |
-| **Отзывы** — оценка 1–5 и комментарий, только после завершённого визита, редактирование своего отзыва | `review/[bookingId].jsx`, `0019_reviews.sql` |
-| Избранные салоны | `(client-tabs)/favorites.jsx` |
-| Push: подтверждение записи, напоминание за 2 часа, отмена | `utils/notifications.js`, `0018_push_outbox.sql` |
-| Удаление аккаунта (требование App Store 5.1.1(v)) — брони обезличиваются, а не удаляются | `ProfileScreen.jsx`, `0013_delete_account.sql` |
-| Политика конфиденциальности и условия использования | `utils/legal.js`, `docs/legal/` |
+| Salon catalog by category (Barber, Beauty, Nails, Lashes, Massage, Tattoo), search by name or service | `(client-tabs)/index.jsx`, `search.jsx` |
+| **Guest browsing** — the catalog and free slots are available without signing up | `0014_guest_catalog.sql`, `SignInPrompt.jsx` |
+| Salon page: photos, services with price and duration, masters, rating and reviews | `salon/[idx].jsx` |
+| Booking in 4 steps: service → master → date → time (only genuinely free slots) | `booking/[idx].jsx` |
+| Rescheduling and cancelling (respecting the salon's cancellation window) | `reschedule/[bookingId].jsx` |
+| "My bookings": upcoming and history | `(client-tabs)/bookings.jsx` |
+| **Reviews** — 1–5 rating and a comment, only after a completed visit, editable by the author | `review/[bookingId].jsx`, `0019_reviews.sql` |
+| Favorite salons | `(client-tabs)/favorites.jsx` |
+| Push: booking confirmation, 2-hour reminder, cancellation | `utils/notifications.js`, `0018_push_outbox.sql` |
+| Account deletion (App Store guideline 5.1.1(v)) — bookings are anonymized, not deleted | `ProfileScreen.jsx`, `0013_delete_account.sql` |
+| Privacy policy and terms of use | `utils/legal.js`, `docs/legal/` |
 
-### Бизнес (владелец салона)
+### Business (salon owner)
 
-| Возможность | Где в коде |
+| Feature | Where in the code |
 |---|---|
-| Самостоятельная регистрация салона («Стать партнёром») | `(client-tabs)/become-partner.jsx` |
-| Календарь: день по мастерам, неделя с выручкой, **история визитов** | `(business-tabs)/calendar.jsx` |
-| Отметка визита: «Пришёл» / «Не пришёл» | `0015_booking_lifecycle.sql` |
-| Ручная запись клиента «по звонку» | `manual-booking/[businessId].jsx` |
-| Услуги, мастера, недельное расписание и выходные мастеров | `services/…`, `master/[masterId].jsx`, `(business-tabs)/team.jsx` |
-| Фото салона и мастеров (Supabase Storage) | `business-settings/[businessId].jsx` |
-| Push «Новая запись» | `0018_push_outbox.sql` |
+| Self-service salon registration ("Become a partner") | `(client-tabs)/become-partner.jsx` |
+| Calendar: day view by master, week view with revenue, **visit history** | `(business-tabs)/calendar.jsx` |
+| Marking a visit: "Showed up" / "No-show" | `0015_booking_lifecycle.sql` |
+| Manual booking for phone-in clients | `manual-booking/[businessId].jsx` |
+| Services, masters, weekly schedules and masters' days off | `services/…`, `master/[masterId].jsx`, `(business-tabs)/team.jsx` |
+| Salon and master photos (Supabase Storage) | `business-settings/[businessId].jsx` |
+| "New booking" push | `0018_push_outbox.sql` |
 
-## Технологии
+## Tech stack
 
-| Слой | Что используется |
+| Layer | What is used |
 |---|---|
-| Мобильное приложение | **Expo SDK 57**, React Native 0.86, expo-router (файловая навигация), Zustand, Reanimated, expo-image, lucide-react-native, шрифт Manrope |
-| Бэкенд | **Supabase**: Postgres, Row Level Security, SECURITY DEFINER RPC, Storage, Edge Functions (Deno), `pg_cron` + `pg_net`, Vault |
-| Push | Expo Push API (через Edge Function `push-dispatch`) |
-| Сборка и публикация | EAS Build / Submit (`apps/mobile/eas.json`) |
+| Mobile app | **Expo SDK 57**, React Native 0.86, expo-router (file-based routing), Zustand, Reanimated, expo-image, lucide-react-native, Manrope font |
+| Backend | **Supabase**: Postgres, Row Level Security, SECURITY DEFINER RPCs, Storage, Edge Functions (Deno), `pg_cron` + `pg_net`, Vault |
+| Push | Expo Push API (via the `push-dispatch` Edge Function) |
+| Build and release | EAS Build / Submit (`apps/mobile/eas.json`) |
 
-## Как устроено
+## How it works
 
-### Бронирование — ядро системы
+### Booking — the core of the system
 
-Вся логика доступности и записи живёт **на сервере**, клиент только показывает результат:
+All availability and booking logic lives **on the server**; the client only displays the result:
 
-- **`get_availability`** считает свободные слоты мастера: рабочие часы (`master_schedule`) с учётом исключений (`master_exceptions` — выходной или особые часы), минус уже подтверждённые брони и буфер между визитами. Арифметика — на `int4multirange` в Postgres.
-- **Двойное бронирование невозможно на уровне БД**: `EXCLUDE USING gist (master_id WITH =, during WITH &&) WHERE (status = 'confirmed')`. Если два клиента нажали на один слот одновременно, второй получит понятную ошибку, а не дубль.
-- **Все записи в `bookings` — только через RPC** (`create_booking`, `reschedule_booking`, `cancel_booking`, `create_manual_booking`, `complete_booking`). Прямая запись с клиента запрещена политиками RLS.
-- **Серверная проверка слота** (`assert_slot_bookable`, миграция `0016`): нельзя записаться в прошлое, в нерабочее время, в выходной мастера или к мастеру, который не делает эту услугу — даже если вызвать RPC напрямую в обход интерфейса.
-- **Защита от злоупотреблений**: не больше 3 активных записей клиента в одном салоне, повторная отправка того же запроса возвращает уже созданную бронь.
+- **`get_availability`** computes a master's free slots: working hours (`master_schedule`) adjusted by exceptions (`master_exceptions` — a day off or custom hours), minus confirmed bookings and the buffer between visits. The math uses Postgres `int4multirange`.
+- **Double booking is impossible at the database level**: `EXCLUDE USING gist (master_id WITH =, during WITH &&) WHERE (status = 'confirmed')`. If two clients tap the same slot at the same moment, the second one gets a clear error instead of a duplicate.
+- **All writes to `bookings` go through RPCs only** (`create_booking`, `reschedule_booking`, `cancel_booking`, `create_manual_booking`, `complete_booking`). Direct client writes are blocked by RLS policies.
+- **Server-side slot validation** (`assert_slot_bookable`, migration `0016`): you can't book in the past, outside working hours, on a master's day off, or with a master who doesn't offer the service — even by calling the RPC directly and bypassing the UI.
+- **Abuse protection**: at most 3 active bookings per client per salon; re-sending the same request returns the already created booking.
 
-### Права доступа
+### Access control
 
-- RLS включён на всех таблицах. Клиент видит только свои брони, участник бизнеса — брони своего бизнеса.
-- «Статусные» поля защищены триггерами: пользователь не может сам поднять себе роль, `phone_verified`, сменить статус или владельца бизнеса.
-- `service_role` ключ используется только в серверных скриптах и Edge Function — никогда в приложении.
+- RLS is enabled on every table. A client sees only their own bookings; a business member sees their business's bookings.
+- "Status" fields are protected by triggers: a user can't raise their own role or `phone_verified`, or change a business's status or owner.
+- The `service_role` key is used only in server scripts and the Edge Function — never in the app.
 
-### Часовой пояс
+### Time zone
 
-Азербайджан — UTC+4 без перехода на летнее время. Сервер считает через `'Asia/Baku'`, клиент — вручную (`+4 * 3600000`), потому что в React Native нет надёжной базы IANA-таймзон.
+Azerbaijan is UTC+4 with no daylight saving time. The server uses `'Asia/Baku'`; the client computes it manually (`+4 * 3600000`), because React Native has no reliable IANA time zone database.
 
-## Структура репозитория
+## Repository structure
 
 ```
-apps/mobile/            Expo-приложение
-  src/app/              экраны (expo-router): (client-tabs), (business-tabs), (auth),
+apps/mobile/            Expo app
+  src/app/              screens (expo-router): (client-tabs), (business-tabs), (auth),
                         booking, salon, review, reschedule, manual-booking, …
-  src/components/       общие компоненты (PressableScale, StarBadge, OfflineBanner, …)
-  src/utils/supabase/   обёртки над запросами и RPC (catalog, booking, business, reviews, …)
-  src/theme/tokens.js   единственное место с дизайн-токенами
-  eas.json              профили сборки EAS
+  src/components/       shared components (PressableScale, StarBadge, OfflineBanner, …)
+  src/utils/supabase/   query and RPC wrappers (catalog, booking, business, reviews, …)
+  src/theme/tokens.js   the single place for design tokens
+  eas.json              EAS build profiles
 supabase/
-  migrations/           схема БД, RLS, RPC — применяются строго по номеру файла
-  functions/push-dispatch/  Edge Function рассылки push-уведомлений
-scripts/                сид, очистка демо-данных и проверочные скрипты (обычный node)
+  migrations/           DB schema, RLS, RPCs — applied strictly in file-number order
+  functions/push-dispatch/  push notification Edge Function
+scripts/                seeding, demo cleanup and verification scripts (plain Node)
 docs/
-  legal/                политика конфиденциальности и условия использования
-  media/                промо-видео
-product-concept.md      продуктовая концепция и дорожная карта
+  legal/                privacy policy and terms of use
+  media/                promo video
+product-concept.md      product concept and roadmap
 ```
 
-## Запуск
+## Getting started
 
 ```bash
 cd apps/mobile
 npm install
-cp .env.example .env   # заполнить EXPO_PUBLIC_SUPABASE_URL и EXPO_PUBLIC_SUPABASE_ANON_KEY
+cp .env.example .env   # fill in EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY
 npx expo start --tunnel
 ```
 
-Для разработки подходит Expo Go. Для удалённых push-уведомлений и публикации нужна сборка через EAS:
+Expo Go is fine for development. Remote push notifications and publishing need an EAS build:
 
 ```bash
-eas build -p ios --profile preview     # тестовая сборка
-eas build -p ios --profile production  # сборка для App Store
+eas build -p ios --profile preview     # test build
+eas build -p ios --profile production  # App Store build
 ```
 
-## База данных и миграции
+## Database and migrations
 
-Миграции лежат в `supabase/migrations/NNNN_*.sql` и применяются по порядку номеров. Работаем напрямую с удалённым проектом:
+Migrations live in `supabase/migrations/NNNN_*.sql` and are applied in number order, directly against the remote project:
 
 ```bash
 SUPABASE_ACCESS_TOKEN=<personal access token> npx supabase link --project-ref <project-ref>
-SUPABASE_ACCESS_TOKEN=<тот же токен> npx supabase db push
+SUPABASE_ACCESS_TOKEN=<same token> npx supabase db push
 ```
 
-| № | Что добавляет |
+| # | What it adds |
 |---|---|
-| 0001–0003 | Схема, RLS, `create_business`, генерация слотов и `create_booking` |
-| 0004, 0006, 0008, 0020 | Исправления неоднозначных имён колонок в RPC |
-| 0005, 0007 | Перенос/отмена брони, бизнес-сторона (ручные записи) |
-| 0009–0012 | Избранное, защита от злоупотреблений, отвязка бизнеса, хранилище фото |
-| 0013 | Удаление аккаунта |
-| 0014 | Гостевой просмотр каталога |
-| 0015 | Жизненный цикл брони: `completed` / `no_show` |
-| 0016 | Серверная проверка слота по расписанию |
-| 0017 | Усиление прав доступа, индексы, лимиты хранилища фото |
-| 0018 | Очередь push-уведомлений + cron |
-| 0019 | Отзывы и рейтинг салона |
+| 0001–0003 | Schema, RLS, `create_business`, slot generation and `create_booking` |
+| 0004, 0006, 0008, 0020 | Fixes for ambiguous column names in RPCs |
+| 0005, 0007 | Reschedule/cancel, business side (manual bookings) |
+| 0009–0012 | Favorites, abuse protection, business unlinking, photo storage |
+| 0013 | Account deletion |
+| 0014 | Guest catalog browsing |
+| 0015 | Booking lifecycle: `completed` / `no_show` |
+| 0016 | Server-side slot validation against the schedule |
+| 0017 | Access-control hardening, indexes, photo storage limits |
+| 0018 | Push notification queue + cron |
+| 0019 | Reviews and salon rating |
 
-## Push-уведомления
+## Push notifications
 
 ```
-bookings (INSERT / отмена)
-   └─ триггер → notification_outbox (подтверждение, напоминание за 2 ч, отмена, «Новая запись» для салона)
-        └─ pg_cron раз в минуту → Edge Function push-dispatch
-             └─ Expo Push API → телефон
+bookings (INSERT / cancellation)
+   └─ trigger → notification_outbox (confirmation, 2-hour reminder, cancellation, "New booking" for the salon)
+        └─ pg_cron every minute → push-dispatch Edge Function
+             └─ Expo Push API → phone
 ```
 
-Разовая настройка после применения миграций:
+One-time setup after applying the migrations:
 
 ```bash
 npx supabase functions deploy push-dispatch
 ```
 
-и в SQL Editor Supabase один раз:
+and once in the Supabase SQL Editor:
 
 ```sql
 select vault.create_secret('<service_role key>', 'service_role_key');
 ```
 
-## Проверочные скрипты
+## Verification scripts
 
-Тестового фреймворка нет — вместо него обычные node-скрипты с проверками против живой базы. Каждый создаёт свои тестовые данные и убирает их за собой.
+There's no test framework — instead, plain Node scripts run checks against the live database. Each one creates its own test data and cleans up after itself.
 
 ```bash
 cd scripts
 npm install
 cp .env.example .env        # SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
-npm run verify-booking      # ядро бронирования: создание, дубли, пересечения, перенос, отмена
-npm run verify-selfserve    # самообслуживание бизнеса от регистрации до первой брони
-npm run verify-release      # негативные сценарии: гостевой доступ, запись в прошлое/выходной,
-                            # эскалация прав, завершение визита, отзывы, удаление аккаунта
-npm run seed                # тестовый каталог
-npm run purge-demo          # удалить демо-салоны перед релизом
+npm run verify-booking      # booking core: creation, duplicates, overlaps, rescheduling, cancellation
+npm run verify-selfserve    # business self-service from sign-up to the first booking
+npm run verify-release      # negative scenarios: guest access, past/day-off bookings,
+                            # privilege escalation, completing visits, reviews, account deletion
+npm run seed                # test catalog
+npm run purge-demo          # remove demo salons before release
 ```
 
-## Соглашения проекта
+## Project conventions
 
-- **Проверки** — один runnable-скрипт на нетривиальную фичу (`scripts/verify-*.js`).
-- **Все записи в `bookings`** — только через SECURITY DEFINER RPC; у `bookings` нет DELETE-политики: отмена — это смена статуса, а не удаление строки.
-- **RPC с `returns table`** — всегда явные псевдонимы таблиц (`b.id`, а не `id`): имена выходных колонок совпадают с колонками таблиц, и без псевдонимов Postgres падает с «column reference is ambiguous».
-- **Дизайн-токены** — только из `src/theme/tokens.js` (индиго `#3D4EDB`, Manrope), без хардкода цветов в экранах.
-- **Нажатия** — через общий `PressableScale`.
+- **Verification** — one runnable script per non-trivial feature (`scripts/verify-*.js`).
+- **All writes to `bookings`** go through SECURITY DEFINER RPCs only; `bookings` has no DELETE policy — cancelling is a status change, not a row deletion.
+- **RPCs with `returns table`** always use explicit table aliases (`b.id`, not `id`): the output column names match the table columns, and without aliases Postgres fails with "column reference is ambiguous".
+- **Design tokens** come only from `src/theme/tokens.js` (indigo `#3D4EDB`, Manrope) — no hard-coded colors in screens.
+- **Taps** go through the shared `PressableScale`.
 
-## Статус и что осталось до релиза
+## Status and release checklist
 
-Готово: полный цикл клиента и салона, серверная защита бронирования, гостевой режим, удаление аккаунта, правовые документы, push-уведомления, офлайн-баннер и обработка ошибок, отзывы, история визитов. Все миграции применены к рабочей базе.
+Done: the full client and salon flows, server-side booking protection, guest mode, account deletion, legal documents, push notifications, offline banner and error handling, reviews, visit history. All migrations are applied to the production database.
 
-Осталось перед публикацией в App Store:
+Left before publishing to the App Store:
 
-- [ ] Данные Apple Developer в `apps/mobile/eas.json` (`appleId`, `ascAppId`, `appleTeamId`)
-- [ ] Реквизиты оператора и контакты в `docs/legal/*.md` (поля `[ЗАПОЛНИТЬ: …]`)
-- [ ] Собственный splash-экран (сейчас стоит шаблонный)
-- [ ] Регистрация реальных салонов-партнёров и `npm run purge-demo`
-- [ ] Скриншоты, описание и демо-аккаунты для App Review
+- [ ] Apple Developer details in `apps/mobile/eas.json` (`appleId`, `ascAppId`, `appleTeamId`)
+- [ ] Operator details and contacts in `docs/legal/*.md` (the `[ЗАПОЛНИТЬ: …]` fields)
+- [ ] A custom splash screen (currently the template one)
+- [ ] Onboard real partner salons and run `npm run purge-demo`
+- [ ] Screenshots, store description and demo accounts for App Review
