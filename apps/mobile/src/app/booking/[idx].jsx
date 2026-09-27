@@ -9,6 +9,9 @@ import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { tintFor } from '@/utils/tint';
 import { getBusiness, listServices, listMasters } from '@/utils/supabase/catalog';
 import { getAvailability, createBooking } from '@/utils/supabase/booking';
+import { useAuthStore } from '@/utils/auth/store';
+import { registerForPush } from '@/utils/notifications';
+import { friendlyError } from '@/utils/errors';
 import PressableScale from '@/components/PressableScale';
 
 const STEP_TITLES = ['Выберите услугу', 'Выберите мастера', 'Выберите дату', 'Выберите время'];
@@ -43,6 +46,7 @@ function formatBakuDateTime(isoUtc) {
 export default function Booking() {
   const params = useLocalSearchParams();
   const businessId = params.idx;
+  const uid = useAuthStore((s) => s.uid);
 
   const [business, setBusiness] = useState(null);
   const [services, setServices] = useState([]);
@@ -62,7 +66,7 @@ export default function Booking() {
           const initial = params.serviceId ? s.findIndex((x) => x.id === params.serviceId) : 0;
           setServiceIdx(initial >= 0 ? initial : 0);
         })
-        .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить данные'))
+        .catch((e) => !cancelled && setError(friendlyError(e, 'Не удалось загрузить данные')))
         .finally(() => !cancelled && setLoading(false));
       return () => {
         cancelled = true;
@@ -98,7 +102,7 @@ export default function Booking() {
           setSelectedDate(firstFree || bakuToday());
         }
       })
-      .catch((e) => setAvailError(e.message || 'Не удалось загрузить свободное время'))
+      .catch((e) => setAvailError(friendlyError(e, 'Не удалось загрузить свободное время')))
       .finally(() => setAvailLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [master?.id, service?.id]);
@@ -136,6 +140,14 @@ export default function Booking() {
   async function stepNext() {
     if (!canNext) return;
     if (step === 4) {
+      // Гость свободно листает шаги 1-4 (услуга/мастер/дата/время читаются
+      // без входа — see 0014_guest_catalog.sql), но саму запись создаёт
+      // только authenticated (create_booking). Перехватываем здесь, а не
+      // раньше — до этого момента нечего было защищать, это просмотр.
+      if (!uid) {
+        router.push({ pathname: '/(auth)/login', params: { redirect: `/booking/${businessId}` } });
+        return;
+      }
       setConfirming(true);
       setConfirmError(null);
       try {
@@ -154,7 +166,7 @@ export default function Booking() {
           setAvailability(null); // перезагрузится при возврате на шаг 3→4
           setStep(3);
         } else {
-          setConfirmError(e.message || 'Не удалось создать бронь');
+          setConfirmError(friendlyError(e, 'Не удалось создать бронь'));
         }
       } finally {
         setConfirming(false);
@@ -296,6 +308,13 @@ export default function Booking() {
 }
 
 function ConfirmScreen({ business, tint, booking, onDone }) {
+  // Момент максимальной очевидной пользы для просьбы разрешения на push —
+  // клиент только что записался и хочет получить подтверждение/напоминание.
+  // registerForPush() сама тихо no-op'ает при отказе/эмуляторе.
+  useEffect(() => {
+    registerForPush();
+  }, []);
+
   const start = formatBakuDateTime(booking.starts_at);
   const receipt = [
     { k: 'Услуга', v: booking.service_name },

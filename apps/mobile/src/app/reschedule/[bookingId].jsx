@@ -8,6 +8,7 @@ import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { getBooking, getAvailability, rescheduleBooking, cancelBooking } from '@/utils/supabase/booking';
+import { friendlyError } from '@/utils/errors';
 
 const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 const DAYS_WINDOW = 14;
@@ -53,7 +54,7 @@ export default function Reschedule() {
           const first = Object.keys(map).sort()[0];
           setSelectedDate(first || bakuToday());
         })
-        .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить'))
+        .catch((e) => !cancelled && setError(friendlyError(e, 'Не удалось загрузить')))
         .finally(() => {
           if (!cancelled) {
             setLoading(false);
@@ -100,7 +101,7 @@ export default function Reschedule() {
           .then(setAvailability)
           .finally(() => setAvailLoading(false));
       } else {
-        setSaveError(e.message || 'Не удалось перенести бронь');
+        setSaveError(friendlyError(e, 'Не удалось перенести бронь'));
       }
     } finally {
       setSaving(false);
@@ -119,7 +120,7 @@ export default function Reschedule() {
             await cancelBooking(bookingId);
             router.replace('/(client-tabs)/bookings');
           } catch (e) {
-            Alert.alert('Не удалось отменить', e.message || '');
+            Alert.alert('Не удалось отменить', friendlyError(e));
             setCancelling(false);
           }
         },

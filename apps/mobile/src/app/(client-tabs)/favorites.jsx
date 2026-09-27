@@ -12,6 +12,7 @@ import { tintFor } from '@/utils/tint';
 import { useAuthStore } from '@/utils/auth/store';
 import { listFavoriteBusinesses } from '@/utils/supabase/favorites';
 import { useReducedMotion } from '@/utils/useReducedMotion';
+import SignInPrompt from '@/components/SignInPrompt';
 
 export default function Favorites() {
   const uid = useAuthStore((s) => s.uid);
@@ -58,6 +59,19 @@ export default function Favorites() {
     );
   }
 
+  if (!uid) {
+    return (
+      <View style={styles.screen}>
+        <Text style={styles.title}>Избранное</Text>
+        <SignInPrompt
+          title="Войдите, чтобы сохранять салоны"
+          subtitle="Избранное синхронизируется с вашим аккаунтом."
+          redirect="/(client-tabs)/favorites"
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.screen}>
       <Text style={styles.title}>Избранное</Text>
@@ -75,7 +89,7 @@ export default function Favorites() {
               <PressableScale style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} onPress={() => router.push(`/salon/${b.id}`)}>
                 <View style={[styles.photo, { backgroundColor: tintFor(b.id)[0] }]}>
                   {b.logo_url ? (
-                    <Image source={{ uri: b.logo_url }} style={StyleSheet.absoluteFillObject} contentFit="cover" />
+                    <Image source={{ uri: b.logo_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                   ) : (
                     <Text style={styles.photoLabel}>ФОТО</Text>
                   )}

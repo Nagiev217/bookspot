@@ -135,7 +135,7 @@ export default function BusinessTeam() {
               <PressableScale key={m.id} style={styles.card} onPress={() => router.push(`/master/${m.id}`)}>
                 <View style={styles.cardTop}>
                   <View style={[styles.avatar, { backgroundColor: tintFor(m.id)[0] }]}>
-                    {m.photo_url && <Image source={{ uri: m.photo_url }} style={StyleSheet.absoluteFillObject} contentFit="cover" />}
+                    {m.photo_url && <Image source={{ uri: m.photo_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />}
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={[styles.name, !m.active && styles.nameOff]}>{m.name}</Text>

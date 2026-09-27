@@ -8,6 +8,18 @@ import { router, useFocusEffect } from 'expo-router';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { tintFor } from '@/utils/tint';
 import { listMyBookings } from '@/utils/supabase/booking';
+import { useAuthStore } from '@/utils/auth/store';
+import SignInPrompt from '@/components/SignInPrompt';
+import StarBadge from '@/components/StarBadge';
+
+// PostgREST может вернуть обратную embedded-связь (reviews.booking_id —
+// unique FK) и как массив, и как одиночный объект в зависимости от версии —
+// нормализуем здесь один раз, а не гадаем формат в разметке.
+function myReviewOf(booking) {
+  const r = booking.reviews;
+  if (!r) return null;
+  return Array.isArray(r) ? r[0] || null : r;
+}
 
 const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 const MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
@@ -18,6 +30,7 @@ function formatBaku(isoUtc) {
 }
 
 export default function Bookings() {
+  const uid = useAuthStore((s) => s.uid);
   const [tab, setTab] = useState('up');
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,6 +38,12 @@ export default function Bookings() {
   const loadedOnce = useRef(false);
 
   const load = useCallback(() => {
+    // Без входа listMyBookings() тихо вернёт [] под RLS (auth.uid() = null
+    // не совпадёт ни с одной записью) — не запрос, а гейт ниже до сети.
+    if (!uid) {
+      setLoading(false);
+      return;
+    }
     if (!loadedOnce.current) setLoading(true);
     setError(null);
     listMyBookings()
@@ -34,7 +53,7 @@ export default function Bookings() {
       })
       .catch((e) => setError(e.message || 'Не удалось загрузить записи'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [uid]);
 
   // Отдельно от useFocusEffect: с lazy:false в (client-tabs)/_layout.jsx
   // эта вкладка монтируется сразу после входа, но useFocusEffect не
@@ -50,6 +69,21 @@ export default function Bookings() {
   const now = Date.now();
   const upcoming = bookings.filter((b) => b.status === 'confirmed' && new Date(b.starts_at).getTime() >= now);
   const past = bookings.filter((b) => b.status !== 'confirmed' || new Date(b.starts_at).getTime() < now);
+
+  if (!loading && !uid) {
+    return (
+      <View style={styles.screen}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Мои записи</Text>
+        </View>
+        <SignInPrompt
+          title="Войдите, чтобы увидеть записи"
+          subtitle="Здесь появятся ваши предстоящие визиты и история."
+          redirect="/(client-tabs)/bookings"
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
@@ -107,18 +141,34 @@ export default function Bookings() {
           {past.length === 0 ? (
             <Text style={styles.emptyText}>Истории пока нет.</Text>
           ) : (
-            past.map((b) => (
-              <PressableScale key={b.id} style={styles.pastRow} onPress={() => router.push(`/salon/${b.business_id}`)}>
-                <View style={[styles.pastThumb, { backgroundColor: tintFor(b.business_id)[0] }]} />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.salonName}>{b.businesses?.name}</Text>
-                  <Text style={styles.subText}>
-                    {b.service_name} · {formatBaku(b.starts_at)}
-                  </Text>
-                  <Text style={styles.statusMuted}>{statusLabel(b.status)}</Text>
+            past.map((b) => {
+              const myReview = myReviewOf(b);
+              return (
+                <View key={b.id} style={styles.pastCard}>
+                  <PressableScale style={styles.pastRow} onPress={() => router.push(`/salon/${b.business_id}`)}>
+                    <View style={[styles.pastThumb, { backgroundColor: tintFor(b.business_id)[0] }]} />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.salonName}>{b.businesses?.name}</Text>
+                      <Text style={styles.subText}>
+                        {b.service_name} · {formatBaku(b.starts_at)}
+                      </Text>
+                      <Text style={styles.statusMuted}>{statusLabel(b.status)}</Text>
+                    </View>
+                  </PressableScale>
+                  {b.status === 'completed' &&
+                    (myReview ? (
+                      <PressableScale style={styles.reviewRow} onPress={() => router.push(`/review/${b.id}`)}>
+                        <StarBadge rating={myReview.rating} />
+                        <Text style={styles.reviewEditText}>Изменить отзыв</Text>
+                      </PressableScale>
+                    ) : (
+                      <PressableScale style={styles.reviewButton} onPress={() => router.push(`/review/${b.id}`)}>
+                        <Text style={styles.reviewButtonText}>Оставить отзыв</Text>
+                      </PressableScale>
+                    ))}
                 </View>
-              </PressableScale>
-            ))
+              );
+            })
           )}
         </ScrollView>
       )}
@@ -167,6 +217,11 @@ const styles = StyleSheet.create({
   outlineButtonText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.ink },
   darkButton: { flex: 1, height: 44, borderRadius: 14, backgroundColor: COLORS.ink, alignItems: 'center', justifyContent: 'center' },
   darkButtonText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.white },
-  pastRow: { flexDirection: 'row', gap: SPACING.md, alignItems: 'center', padding: SPACING.sm, borderWidth: 1, borderColor: COLORS.borderLight, borderRadius: RADIUS.md },
+  pastCard: { borderWidth: 1, borderColor: COLORS.borderLight, borderRadius: RADIUS.md, overflow: 'hidden' },
+  pastRow: { flexDirection: 'row', gap: SPACING.md, alignItems: 'center', padding: SPACING.sm },
   pastThumb: { width: 54, height: 54, borderRadius: 17, opacity: 0.75 },
+  reviewButton: { margin: SPACING.sm, marginTop: 0, height: 40, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(11,17,32,.12)', alignItems: 'center', justifyContent: 'center' },
+  reviewButtonText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.ink },
+  reviewRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, margin: SPACING.sm, marginTop: 0, padding: SPACING.sm, backgroundColor: COLORS.surface, borderRadius: 12 },
+  reviewEditText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub },
 });

@@ -4,18 +4,24 @@
 // дизайна (там статичное демо-имя "Лейла Мамедова" и выдуманная
 // статистика) здесь показаны только реальные данные аккаунта — без
 // придуманных цифр.
-import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { useState } from 'react';
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
-import { LogOut, ChevronRight } from 'lucide-react-native';
+import * as WebBrowser from 'expo-web-browser';
+import { LogOut, ChevronRight, Trash2 } from 'lucide-react-native';
 import { supabase } from '@/utils/supabase/config';
+import { deleteMyAccount } from '@/utils/supabase/profile';
 import { useAuthStore } from '@/utils/auth/store';
 import { setCachedMode } from '@/utils/auth/roleCache';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
+import { PRIVACY_POLICY_URL, TERMS_URL } from '@/utils/legal';
 import PressableScale from '@/components/PressableScale';
+import SignInPrompt from '@/components/SignInPrompt';
 
 export default function ProfileScreen() {
   const { uid, role, businessId, mode, setMode } = useAuthStore();
   const isStaff = role === 'business_owner' || role === 'staff';
+  const [deleting, setDeleting] = useState(false);
 
   async function switchMode() {
     const next = mode === 'client' ? 'business' : 'client';
@@ -31,6 +37,74 @@ export default function ProfileScreen() {
   async function handleSignOut() {
     await supabase.auth.signOut();
     router.replace('/(auth)/login');
+  }
+
+  function openPrivacyPolicy() {
+    WebBrowser.openBrowserAsync(PRIVACY_POLICY_URL);
+  }
+
+  function openTerms() {
+    WebBrowser.openBrowserAsync(TERMS_URL);
+  }
+
+  // Двухшаговое подтверждение — необратимое действие. Владелец активного
+  // бизнеса получит здесь же ошибку от RPC (delete_my_account сама это
+  // проверяет на сервере) с понятным текстом, почему нельзя.
+  function handleDeleteAccount() {
+    Alert.alert(
+      'Удалить аккаунт?',
+      'Это необратимо. Личные данные будут удалены; история визитов останется у салонов, но без вашего имени и телефона.',
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Удалить',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert('Вы уверены?', 'Аккаунт нельзя будет восстановить.', [
+              { text: 'Отмена', style: 'cancel' },
+              { text: 'Удалить навсегда', style: 'destructive', onPress: confirmDeleteAccount },
+            ]);
+          },
+        },
+      ]
+    );
+  }
+
+  async function confirmDeleteAccount() {
+    setDeleting(true);
+    try {
+      await deleteMyAccount();
+      router.replace('/(auth)/login');
+    } catch (e) {
+      Alert.alert('Не удалось удалить аккаунт', e.message || 'Попробуйте ещё раз');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  // Гость (каталог доступен без входа, см. index.jsx) — весь остальной
+  // экран завязан на аккаунт (роль, режим, удаление аккаунта), поэтому для
+  // гостя это просто приглашение войти, а не урезанная версия того же UI.
+  if (!uid) {
+    return (
+      <View style={styles.screen}>
+        <Text style={styles.title}>Профиль</Text>
+        <SignInPrompt
+          title="Вы не вошли в аккаунт"
+          subtitle="Войдите, чтобы записываться, сохранять избранное и управлять своим бизнесом."
+          redirect="/(client-tabs)/profile"
+        />
+        <View style={styles.legalRow}>
+          <Pressable onPress={openPrivacyPolicy}>
+            <Text style={styles.legalLink}>Политика конфиденциальности</Text>
+          </Pressable>
+          <Text style={styles.legalDot}>·</Text>
+          <Pressable onPress={openTerms}>
+            <Text style={styles.legalLink}>Условия использования</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
   }
 
   return (
@@ -59,10 +133,27 @@ export default function ProfileScreen() {
         )}
       </View>
 
+      <View style={styles.group}>
+        <MenuRow label="Политика конфиденциальности" onPress={openPrivacyPolicy} />
+        <MenuRow label="Условия использования" onPress={openTerms} last />
+      </View>
+
       <PressableScale style={styles.signOutButton} onPress={handleSignOut}>
         <LogOut size={18} color={COLORS.danger} />
         <Text style={styles.signOutText}>Выйти</Text>
       </PressableScale>
+
+      <PressableScale style={styles.deleteRow} onPress={handleDeleteAccount} disabled={deleting}>
+        {deleting ? (
+          <ActivityIndicator color={COLORS.danger} />
+        ) : (
+          <>
+            <Trash2 size={16} color="#B6BCC8" />
+            <Text style={styles.deleteText}>Удалить аккаунт</Text>
+          </>
+        )}
+      </PressableScale>
+
       <Text style={styles.version}>Версия 1.0 · Баку</Text>
     </ScrollView>
   );
@@ -106,6 +197,9 @@ const styles = StyleSheet.create({
   },
   menuRowLast: { borderBottomWidth: 0 },
   menuLabel: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.md, color: COLORS.ink },
+  legalRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginTop: SPACING.xl },
+  legalLink: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.xs, color: COLORS.sub, textDecorationLine: 'underline' },
+  legalDot: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.xs, color: COLORS.subLight },
   signOutButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -117,5 +211,16 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(11,17,32,.1)',
   },
   signOutText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.danger },
+  // Визуально приглушённее, чем "Выйти" — не первичное и не частое
+  // действие, случайный тап не должен быть таким же лёгким, как выход.
+  deleteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    height: 44,
+    marginTop: SPACING.sm,
+  },
+  deleteText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: '#B6BCC8' },
   version: { textAlign: 'center', fontFamily: FONT.medium, fontSize: TEXT_SIZE.xs, color: '#B6BCC8', marginTop: SPACING.md },
 });

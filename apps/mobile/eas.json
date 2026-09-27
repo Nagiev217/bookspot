@@ -1,0 +1,29 @@
+{
+  "cli": {
+    "version": ">= 12.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview"
+    },
+    "production": {
+      "autoIncrement": true,
+      "channel": "production"
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "ЗАПОЛНИТЬ: email вашего Apple ID (Apple Developer Program)",
+        "ascAppId": "ЗАПОЛНИТЬ: App Store Connect App ID — появится после первого создания записи приложения в App Store Connect",
+        "appleTeamId": "ЗАПОЛНИТЬ: Team ID из developer.apple.com/account → Membership"
+      }
+    }
+  }
+}

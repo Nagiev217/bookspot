@@ -210,7 +210,10 @@ const styles = StyleSheet.create({
   title: { flex: 1, fontFamily: FONT.extrabold, fontSize: 20, color: COLORS.ink, letterSpacing: -0.4 },
   content: { padding: SPACING.xl, paddingTop: SPACING.sm, gap: SPACING.md },
   photoBox: { height: 150, borderRadius: RADIUS.xl, backgroundColor: COLORS.surface, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
-  photoImg: { ...StyleSheet.absoluteFillObject },
+  // Явные размеры вместо absoluteFillObject: expo-image ничего не рисует,
+  // когда размер задан только парой left/right + top/bottom без width/height.
+  // photoBox задаёт размер сам, поэтому 100% — тот же результат, но рабочий.
+  photoImg: { width: '100%', height: '100%' },
   photoOverlay: { alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: 'rgba(11,17,32,.35)', ...StyleSheet.absoluteFillObject },
   photoOverlayText: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: COLORS.white },
   input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, padding: SPACING.md, fontFamily: FONT.regular, fontSize: TEXT_SIZE.md, color: COLORS.text },

@@ -35,11 +35,14 @@ export async function createBooking({ businessId, masterId, serviceId, date, sta
 }
 
 // businesses(...) — embedded-select через FK bookings.business_id -> businesses.id,
-// один запрос вместо N+1.
+// один запрос вместо N+1. reviews(...) — обратная связь через
+// reviews.booking_id (unique FK, 0019_reviews.sql): нужна списку "Мои
+// записи", чтобы знать, есть ли уже отзыв на завершённый визит, без
+// отдельного запроса на каждую строку.
 export async function listMyBookings() {
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, business_id, master_id, service_id, service_name, price, starts_at, ends_at, status, businesses(name, city, district)')
+    .select('id, business_id, master_id, service_id, service_name, price, starts_at, ends_at, status, businesses(name, city, district), reviews(id, rating)')
     .order('starts_at', { ascending: false });
   if (error) throw error;
   return data;

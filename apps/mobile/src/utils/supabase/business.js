@@ -26,6 +26,40 @@ export async function listBusinessBookings({ businessId, from, days = 1 }) {
   return data;
 }
 
+// Завершение визита — бизнес отмечает "пришёл"/"не пришёл" на прошедшей
+// брони. p_status: 'completed' | 'no_show'. RPC сама проверяет доступ,
+// текущий статус и что визит уже наступил (0015_booking_lifecycle.sql).
+export async function completeBooking(bookingId, status) {
+  const { error } = await supabase.rpc('complete_booking', { p_booking_id: bookingId, p_status: status });
+  if (error) throw error;
+}
+
+// История визитов — то, что раньше видно было только на день/неделю вперёд
+// (calendar.jsx), а завершённые/неявки/отменённые визиты вообще пропадали
+// из вида (day-grid фильтрует только status === 'confirmed'). Здесь —
+// плоский список по всем мастерам сразу, самые новые сверху: завершённые,
+// неявки, отменённые, плюс confirmed, у которых время уже прошло (владелец
+// ещё не успел отметить — тоже часть "истории", не только день/неделя).
+// Лимит 100 — без пагинации, этого достаточно для повседневного просмотра.
+//
+// Два отдельных запроса и слияние на клиенте, а не один .or() — так проще
+// быть уверенным в корректности фильтра без возможности прогнать его на
+// реальной базе перед выкаткой.
+const HISTORY_COLUMNS = 'id, master_id, service_name, price, starts_at, ends_at, status, client_name, client_phone';
+
+export async function listBusinessHistory(businessId) {
+  const nowIso = new Date().toISOString();
+  const [nonConfirmed, overdueConfirmed] = await Promise.all([
+    supabase.from('bookings').select(HISTORY_COLUMNS).eq('business_id', businessId).neq('status', 'confirmed').order('starts_at', { ascending: false }).limit(100),
+    supabase.from('bookings').select(HISTORY_COLUMNS).eq('business_id', businessId).eq('status', 'confirmed').lt('starts_at', nowIso).order('starts_at', { ascending: false }).limit(100),
+  ]);
+  if (nonConfirmed.error) throw nonConfirmed.error;
+  if (overdueConfirmed.error) throw overdueConfirmed.error;
+  return [...nonConfirmed.data, ...overdueConfirmed.data]
+    .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime())
+    .slice(0, 100);
+}
+
 export async function createManualBooking({ businessId, masterId, serviceId, date, start, clientName, clientPhone }) {
   const { data, error } = await supabase.rpc('create_manual_booking', {
     p_business_id: businessId,

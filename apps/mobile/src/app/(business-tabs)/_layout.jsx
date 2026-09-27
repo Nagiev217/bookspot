@@ -1,8 +1,17 @@
+import { useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { House, Calendar, Users, User } from 'lucide-react-native';
 import { COLORS } from '@/theme/tokens';
+import { registerForPush } from '@/utils/notifications';
 
 export default function BusinessTabsLayout() {
+  // Владелец/сотрудник заходит в бизнес-режим — здесь push уже имеет явную
+  // пользу (уведомление о новой брони), поэтому спрашиваем разрешение сразу
+  // при входе, а не откладываем до первого события. Тихо no-op'ает при отказе.
+  useEffect(() => {
+    registerForPush();
+  }, []);
+
   return (
     // lazy: false — см. тот же комментарий в (client-tabs)/_layout.jsx.
     <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: COLORS.indigo, tabBarInactiveTintColor: '#A3AAB8', lazy: false }}>

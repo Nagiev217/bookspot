@@ -103,7 +103,7 @@ export default function Home() {
                   >
                     <View style={[styles.brandPhoto, { backgroundColor: tintFor(b.id)[0] }]}>
                       {b.logo_url ? (
-                        <Image source={{ uri: b.logo_url }} style={StyleSheet.absoluteFillObject} contentFit="cover" />
+                        <Image source={{ uri: b.logo_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                       ) : (
                         <Text style={styles.photoLabel}>ФОТО</Text>
                       )}

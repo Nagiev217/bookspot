@@ -1,0 +1,14 @@
+-- Гостевой просмотр каталога и доступности (App Store Guideline 5.1.1 —
+-- нельзя требовать регистрацию там, где контент можно смотреть без неё).
+--
+-- Таблицы каталога (categories/businesses/services/masters/...) читаемы
+-- ролью anon уже сейчас — RLS-политика businesses_public_read_active
+-- (0001_init.sql) не ограничивает по роли, а Supabase выдаёт table-level
+-- SELECT anon на public-схему по умолчанию. Не хватает только функции:
+-- get_availability выдана исключительно authenticated (0003_availability.sql)
+-- — читает только расписание/занятые слоты, auth.uid() внутри не использует
+-- вообще, так что расширение до anon ничего не открывает лишнего.
+--
+-- create_booking/reschedule_booking/cancel_booking остаются authenticated-only
+-- — бронь по-прежнему требует входа, гость только смотрит.
+grant execute on function public.get_availability to anon;

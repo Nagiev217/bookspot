@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import PressableScale from '@/components/PressableScale';
-import { Link, router } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '@/utils/supabase/config';
 import { getMyProfile } from '@/utils/supabase/profile';
 import { useAuthStore } from '@/utils/auth/store';
 import { setCachedRole } from '@/utils/auth/roleCache';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
+import { PRIVACY_POLICY_URL, TERMS_URL } from '@/utils/legal';
 
 const LANGS = [
   { code: 'az', label: 'AZ' },
@@ -15,6 +17,7 @@ const LANGS = [
 ];
 
 export default function Register() {
+  const { redirect } = useLocalSearchParams();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -52,7 +55,7 @@ export default function Register() {
       const profile = await getMyProfile(uid);
       await setCachedRole(uid, profile.role, profile.businessId);
       setAuth({ status: 'signedIn', uid, role: profile.role, businessId: profile.businessId, mode: 'client' });
-      router.replace('/');
+      router.replace(typeof redirect === 'string' ? redirect : '/');
     } catch (e) {
       setError(mapAuthError(e.message));
     } finally {
@@ -108,8 +111,26 @@ export default function Register() {
         {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.buttonText}>Зарегистрироваться</Text>}
       </PressableScale>
 
-      <Link href="/(auth)/login" style={styles.link}>
+      <Text style={styles.legalText}>
+        Регистрируясь, вы принимаете{' '}
+        <Text style={styles.legalLink} onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)}>
+          условия использования
+        </Text>{' '}
+        и{' '}
+        <Text style={styles.legalLink} onPress={() => WebBrowser.openBrowserAsync(PRIVACY_POLICY_URL)}>
+          политику конфиденциальности
+        </Text>
+      </Text>
+
+      <Link
+        href={{ pathname: '/(auth)/login', params: redirect ? { redirect } : undefined }}
+        style={styles.link}
+      >
         Уже есть аккаунт? Войти
+      </Link>
+
+      <Link href="/(client-tabs)" style={styles.backLink}>
+        Назад к каталогу
       </Link>
     </ScrollView>
   );
@@ -153,4 +174,14 @@ const styles = StyleSheet.create({
   button: { backgroundColor: COLORS.indigo, borderRadius: RADIUS.sm, padding: SPACING.md, alignItems: 'center' },
   buttonText: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.md, color: COLORS.white },
   link: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.indigo, textAlign: 'center', marginTop: SPACING.lg },
+  backLink: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, textAlign: 'center', marginTop: SPACING.md },
+  legalText: {
+    fontFamily: FONT.regular,
+    fontSize: TEXT_SIZE.xs,
+    color: COLORS.sub,
+    textAlign: 'center',
+    marginTop: SPACING.md,
+    lineHeight: 16,
+  },
+  legalLink: { color: COLORS.indigo, textDecorationLine: 'underline' },
 });

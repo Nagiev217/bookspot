@@ -1,13 +1,15 @@
-// Список салонов — реальные данные из Supabase. Фильтры "Рейтинг/Цена/Км"
-// и режим карты из дизайна остаются заглушкой: нет ни отзывов (рейтинга),
-// ни geo-координат в схеме бизнеса ещё (Фаза 2 концепта).
+// Список салонов — реальные данные из Supabase. Фильтры "Рейтинг/Цена/Км" и
+// режим карты из дизайна не реализованы: нет ни отзывов (рейтинга), ни
+// geo-координат в схеме бизнеса (Фаза 2 концепта). Нерабочая кнопка "На
+// карте" убрана перед релизом — App Store отклоняет видимые заглушки
+// (Guideline 2.1). Вернуть вместе с настоящей картой, не раньше.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import PressableScale from '@/components/PressableScale';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useLocalSearchParams, useFocusEffect, router } from 'expo-router';
-import { Map, List as ListIcon, Search as SearchIcon } from 'lucide-react-native';
+import { Search as SearchIcon } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { tintFor } from '@/utils/tint';
 import { searchBusinesses } from '@/utils/supabase/catalog';
@@ -19,7 +21,6 @@ export default function Search() {
   const [businesses, setBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [mapMode, setMapMode] = useState(false);
   const loadedOnce = useRef(false);
   const reducedMotion = useReducedMotion();
 
@@ -81,10 +82,6 @@ export default function Search() {
           />
         </View>
         <Text style={styles.count}>{businesses.length} салон(ов) · Баку</Text>
-        <PressableScale style={styles.mapToggle} onPress={() => setMapMode((v) => !v)}>
-          {mapMode ? <ListIcon size={13} color={COLORS.white} /> : <Map size={13} color={COLORS.white} />}
-          <Text style={styles.mapToggleText}>{mapMode ? 'Списком' : 'На карте (заглушка)'}</Text>
-        </PressableScale>
       </View>
 
       {loading ? (
@@ -101,7 +98,7 @@ export default function Search() {
               <PressableScale style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} onPress={() => router.push(`/salon/${b.id}`)}>
                 <View style={[styles.photo, { backgroundColor: tintFor(b.id)[0] }]}>
                   {b.logo_url ? (
-                    <Image source={{ uri: b.logo_url }} style={StyleSheet.absoluteFillObject} contentFit="cover" />
+                    <Image source={{ uri: b.logo_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                   ) : (
                     <Text style={styles.photoLabel}>ФОТО</Text>
                   )}
@@ -147,18 +144,6 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontFamily: FONT.medium, fontSize: TEXT_SIZE.md, color: COLORS.text, padding: 0 },
   count: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginTop: SPACING.sm },
-  mapToggle: {
-    alignSelf: 'flex-start',
-    marginTop: SPACING.md,
-    height: 36,
-    paddingHorizontal: SPACING.md,
-    borderRadius: RADIUS.sm,
-    backgroundColor: COLORS.ink,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  mapToggleText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.white },
   errorText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.danger, margin: SPACING.xl },
   emptyText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub },
   list: { padding: SPACING.xl, gap: SPACING.md },

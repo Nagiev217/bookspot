@@ -10,7 +10,26 @@ import { tintFor } from '@/utils/tint';
 import PressableScale from '@/components/PressableScale';
 import { getBusiness, listServices, listMasters } from '@/utils/supabase/catalog';
 import { isFavorite, addFavorite, removeFavorite } from '@/utils/supabase/favorites';
+import { listReviews } from '@/utils/supabase/reviews';
 import { useAuthStore } from '@/utils/auth/store';
+import StarBadge from '@/components/StarBadge';
+
+// Азербайджан — UTC+4 без перехода на летнее время (та же ручная арифметика,
+// что и в booking/[idx].jsx — надёжного доступа к базе IANA-таймзон на
+// клиенте нет).
+function formatReviewDate(isoUtc) {
+  const d = new Date(new Date(isoUtc).getTime() + 4 * 3600000);
+  return `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.${d.getUTCFullYear()}`;
+}
+
+// 1 отзыв, 2–4 отзыва, 5+ и 11–14 отзывов.
+function reviewsLabel(n) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${n} отзыв`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} отзыва`;
+  return `${n} отзывов`;
+}
 
 export default function SalonDetail() {
   const { idx: businessId } = useLocalSearchParams();
@@ -18,6 +37,7 @@ export default function SalonDetail() {
   const [business, setBusiness] = useState(null);
   const [services, setServices] = useState([]);
   const [masters, setMasters] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [favorite, setFavorite] = useState(false);
@@ -28,13 +48,20 @@ export default function SalonDetail() {
       let cancelled = false;
       setLoading(true);
       setError(null);
-      Promise.all([getBusiness(businessId), listServices(businessId), listMasters(businessId), uid ? isFavorite(uid, businessId) : false])
-        .then(([b, s, m, fav]) => {
+      Promise.all([
+        getBusiness(businessId),
+        listServices(businessId),
+        listMasters(businessId),
+        uid ? isFavorite(uid, businessId) : false,
+        listReviews(businessId),
+      ])
+        .then(([b, s, m, fav, rv]) => {
           if (cancelled) return;
           setBusiness(b);
           setServices(s);
           setMasters(m);
           setFavorite(fav);
+          setReviews(rv);
         })
         .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить салон'))
         .finally(() => !cancelled && setLoading(false));
@@ -45,7 +72,11 @@ export default function SalonDetail() {
   );
 
   async function toggleFavorite() {
-    if (!uid || favBusy) return;
+    if (favBusy) return;
+    if (!uid) {
+      router.push({ pathname: '/(auth)/login', params: { redirect: `/salon/${businessId}` } });
+      return;
+    }
     setFavBusy(true);
     const next = !favorite;
     setFavorite(next); // оптимистично — сердечко должно отвечать сразу
@@ -80,25 +111,28 @@ export default function SalonDetail() {
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={{ paddingBottom: 104 }}>
         <View style={[styles.hero, { backgroundColor: tint[0] }]}>
-          {business.logo_url && <Image source={{ uri: business.logo_url }} style={StyleSheet.absoluteFillObject} contentFit="cover" />}
+          {business.logo_url && <Image source={{ uri: business.logo_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />}
           <PressableScale style={styles.backButton} onPress={() => router.back()}>
             <ArrowLeft size={17} color={COLORS.ink} />
           </PressableScale>
-          {uid && (
-            <PressableScale style={styles.favButton} onPress={toggleFavorite}>
-              <Heart size={18} color={favorite ? COLORS.danger : COLORS.ink} fill={favorite ? COLORS.danger : 'transparent'} />
-            </PressableScale>
-          )}
+          <PressableScale style={styles.favButton} onPress={toggleFavorite}>
+            <Heart size={18} color={favorite ? COLORS.danger : COLORS.ink} fill={favorite ? COLORS.danger : 'transparent'} />
+          </PressableScale>
         </View>
 
         <View style={styles.sheet}>
           <View style={styles.titleRow}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles.name}>{business.name}</Text>
-              <Text style={styles.meta}>
-                {business.city}
-                {business.district ? ` · ${business.district}` : ''}
-              </Text>
+              <View style={styles.metaRow}>
+                <Text style={styles.meta}>
+                  {business.city}
+                  {business.district ? ` · ${business.district}` : ''}
+                </Text>
+                {business.review_count > 0 && (
+                  <StarBadge rating={business.rating_avg} extra={reviewsLabel(business.review_count)} style={styles.ratingBadge} />
+                )}
+              </View>
             </View>
           </View>
 
@@ -137,12 +171,30 @@ export default function SalonDetail() {
               {masters.map((m) => (
                 <View key={m.id} style={styles.masterCard}>
                   <View style={[styles.masterAvatar, { backgroundColor: tintFor(m.id)[0] }]}>
-                    {m.photo_url && <Image source={{ uri: m.photo_url }} style={StyleSheet.absoluteFillObject} contentFit="cover" />}
+                    {m.photo_url && <Image source={{ uri: m.photo_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />}
                   </View>
                   <Text style={styles.masterName}>{m.name}</Text>
                 </View>
               ))}
             </ScrollView>
+          )}
+
+          <Text style={styles.sectionTitle}>Отзывы</Text>
+          {reviews.length === 0 ? (
+            <Text style={styles.emptyText}>Отзывов пока нет — станьте первым!</Text>
+          ) : (
+            <View style={{ gap: SPACING.sm }}>
+              {reviews.map((r) => (
+                <View key={r.id} style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    <Text style={styles.reviewName}>{r.client_name}</Text>
+                    <StarBadge rating={r.rating} />
+                  </View>
+                  {r.comment && <Text style={styles.reviewComment}>{r.comment}</Text>}
+                  <Text style={styles.reviewDate}>{formatReviewDate(r.created_at)}</Text>
+                </View>
+              ))}
+            </View>
           )}
         </View>
       </ScrollView>
@@ -191,7 +243,9 @@ const styles = StyleSheet.create({
   sheet: { marginTop: -26, backgroundColor: COLORS.white, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: SPACING.xl },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: SPACING.md },
   name: { fontFamily: FONT.extrabold, fontSize: TEXT_SIZE.xl, color: COLORS.ink, letterSpacing: -0.6 },
-  meta: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.md, color: COLORS.sub, marginTop: 5 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginTop: 5 },
+  meta: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.md, color: COLORS.sub },
+  ratingBadge: { paddingLeft: SPACING.sm, borderLeftWidth: 1, borderLeftColor: COLORS.border },
   tagRow: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.lg },
   tag: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: '#3A4256', backgroundColor: COLORS.surface, borderRadius: RADIUS.sm, paddingVertical: 9, paddingHorizontal: 12 },
   sectionTitle: { fontFamily: FONT.bold, fontSize: 16, color: COLORS.ink, letterSpacing: -0.3, marginTop: SPACING.xxl, marginBottom: SPACING.md },
@@ -211,6 +265,11 @@ const styles = StyleSheet.create({
   masterCard: { width: 92, alignItems: 'center' },
   masterAvatar: { width: 92, height: 92, borderRadius: RADIUS.lg, overflow: 'hidden' },
   masterName: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.ink, marginTop: 9 },
+  reviewCard: { padding: 14, backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, gap: 6 },
+  reviewHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  reviewName: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.ink },
+  reviewComment: { fontFamily: FONT.regular, fontSize: TEXT_SIZE.md, color: COLORS.text, lineHeight: 20 },
+  reviewDate: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.xs, color: COLORS.subLight },
   ctaBar: {
     position: 'absolute',
     left: 0,

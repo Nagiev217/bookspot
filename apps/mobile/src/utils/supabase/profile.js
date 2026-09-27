@@ -45,3 +45,14 @@ export async function updateProfile(uid, { name, phone, lang }) {
   const { error } = await supabase.from('profiles').update(patch).eq('id', uid);
   if (error) throw error;
 }
+
+// Безвозвратное удаление аккаунта (Apple Guideline 5.1.1(v)). Брони не
+// исчезают — RPC delete_my_account (0013_delete_account.sql) обезличивает их
+// на сервере, они остаются историей визитов у бизнеса. Владельца активного
+// бизнеса функция сама отклонит с понятной ошибкой — здесь это не проверяем
+// заранее, чтобы не дублировать правило в двух местах.
+export async function deleteMyAccount() {
+  const { error } = await supabase.rpc('delete_my_account');
+  if (error) throw error;
+  await supabase.auth.signOut();
+}

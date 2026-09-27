@@ -9,6 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.bookspot.app",
+      "buildNumber": "1",
       "supportsTablet": false
     },
     "android": {
@@ -34,10 +35,31 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Нужен доступ к фото, чтобы загрузить логотип салона и фотографии мастеров.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#2563EB"
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "dc12ae3c-45be-4b2f-be5b-a9ee9f74339f"
+      }
+    },
+    "owner": "nagiev217"
   }
 }

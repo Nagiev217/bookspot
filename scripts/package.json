@@ -5,8 +5,10 @@
     "seed": "node --env-file=.env seed.js",
     "seed-baku": "node --env-file=.env seed-baku-salons.js",
     "add-photos": "node --env-file=.env add-category-photos.js",
+    "purge-demo": "node --env-file=.env purge-demo.js",
     "verify-booking": "node --env-file=.env verify-booking.js",
-    "verify-selfserve": "node --env-file=.env verify-selfserve.js"
+    "verify-selfserve": "node --env-file=.env verify-selfserve.js",
+    "verify-release": "node --env-file=.env verify-release.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0"

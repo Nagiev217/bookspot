@@ -6,7 +6,10 @@ export default function Index() {
   const { status, role, mode } = useAuthStore();
 
   if (status === 'loading') return null;
-  if (status === 'signedOut') return <Redirect href="/(auth)/login" />;
+  // Гость смотрит каталог свободно (App Store Guideline 5.1.1) — экраны,
+  // которым реально нужен аккаунт (бронь, избранное, «Мои записи»),
+  // сами отправляют на логин в момент действия, а не здесь заранее.
+  if (status === 'signedOut') return <Redirect href="/(client-tabs)" />;
 
   // Авторизован, но users/{uid} ещё не создан (например, приложение
   // закрыли между созданием аккаунта и вызовом registerProfile).

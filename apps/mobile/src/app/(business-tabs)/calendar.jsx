@@ -3,14 +3,14 @@
 // но рабочее для типичного салона; # ponytail: если появится мастер с
 // более ранним/поздним стартом, окно нужно будет считать динамически.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
 import PressableScale from '@/components/PressableScale';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { useAuthStore } from '@/utils/auth/store';
 import { listMasters } from '@/utils/supabase/catalog';
-import { listBusinessBookings } from '@/utils/supabase/business';
+import { listBusinessBookings, listBusinessHistory, completeBooking } from '@/utils/supabase/business';
 import { bakuToday, addDaysISO } from '@/components/DateTimeGrid';
 
 const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
@@ -35,6 +35,7 @@ function useCalendarData(businessId, view, selectedDate) {
   const [masters, setMasters] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [weekBookings, setWeekBookings] = useState([]);
+  const [historyBookings, setHistoryBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const loadedOnce = useRef(false);
@@ -55,12 +56,14 @@ function useCalendarData(businessId, view, selectedDate) {
       listMasters(businessId),
       listBusinessBookings({ businessId, from: selectedDate, days: 1 }),
       view === 'week' ? listBusinessBookings({ businessId, from: weekStart, days: 7 }) : Promise.resolve([]),
+      view === 'history' ? listBusinessHistory(businessId) : Promise.resolve([]),
     ])
-      .then(([m, bk, wk]) => {
+      .then(([m, bk, wk, hist]) => {
         if (cancelled) return;
         setMasters(m);
         setBookings(bk);
         if (view === 'week') setWeekBookings(wk);
+        if (view === 'history') setHistoryBookings(hist);
         loadedOnce.current = true;
       })
       .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить'))
@@ -77,7 +80,7 @@ function useCalendarData(businessId, view, selectedDate) {
 
   useFocusEffect(load);
 
-  return { masters, bookings, weekBookings, loading, error };
+  return { masters, bookings, weekBookings, historyBookings, loading, error, reload: load };
 }
 
 export default function BusinessCalendar() {
@@ -100,7 +103,40 @@ export default function BusinessCalendar() {
   const dateList = Array.from({ length: 7 }, (_, i) => addDaysISO(bakuToday(), i));
   const selectedDate = dateList[dayIdx];
 
-  const { masters, bookings, weekBookings, loading, error } = useCalendarData(businessId, view, selectedDate);
+  const { masters, bookings, weekBookings, historyBookings, loading, error, reload } = useCalendarData(businessId, view, selectedDate);
+  const masterName = useCallback((id) => masters.find((m) => m.id === id)?.name || 'Мастер', [masters]);
+
+  // Отметить визит завершённым/неявкой можно только для уже прошедшего
+  // времени — то же самое complete_booking проверяет и на сервере
+  // (0015_booking_lifecycle.sql). Раньше тап по ещё не начавшейся брони
+  // молча ничего не делал — выглядело как "не работает"; теперь для
+  // будущей брони показываем просто карточку без действий, а не тишину.
+  async function handleBookingTap(b) {
+    if (b.status !== 'confirmed') return;
+    const isPast = new Date(b.starts_at).getTime() <= Date.now();
+    if (!isPast) {
+      Alert.alert(b.client_name || 'Без имени', `${b.service_name}\n\nОтметить визит можно только после времени начала записи.`);
+      return;
+    }
+    Alert.alert(
+      b.client_name || 'Без имени',
+      b.service_name,
+      [
+        { text: 'Отмена', style: 'cancel' },
+        { text: 'Не пришёл', style: 'destructive', onPress: () => runComplete(b.id, 'no_show') },
+        { text: 'Пришёл', onPress: () => runComplete(b.id, 'completed') },
+      ]
+    );
+  }
+
+  async function runComplete(bookingId, status) {
+    try {
+      await completeBooking(bookingId, status);
+      reload();
+    } catch (e) {
+      Alert.alert('Не удалось обновить статус', e.message || 'Попробуйте ещё раз');
+    }
+  }
 
   if (loading) {
     return (
@@ -123,7 +159,7 @@ export default function BusinessCalendar() {
         <View style={styles.headerRow}>
           <Text style={styles.title}>Расписание</Text>
           <View style={styles.segment}>
-            {segLayouts.day && segLayouts.week && <Animated.View style={[styles.segPill, pillStyle]} />}
+            {segLayouts.day && segLayouts.week && segLayouts.history && <Animated.View style={[styles.segPill, pillStyle]} />}
             <Pressable
               style={styles.segTab}
               onLayout={(e) => {
@@ -144,17 +180,31 @@ export default function BusinessCalendar() {
             >
               <Text style={[styles.segText, view === 'week' && styles.segTextOn]}>Неделя</Text>
             </Pressable>
+            <Pressable
+              style={styles.segTab}
+              onLayout={(e) => {
+                const { x, width } = e.nativeEvent.layout;
+                setSegLayouts((s) => ({ ...s, history: { x, width } }));
+              }}
+              onPress={() => setView('history')}
+            >
+              <Text style={[styles.segText, view === 'history' && styles.segTextOn]}>История</Text>
+            </Pressable>
           </View>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daysRow}>
-          {dateList.map((iso, i) => (
-            <PressableScale key={iso} style={[styles.dayChip, dayIdx === i && styles.dayChipOn]} onPress={() => setDayIdx(i)}>
-              <Text style={[styles.dayDow, dayIdx === i && styles.dayTextOn]}>{DOW[dowOf(iso)]}</Text>
-              <Text style={[styles.dayNum, dayIdx === i && styles.dayTextOn]}>{iso.slice(8, 10)}</Text>
-            </PressableScale>
-          ))}
-        </ScrollView>
+        {/* Строка дней бессмысленна для "Истории" — там плоский список за
+            всё время, а не окно в 7 дней вперёд от сегодня. */}
+        {view !== 'history' && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daysRow}>
+            {dateList.map((iso, i) => (
+              <PressableScale key={iso} style={[styles.dayChip, dayIdx === i && styles.dayChipOn]} onPress={() => setDayIdx(i)}>
+                <Text style={[styles.dayDow, dayIdx === i && styles.dayTextOn]}>{DOW[dowOf(iso)]}</Text>
+                <Text style={[styles.dayNum, dayIdx === i && styles.dayTextOn]}>{iso.slice(8, 10)}</Text>
+              </PressableScale>
+            ))}
+          </ScrollView>
+        )}
       </View>
 
       {view === 'day' ? (
@@ -194,11 +244,18 @@ export default function BusinessCalendar() {
                         const endMin = localMinutes(b.ends_at);
                         const top = ((startMin - DISPLAY_START) / 60) * HOUR_H;
                         const height = Math.max(((endMin - startMin) / 60) * HOUR_H - 3, 20);
+                        const isPast = new Date(b.starts_at).getTime() < Date.now();
                         return (
-                          <View key={b.id} style={[styles.block, { top, height, backgroundColor: COLORS.indigo100, borderLeftColor: COLORS.indigo }]}>
+                          <PressableScale
+                            key={b.id}
+                            style={[styles.block, { top, height, backgroundColor: COLORS.indigo100, borderLeftColor: COLORS.indigo }]}
+                            onPress={() => handleBookingTap(b)}
+                          >
                             <Text numberOfLines={1} style={styles.blockClient}>{b.client_name || 'Без имени'}</Text>
                             {height > 40 && <Text numberOfLines={1} style={styles.blockService}>{b.service_name}</Text>}
-                          </View>
+                            {/* Точка-подсказка: прошедшую бронь можно тапнуть и отметить визит. */}
+                            {isPast && height > 40 && <View style={styles.blockPastDot} />}
+                          </PressableScale>
                         );
                       })}
                   </View>
@@ -207,7 +264,7 @@ export default function BusinessCalendar() {
             </View>
           </ScrollView>
         )
-      ) : (
+      ) : view === 'week' ? (
         <ScrollView contentContainerStyle={styles.weekList}>
           {dateList.map((iso) => {
             const dayBookings = weekBookings.filter(
@@ -228,9 +285,63 @@ export default function BusinessCalendar() {
             );
           })}
         </ScrollView>
+      ) : historyBookings.length === 0 ? (
+        <Text style={styles.emptyText}>Истории визитов пока нет.</Text>
+      ) : (
+        <ScrollView contentContainerStyle={styles.weekList}>
+          {historyBookings.map((b) => {
+            const isPast = new Date(b.starts_at).getTime() <= Date.now();
+            const tappable = b.status === 'confirmed' && isPast;
+            const { label, color } = historyStatus(b.status, isPast);
+            return (
+              <PressableScale
+                key={b.id}
+                style={styles.historyRow}
+                disabled={!tappable}
+                onPress={() => handleBookingTap(b)}
+              >
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.weekLabel}>{b.client_name || 'Без имени'}</Text>
+                  <Text style={styles.historySub}>
+                    {b.service_name} · {masterName(b.master_id)}
+                  </Text>
+                  <Text style={styles.historySub}>{formatHistoryDate(b.starts_at)}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                  <Text style={styles.weekLabel}>{b.price} ₼</Text>
+                  <Text style={[styles.historyStatus, { color }]}>{label}</Text>
+                </View>
+              </PressableScale>
+            );
+          })}
+        </ScrollView>
       )}
     </View>
   );
+}
+
+function historyStatus(status, isPast) {
+  switch (status) {
+    case 'completed':
+      return { label: 'Завершён', color: COLORS.success };
+    case 'no_show':
+      return { label: 'Неявка', color: COLORS.danger };
+    case 'cancelled':
+      return { label: 'Отменена', color: COLORS.subLight };
+    default:
+      // status === 'confirmed', но время уже прошло — владелец ещё не
+      // отметил визит (тап всё ещё открывает "Пришёл"/"Не пришёл").
+      return isPast ? { label: 'Ожидает отметки', color: COLORS.warning } : { label: 'Подтверждено', color: COLORS.indigo };
+  }
+}
+
+function formatHistoryDate(isoUtc) {
+  const d = new Date(new Date(isoUtc).getTime() + 4 * 3600000);
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const hh = String(d.getUTCHours()).padStart(2, '0');
+  const min = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${dd}.${mm} · ${hh}:${min}`;
 }
 
 const styles = StyleSheet.create({
@@ -262,9 +373,23 @@ const styles = StyleSheet.create({
   block: { position: 'absolute', left: 0, right: 0, padding: 7, paddingHorizontal: 8, borderLeftWidth: 3, borderRadius: 11, overflow: 'hidden' },
   blockClient: { fontFamily: FONT.bold, fontSize: 11, color: COLORS.ink },
   blockService: { fontFamily: FONT.medium, fontSize: 10, color: '#5B6478', marginTop: 3 },
+  blockPastDot: { position: 'absolute', top: 6, right: 6, width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.indigo },
   weekList: { padding: SPACING.xl, gap: SPACING.sm },
   weekCard: { padding: 14, borderWidth: 1, borderColor: COLORS.borderLight, borderRadius: RADIUS.lg, backgroundColor: COLORS.white },
   weekRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: SPACING.md },
   weekLabel: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.ink },
   weekMeta: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: COLORS.sub },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.md,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.white,
+  },
+  historySub: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginTop: 2 },
+  historyStatus: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.xs },
 });
