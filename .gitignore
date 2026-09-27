@@ -27,3 +27,6 @@ npm-debug.*
 yarn-debug.*
 yarn-error.*
 *.log
+
+# рабочие папки промо-видео (кадры, node_modules, исходники рендера)
+brag-output*/
