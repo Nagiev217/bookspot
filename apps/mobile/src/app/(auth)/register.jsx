@@ -4,9 +4,8 @@ import PressableScale from '@/components/PressableScale';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '@/utils/supabase/config';
-import { getMyProfile } from '@/utils/supabase/profile';
+import { buildSession } from '@/utils/supabase/profile';
 import { useAuthStore } from '@/utils/auth/store';
-import { setCachedRole } from '@/utils/auth/roleCache';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { PRIVACY_POLICY_URL, TERMS_URL } from '@/utils/legal';
 
@@ -51,10 +50,7 @@ export default function Register() {
         return;
       }
 
-      const uid = data.user.id;
-      const profile = await getMyProfile(uid);
-      await setCachedRole(uid, profile.role, profile.businessId);
-      setAuth({ status: 'signedIn', uid, role: profile.role, businessId: profile.businessId, mode: 'client' });
+      setAuth(await buildSession(data.user.id));
       router.replace(typeof redirect === 'string' ? redirect : '/');
     } catch (e) {
       setError(mapAuthError(e.message));

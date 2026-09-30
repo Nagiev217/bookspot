@@ -8,7 +8,9 @@
     "purge-demo": "node --env-file=.env purge-demo.js",
     "verify-booking": "node --env-file=.env verify-booking.js",
     "verify-selfserve": "node --env-file=.env verify-selfserve.js",
-    "verify-release": "node --env-file=.env verify-release.js"
+    "verify-release": "node --env-file=.env verify-release.js",
+    "verify-admin": "node --env-file=.env verify-admin.js",
+    "make-admin": "node --env-file=.env make-admin.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0"

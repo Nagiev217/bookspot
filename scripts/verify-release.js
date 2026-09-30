@@ -69,13 +69,16 @@ async function main() {
 
   try {
     // ── Фикстуры: бизнес, услуга, мастер с расписанием только Пн-Пт ──────
-    const { data: bizId, error: bizErr } = await owner.client.rpc('create_business', {
+    // Салоны создаёт admin (0022) — тот же RPC, что у Edge Function manage-accounts.
+    const { data: bizId, error: bizErr } = await admin.rpc('admin_create_business', {
+      p_owner_id: owner.uid,
       p_name: 'Verify Release Salon',
       p_category_id: 'barber',
       p_city: 'Баку',
       p_district: 'Ясамал',
       p_address: 'ул. Релизная 1',
       p_phone: '+994500000001',
+      p_paid_until: null,
     });
     if (bizErr) throw bizErr;
     businessId = bizId;

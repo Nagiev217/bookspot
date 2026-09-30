@@ -4,15 +4,40 @@
 // supabase/migrations/0001_init.sql). Функция нужна только там, где логика
 // пересекает границы таблиц/прав — создание бизнеса.
 import { supabase } from './config';
+import { setCachedRole, resolveMode } from '@/utils/auth/roleCache';
 
 export async function getMyProfile(uid) {
   const { data, error } = await supabase
     .from('profiles')
-    .select('role, business_id')
+    .select('role, business_id, must_change_password')
     .eq('id', uid)
     .single();
   if (error) throw error;
-  return { role: data.role, businessId: data.business_id };
+  // Мастер (staff) видит только свой календарь — нужен id его мастера.
+  let masterId = null;
+  if (data.role === 'staff') {
+    const { data: m } = await supabase.from('masters').select('id').eq('user_id', uid).maybeSingle();
+    masterId = m?.id ?? null;
+  }
+  return { role: data.role, businessId: data.business_id, masterId, mustChangePassword: !!data.must_change_password };
+}
+
+// Собирает всё состояние авторизации после входа — одно место для
+// _layout.jsx, login.jsx и register.jsx, чтобы правила режима и кэша не
+// расходились между ними.
+export async function buildSession(uid) {
+  const profile = await getMyProfile(uid);
+  const mode = await resolveMode(uid, profile.role);
+  await setCachedRole(uid, profile.role, profile.businessId, profile.masterId);
+  return { status: 'signedIn', uid, ...profile, mode };
+}
+
+// Смена временного пароля при первом входе.
+export async function changeMyPassword(password) {
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw error;
+  const { error: rpcErr } = await supabase.rpc('clear_must_change_password');
+  if (rpcErr) throw rpcErr;
 }
 
 export async function savePushToken(token) {
@@ -22,19 +47,6 @@ export async function savePushToken(token) {
   if (!user) throw new Error('Не авторизован');
   const { error } = await supabase.from('profiles').update({ fcm_token: token }).eq('id', user.id);
   if (error) throw error;
-}
-
-export async function createBusiness({ name, categoryId, city, district, address, phone }) {
-  const { data, error } = await supabase.rpc('create_business', {
-    p_name: name,
-    p_category_id: categoryId,
-    p_city: city,
-    p_district: district ?? null,
-    p_address: address ?? null,
-    p_phone: phone ?? null,
-  });
-  if (error) throw error;
-  return { businessId: data };
 }
 
 export async function updateProfile(uid, { name, phone, lang }) {

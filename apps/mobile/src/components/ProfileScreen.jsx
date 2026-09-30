@@ -20,19 +20,24 @@ import SignInPrompt from '@/components/SignInPrompt';
 
 export default function ProfileScreen() {
   const { uid, role, businessId, mode, setMode } = useAuthStore();
-  const isStaff = role === 'business_owner' || role === 'staff';
+  const isBusinessSide = role === 'business_owner' || role === 'staff';
+  // Второй режим, кроме клиентского: админка или бизнес-режим.
+  const workMode = role === 'admin' ? 'admin' : isBusinessSide ? 'business' : null;
   const [deleting, setDeleting] = useState(false);
 
   async function switchMode() {
-    const next = mode === 'client' ? 'business' : 'client';
+    const next = mode === 'client' ? workMode : 'client';
     await setCachedMode(uid, next);
     setMode(next);
     // Не router.replace('/') — у (client-tabs)/index и (business-tabs)/index
     // группы не входят в URL, поэтому их путь тоже резолвится в "/". Если
     // мы уже "на /", replace('/') становится no-op и гейт в index.jsx
     // не перерендеривается. Переключаем на конкретную группу напрямую.
-    router.replace(next === 'business' ? '/(business-tabs)' : '/(client-tabs)');
+    router.replace(next === 'admin' ? '/(admin-tabs)' : next === 'business' ? '/(business-tabs)' : '/(client-tabs)');
   }
+
+  const switchLabel =
+    mode !== 'client' ? 'Переключиться в Client mode' : workMode === 'admin' ? 'Перейти в админку' : 'Переключиться в Business mode';
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -119,9 +124,7 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.group}>
-        {isStaff && (
-          <MenuRow label={mode === 'client' ? 'Переключиться в Business mode' : 'Переключиться в Client mode'} onPress={switchMode} />
-        )}
+        {workMode && <MenuRow label={switchLabel} onPress={switchMode} last={role !== 'business_owner'} />}
         {role === 'business_owner' && (
           <>
             <MenuRow label="Услуги" onPress={() => router.push(`/services/${businessId}`)} />
@@ -173,7 +176,9 @@ function roleLabel(role) {
     case 'business_owner':
       return 'Владелец бизнеса';
     case 'staff':
-      return 'Сотрудник';
+      return 'Мастер';
+    case 'admin':
+      return 'Администратор';
     default:
       return 'Клиент';
   }

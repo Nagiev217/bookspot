@@ -171,7 +171,7 @@ export async function getMaster(masterId) {
 export async function listAllMasters(businessId) {
   const { data, error } = await supabase
     .from('masters')
-    .select('id, name, photo_url, active')
+    .select('id, name, photo_url, active, user_id')
     .eq('business_id', businessId)
     .order('name');
   if (error) throw error;

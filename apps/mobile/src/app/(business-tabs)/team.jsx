@@ -3,7 +3,7 @@
 // не визуальная имитация. Полное редактирование (расписание, будущие
 // выходные, активность) — на экране master/[masterId].
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import PressableScale from '@/components/PressableScale';
 import { router, useFocusEffect } from 'expo-router';
@@ -11,7 +11,9 @@ import { Plus } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { useAuthStore } from '@/utils/auth/store';
 import { tintFor } from '@/utils/tint';
-import { listAllMasters, createMaster, setMasterDayOff, isMasterOffOn } from '@/utils/supabase/business';
+import { listAllMasters, createMaster, setMasterDayOff, isMasterOffOn, getMyBusiness } from '@/utils/supabase/business';
+import { grantStaffAccess, revokeStaffAccess, resetPassword } from '@/utils/supabase/admin';
+import CredentialsCard from '@/components/CredentialsCard';
 import { bakuToday } from '@/components/DateTimeGrid';
 
 export default function BusinessTeam() {
@@ -23,7 +25,16 @@ export default function BusinessTeam() {
   const [togglingId, setTogglingId] = useState(null);
   const [addingName, setAddingName] = useState(null); // null = форма закрыта
   const [saving, setSaving] = useState(false);
+  const [grantFor, setGrantFor] = useState(null); // id мастера, которому вводим email
+  const [grantEmail, setGrantEmail] = useState('');
+  const [accessBusy, setAccessBusy] = useState(null);
+  const [creds, setCreds] = useState(null); // { masterId, email, password } — показать один раз
+  const [businessName, setBusinessName] = useState(null);
   const loadedOnce = useRef(false);
+
+  useEffect(() => {
+    if (businessId) getMyBusiness(businessId).then((b) => setBusinessName(b.name)).catch(() => {});
+  }, [businessId]);
 
   const load = useCallback(() => {
     if (!businessId) {
@@ -66,6 +77,68 @@ export default function BusinessTeam() {
     } finally {
       setTogglingId(null);
     }
+  }
+
+  async function grantAccess(m) {
+    const email = grantEmail.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      Alert.alert('Проверьте email', 'Введите email мастера — он будет логином.');
+      return;
+    }
+    setAccessBusy(m.id);
+    try {
+      const res = await grantStaffAccess({ businessId, masterId: m.id, email });
+      setCreds({ masterId: m.id, ...res });
+      setGrantFor(null);
+      load();
+    } catch (e) {
+      Alert.alert('Не удалось выдать доступ', e.message);
+    } finally {
+      setAccessBusy(null);
+    }
+  }
+
+  function resetAccess(m) {
+    Alert.alert('Сбросить пароль?', `Старый пароль ${m.name} перестанет работать.`, [
+      { text: 'Отмена', style: 'cancel' },
+      {
+        text: 'Сбросить',
+        style: 'destructive',
+        onPress: async () => {
+          setAccessBusy(m.id);
+          try {
+            const res = await resetPassword(m.user_id);
+            setCreds({ masterId: m.id, ...res });
+          } catch (e) {
+            Alert.alert('Не удалось сбросить пароль', e.message);
+          } finally {
+            setAccessBusy(null);
+          }
+        },
+      },
+    ]);
+  }
+
+  function revokeAccess(m) {
+    Alert.alert('Забрать доступ?', `${m.name} больше не сможет входить в приложение. Мастер и его записи останутся.`, [
+      { text: 'Отмена', style: 'cancel' },
+      {
+        text: 'Забрать',
+        style: 'destructive',
+        onPress: async () => {
+          setAccessBusy(m.id);
+          try {
+            await revokeStaffAccess(m.id);
+            if (creds?.masterId === m.id) setCreds(null);
+            load();
+          } catch (e) {
+            Alert.alert('Не удалось забрать доступ', e.message);
+          } finally {
+            setAccessBusy(null);
+          }
+        },
+      },
+    ]);
   }
 
   async function handleAddMaster() {
@@ -132,7 +205,8 @@ export default function BusinessTeam() {
           masters.map((m) => {
             const isOn = !offToday[m.id];
             return (
-              <PressableScale key={m.id} style={styles.card} onPress={() => router.push(`/master/${m.id}`)}>
+              <View key={m.id} style={{ gap: SPACING.md }}>
+              <PressableScale style={styles.card} onPress={() => router.push(`/master/${m.id}`)}>
                 <View style={styles.cardTop}>
                   <View style={[styles.avatar, { backgroundColor: tintFor(m.id)[0] }]}>
                     {m.photo_url && <Image source={{ uri: m.photo_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />}
@@ -154,7 +228,54 @@ export default function BusinessTeam() {
                     {togglingId === m.id ? <ActivityIndicator size="small" color={COLORS.white} /> : <View style={styles.switchKnob} />}
                   </PressableScale>
                 </View>
+
+                {/* Доступ мастера в приложение: свой логин, видит только своё расписание. */}
+                <View style={styles.access}>
+                  {m.user_id ? (
+                    <>
+                      <Text style={styles.accessOn}>Есть доступ в приложение</Text>
+                      <View style={styles.accessActions}>
+                        <PressableScale style={styles.accessBtn} disabled={accessBusy === m.id} onPress={() => resetAccess(m)}>
+                          <Text style={styles.accessBtnText}>Сбросить пароль</Text>
+                        </PressableScale>
+                        <PressableScale style={styles.accessBtn} disabled={accessBusy === m.id} onPress={() => revokeAccess(m)}>
+                          <Text style={[styles.accessBtnText, { color: COLORS.danger }]}>Забрать доступ</Text>
+                        </PressableScale>
+                      </View>
+                    </>
+                  ) : grantFor === m.id ? (
+                    <View style={styles.addForm}>
+                      <TextInput
+                        style={styles.addInput}
+                        placeholder="Email мастера — будет логином"
+                        placeholderTextColor={COLORS.sub}
+                        autoCapitalize="none"
+                        keyboardType="email-address"
+                        value={grantEmail}
+                        onChangeText={setGrantEmail}
+                        autoFocus
+                      />
+                      <PressableScale style={styles.addSaveButton} onPress={() => grantAccess(m)} disabled={accessBusy === m.id}>
+                        {accessBusy === m.id ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.addSaveText}>Выдать</Text>}
+                      </PressableScale>
+                    </View>
+                  ) : (
+                    <PressableScale
+                      style={styles.accessBtn}
+                      onPress={() => {
+                        setGrantFor(m.id);
+                        setGrantEmail('');
+                      }}
+                    >
+                      <Text style={styles.accessBtnText}>Выдать доступ в приложение</Text>
+                    </PressableScale>
+                  )}
+                </View>
               </PressableScale>
+              {creds?.masterId === m.id && (
+                <CredentialsCard title={`Доступ для ${m.name}`} name={m.name} email={creds.email} password={creds.password} businessName={businessName} />
+              )}
+              </View>
             );
           })
         )}
@@ -182,6 +303,11 @@ const styles = StyleSheet.create({
   name: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.base, color: COLORS.ink },
   nameOff: { color: COLORS.sub },
   sub: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginTop: 3 },
+  access: { marginTop: SPACING.md, paddingTop: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.borderLight, gap: SPACING.sm },
+  accessOn: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: COLORS.success },
+  accessActions: { flexDirection: 'row', gap: SPACING.sm },
+  accessBtn: { flex: 1, height: 40, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(11,17,32,.12)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: SPACING.sm },
+  accessBtnText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.ink },
   switchTrack: { width: 48, height: 28, borderRadius: 14, padding: 3, flexDirection: 'row', alignItems: 'center' },
   switchKnob: { width: 22, height: 22, borderRadius: 11, backgroundColor: COLORS.white },
 });

@@ -96,32 +96,21 @@ async function ensureBusiness(ownerUid) {
     return profile.business_id;
   }
 
-  // create_business() — SECURITY DEFINER, читает auth.uid() из JWT, поэтому
-  // вызывается от имени владельца (его access token), а не service_role.
-  const anonKey = process.env.SUPABASE_ANON_KEY;
-  if (!anonKey) throw new Error('Нужен SUPABASE_ANON_KEY в scripts/.env для входа под владельцем');
-
-  const anon = createClient(SUPABASE_URL, anonKey, { auth: { autoRefreshToken: false, persistSession: false } });
-  const { data: signIn, error: signInErr } = await anon.auth.signInWithPassword({
-    email: OWNER_EMAIL,
-    password: OWNER_PASSWORD,
-  });
-  if (signInErr) throw signInErr;
-
-  const asOwner = createClient(SUPABASE_URL, anonKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-    global: { headers: { Authorization: `Bearer ${signIn.session.access_token}` } },
-  });
-
-  const { data: businessId, error: rpcErr } = await asOwner.rpc('create_business', {
+  // Салоны создаёт только admin (0022) — тот же RPC, что вызывает Edge
+  // Function manage-accounts, через service_role.
+  const { data: businessId, error: rpcErr } = await admin.rpc('admin_create_business', {
+    p_owner_id: ownerUid,
     p_name: 'Atelier Nizami',
     p_category_id: 'barber',
     p_city: 'Баку',
     p_district: 'Ичеришехер',
     p_address: null,
     p_phone: '+994501234567',
+    p_paid_until: null,
   });
   if (rpcErr) throw rpcErr;
+  // Сид-владелец входит с известным паролем — смена временного пароля ему не нужна.
+  await admin.from('profiles').update({ must_change_password: false }).eq('id', ownerUid);
   console.log(`✓ Создан бизнес: Atelier Nizami (${businessId})`);
   return businessId;
 }

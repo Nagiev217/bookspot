@@ -44,10 +44,13 @@ async function main() {
   });
   if (signInErr) throw new Error(`Не удалось войти как ${OWNER_EMAIL}: ${signInErr.message}. Запустите сначала npm run seed.`);
 
-  const { data: master } = await client.from('masters').select('id, name').eq('name', 'Тогрул').single();
-  const { data: service } = await client.from('services').select('id, duration_min').eq('name', 'Стрижка + борода').single();
+  // Сначала салон, потом мастер и услуга только в нём: «Стрижка + борода»
+  // есть и у демо-салонов из seed-baku-salons.js, без фильтра .single() падает.
   const { data: business } = await client.from('businesses').select('id').eq('name', 'Atelier Nizami').single();
-  if (!master || !service || !business) throw new Error('Сид-данные не найдены — запустите npm run seed');
+  if (!business) throw new Error('Сид-данные не найдены — запустите npm run seed');
+  const { data: master } = await client.from('masters').select('id, name').eq('business_id', business.id).eq('name', 'Тогрул').single();
+  const { data: service } = await client.from('services').select('id, duration_min').eq('business_id', business.id).eq('name', 'Стрижка + борода').single();
+  if (!master || !service) throw new Error('Сид-данные не найдены — запустите npm run seed');
 
   const date = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10); // завтра
   const args = { p_business_id: business.id, p_master_id: master.id, p_service_id: service.id, p_date: date };
@@ -61,7 +64,10 @@ async function main() {
   check('повтор того же запроса — та же бронь, не дубль', r2.data?.[0]?.id === r1.data?.[0]?.id);
 
   const r3 = await client.rpc('create_booking', { ...args, p_start: '10:30' });
-  check('пересекающийся слот отклонён', r3.error?.code === '23P01');
+  // С 0016 пересечение отсекает ещё assert_slot_bookable (занятое время
+  // вычитается из свободного, код 22023) — до EXCLUDE-constraint (23P01)
+  // дело доходит только при одновременной гонке двух запросов.
+  check('пересекающийся слот отклонён', ['23P01', '22023'].includes(r3.error?.code), `${r3.error?.code} ${r3.error?.message}`);
 
   const r4 = await client.rpc('create_booking', { ...args, p_start: '11:10' });
   check(`стыковый слот (${service.duration_min} мин ровно до 11:10) разрешён`, !r4.error && r4.data?.[0]?.id);

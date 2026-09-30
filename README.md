@@ -73,6 +73,19 @@ One app, two modes. Every user is a client; if the account owns a business, a **
 | Salon and master photos (Supabase Storage) | `business-settings/[businessId].jsx` |
 | "New booking" push | `0018_push_outbox.sql` |
 
+### Roles and partner onboarding
+
+Salons become partners via WhatsApp and pay a subscription; there is no self-service salon sign-up.
+
+| Role | How the account is created | What they can do |
+|---|---|---|
+| **Admin** (platform) | `npm run make-admin -- <email>` (service role) | Admin mode: create a salon together with its owner's account, extend the subscription (+1/3/6/12 months), block/unblock, reset the owner's password |
+| **Owner** | By the admin; temporary password sent via WhatsApp, must be changed on first login | Everything in business mode; give each master their own login in "Team", reset or revoke it |
+| **Master** (staff) | By the owner, same temporary-password flow | Sees only their own column in the calendar and their own bookings; can't change the salon, services or schedules |
+| **Client** | Signs up in the app | Books, reviews, favorites |
+
+Accounts are created by the `manage-accounts` Edge Function (creating Auth users needs the service role). A salon whose `paid_until` date has passed disappears from the catalog and stops accepting new bookings; existing bookings stay. See migration `0022`.
+
 ## Tech stack
 
 | Layer | What is used |

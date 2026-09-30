@@ -51,17 +51,21 @@ async function main() {
   let businessId, serviceId, masterId, bookingId;
 
   try {
-    const { data: bizId, error: bizErr } = await owner.client.rpc('create_business', {
+    // Салон создаёт admin (0022), дальше владелец сам ведёт услуги, мастеров
+    // и расписание — это и есть «самообслуживание» после подключения.
+    const { data: bizId, error: bizErr } = await admin.rpc('admin_create_business', {
+      p_owner_id: owner.uid,
       p_name: 'Selfserve Verify Salon',
       p_category_id: 'barber',
       p_city: 'Баку',
       p_district: 'Ясамал',
       p_address: 'ул. Тестовая 1',
       p_phone: '+994500000000',
+      p_paid_until: null,
     });
     if (bizErr) throw bizErr;
     businessId = bizId;
-    assert(!!businessId, 'владелец создаёт бизнес через create_business()');
+    assert(!!businessId, 'admin создаёт салон с владельцем через admin_create_business()');
 
     const { data: service, error: svcErr } = await owner.client
       .from('services')

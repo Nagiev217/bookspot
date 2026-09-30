@@ -3,7 +3,7 @@ import { Redirect } from 'expo-router';
 import { useAuthStore } from '@/utils/auth/store';
 
 export default function Index() {
-  const { status, role, mode } = useAuthStore();
+  const { status, role, mode, mustChangePassword } = useAuthStore();
 
   if (status === 'loading') return null;
   // Гость смотрит каталог свободно (App Store Guideline 5.1.1) — экраны,
@@ -15,7 +15,12 @@ export default function Index() {
   // закрыли между созданием аккаунта и вызовом registerProfile).
   if (role === null) return <Redirect href="/(auth)/register" />;
 
-  const isStaff = role === 'business_owner' || role === 'staff';
-  if (isStaff && mode === 'business') return <Redirect href="/(business-tabs)" />;
+  // Аккаунт выдан admin'ом или владельцем с временным паролем — сначала
+  // сменить его, иначе пароль из переписки в WhatsApp так и останется.
+  if (mustChangePassword) return <Redirect href="/(auth)/change-password" />;
+
+  if (role === 'admin' && mode === 'admin') return <Redirect href="/(admin-tabs)" />;
+  const isBusinessSide = role === 'business_owner' || role === 'staff';
+  if (isBusinessSide && mode === 'business') return <Redirect href="/(business-tabs)" />;
   return <Redirect href="/(client-tabs)" />;
 }

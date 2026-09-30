@@ -3,8 +3,10 @@ import { Tabs } from 'expo-router';
 import { House, Calendar, Users, User } from 'lucide-react-native';
 import { COLORS } from '@/theme/tokens';
 import { registerForPush } from '@/utils/notifications';
+import { useAuthStore } from '@/utils/auth/store';
 
 export default function BusinessTabsLayout() {
+  const isOwner = useAuthStore((s) => s.role === 'business_owner');
   // Владелец/сотрудник заходит в бизнес-режим — здесь push уже имеет явную
   // пользу (уведомление о новой брони), поэтому спрашиваем разрешение сразу
   // при входе, а не откладываем до первого события. Тихо no-op'ает при отказе.
@@ -23,9 +25,15 @@ export default function BusinessTabsLayout() {
         name="calendar"
         options={{ title: 'Календарь', tabBarIcon: ({ color, size }) => <Calendar color={color} size={size} /> }}
       />
+      {/* Команду (мастера, выходные, доступы) ведёт только владелец —
+          мастер видит своё расписание во вкладках «Сегодня» и «Календарь». */}
       <Tabs.Screen
         name="team"
-        options={{ title: 'Команда', tabBarIcon: ({ color, size }) => <Users color={color} size={size} /> }}
+        options={{
+          title: 'Команда',
+          href: isOwner ? undefined : null,
+          tabBarIcon: ({ color, size }) => <Users color={color} size={size} />,
+        }}
       />
       <Tabs.Screen
         name="profile"

@@ -3,9 +3,8 @@ import { View, Text, TextInput, StyleSheet, ActivityIndicator } from 'react-nati
 import PressableScale from '@/components/PressableScale';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { supabase, IS_SUPABASE_READY } from '@/utils/supabase/config';
-import { getMyProfile } from '@/utils/supabase/profile';
+import { buildSession } from '@/utils/supabase/profile';
 import { useAuthStore } from '@/utils/auth/store';
-import { setCachedRole, getCachedMode } from '@/utils/auth/roleCache';
 import { friendlyError } from '@/utils/errors';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 
@@ -41,15 +40,11 @@ export default function Login() {
       // index.jsx отправит обратно на этот же экран, и без другого
       // подписчика уже ничто не перепроверит стор повторно. Поэтому статус
       // выставляется здесь же, синхронно с самим redirect.
-      const uid = data.user.id;
-      const profile = await getMyProfile(uid);
-      const mode = await getCachedMode(
-        uid,
-        profile.role === 'business_owner' || profile.role === 'staff' ? 'business' : 'client'
-      );
-      await setCachedRole(uid, profile.role, profile.businessId);
-      setAuth({ status: 'signedIn', uid, role: profile.role, businessId: profile.businessId, mode });
-      router.replace(typeof redirect === 'string' ? redirect : '/');
+      const session = await buildSession(data.user.id);
+      setAuth(session);
+      // Временный пароль — сначала через гейт на смену пароля, даже если
+      // вход был вызван со страницы брони/избранного.
+      router.replace(typeof redirect === 'string' && !session.mustChangePassword ? redirect : '/');
     } catch (e) {
       setError(mapAuthError(e));
     } finally {

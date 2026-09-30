@@ -11,9 +11,9 @@ import {
   Manrope_800ExtraBold,
 } from '@expo-google-fonts/manrope';
 import { supabase, IS_SUPABASE_READY } from '@/utils/supabase/config';
-import { getMyProfile } from '@/utils/supabase/profile';
+import { buildSession } from '@/utils/supabase/profile';
 import { useAuthStore } from '@/utils/auth/store';
-import { getCachedRole, setCachedRole, getCachedMode } from '@/utils/auth/roleCache';
+import { getCachedRole, resolveMode } from '@/utils/auth/roleCache';
 import { useReducedMotion } from '@/utils/useReducedMotion';
 import { addNotificationResponseListener } from '@/utils/notifications';
 import OfflineBanner from '@/components/OfflineBanner';
@@ -67,36 +67,27 @@ export default function RootLayout() {
       const user = session?.user ?? null;
 
       if (!user) {
-        setAuth({ status: 'signedOut', uid: null, role: null, businessId: null, mode: 'client' });
+        setAuth({ status: 'signedOut', uid: null, role: null, businessId: null, masterId: null, mustChangePassword: false, mode: 'client' });
         return;
       }
 
       const cached = await getCachedRole(user.id);
       if (mySession !== sessionRef) return;
       if (cached) {
-        const mode = await getCachedMode(
-          user.id,
-          cached.role === 'business_owner' || cached.role === 'staff' ? 'business' : 'client'
-        );
+        const mode = await resolveMode(user.id, cached.role);
         if (mySession !== sessionRef) return;
-        setAuth({ status: 'signedIn', uid: user.id, role: cached.role, businessId: cached.businessId, mode });
+        setAuth({ status: 'signedIn', uid: user.id, role: cached.role, businessId: cached.businessId, masterId: cached.masterId ?? null, mode });
       }
 
       try {
-        const profile = await getMyProfile(user.id);
+        const session = await buildSession(user.id);
         if (mySession !== sessionRef) return;
-        const mode = await getCachedMode(
-          user.id,
-          profile.role === 'business_owner' || profile.role === 'staff' ? 'business' : 'client'
-        );
-        if (mySession !== sessionRef) return;
-        setAuth({ status: 'signedIn', uid: user.id, role: profile.role, businessId: profile.businessId, mode });
-        await setCachedRole(user.id, profile.role, profile.businessId);
+        setAuth(session);
       } catch {
         // Сеть недоступна и кэша нет — role остаётся null, гейт в index.jsx
         // отправит на регистрацию профиля.
         if (!cached && mySession === sessionRef) {
-          setAuth({ status: 'signedIn', uid: user.id, role: null, businessId: null, mode: 'client' });
+          setAuth({ status: 'signedIn', uid: user.id, role: null, businessId: null, masterId: null, mode: 'client' });
         }
       }
     });
@@ -135,6 +126,7 @@ export default function RootLayout() {
             осознанный переход, а не зависание/лаг. */}
         <Stack.Screen name="(client-tabs)" options={{ animation: reducedMotion ? 'none' : 'fade' }} />
         <Stack.Screen name="(business-tabs)" options={{ animation: reducedMotion ? 'none' : 'fade' }} />
+        <Stack.Screen name="(admin-tabs)" options={{ animation: reducedMotion ? 'none' : 'fade' }} />
         {/* Просмотр/дрилл-даун — обычный push. */}
         <Stack.Screen name="salon/[idx]" options={{ gestureEnabled: true }} />
         <Stack.Screen name="booking/[idx]" options={{ gestureEnabled: true }} />
@@ -143,6 +135,7 @@ export default function RootLayout() {
             закрываться как форма, а не как ещё один уровень навигации push. */}
         <Stack.Screen name="reschedule/[bookingId]" options={{ presentation: 'modal', gestureEnabled: true }} />
         <Stack.Screen name="review/[bookingId]" options={{ presentation: 'modal', gestureEnabled: true }} />
+        <Stack.Screen name="admin-business/[id]" options={{ gestureEnabled: true }} />
         <Stack.Screen name="manual-booking/[businessId]" options={{ presentation: 'modal', gestureEnabled: true }} />
         <Stack.Screen name="services/[businessId]" options={{ presentation: 'modal', gestureEnabled: true }} />
         <Stack.Screen name="business-settings/[businessId]" options={{ presentation: 'modal', gestureEnabled: true }} />

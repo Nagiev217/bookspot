@@ -103,7 +103,11 @@ export default function BusinessCalendar() {
   const dateList = Array.from({ length: 7 }, (_, i) => addDaysISO(bakuToday(), i));
   const selectedDate = dateList[dayIdx];
 
-  const { masters, bookings, weekBookings, historyBookings, loading, error, reload } = useCalendarData(businessId, view, selectedDate);
+  const { masters: allMasters, bookings, weekBookings, historyBookings, loading, error, reload } = useCalendarData(businessId, view, selectedDate);
+  // Мастер (staff) видит только свою колонку; брони других мастеров ему и
+  // так не приходят с сервера (политика bookings в 0022).
+  const staffMasterId = useAuthStore((s) => (s.role === 'staff' ? s.masterId : null));
+  const masters = staffMasterId ? allMasters.filter((m) => m.id === staffMasterId) : allMasters;
   const masterName = useCallback((id) => masters.find((m) => m.id === id)?.name || 'Мастер', [masters]);
 
   // Отметить визит завершённым/неявкой можно только для уже прошедшего

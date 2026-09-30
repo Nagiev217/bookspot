@@ -15,20 +15,40 @@ export async function getCachedRole(uid) {
   }
 }
 
-export async function setCachedRole(uid, role, businessId) {
+export async function setCachedRole(uid, role, businessId, masterId = null) {
   try {
-    await AsyncStorage.setItem(roleKey(uid), JSON.stringify({ role, businessId }));
+    await AsyncStorage.setItem(roleKey(uid), JSON.stringify({ role, businessId, masterId }));
   } catch {
     // AsyncStorage недоступен — не критично, роль перечитается с сервера.
   }
 }
 
-export async function getCachedMode(uid, fallback) {
+// Какие режимы (навигационные графы) доступны роли. Первый — режим по
+// умолчанию: admin открывает админку, владелец и мастер — бизнес-режим.
+function modesFor(role) {
+  switch (role) {
+    case 'admin':
+      return ['admin', 'client'];
+    case 'business_owner':
+    case 'staff':
+      return ['business', 'client'];
+    default:
+      return ['client'];
+  }
+}
+
+export function defaultModeFor(role) {
+  return modesFor(role)[0];
+}
+
+// Последний выбранный режим, если он всё ещё доступен роли; иначе — по
+// умолчанию (например, владельца лишили бизнеса — кэш 'business' устарел).
+export async function resolveMode(uid, role) {
   try {
     const raw = await AsyncStorage.getItem(modeKey(uid));
-    return raw === 'client' || raw === 'business' ? raw : fallback;
+    return modesFor(role).includes(raw) ? raw : defaultModeFor(role);
   } catch {
-    return fallback;
+    return defaultModeFor(role);
   }
 }
 

@@ -4,11 +4,13 @@
 // вручную), а точечное закрытие слота — отдельная задача под
 // master_exceptions/custom_hours, ещё не построена.
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Linking } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '@/utils/auth/store';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { getMyBusiness, listBusinessBookings } from '@/utils/supabase/business';
+import { daysLeft, formatDateRu } from '@/utils/supabase/admin';
+import { PARTNER_WHATSAPP, hasPartnerWhatsapp, whatsappUrl } from '@/utils/contact';
 import { bakuToday } from '@/components/DateTimeGrid';
 import PressableScale from '@/components/PressableScale';
 
@@ -29,6 +31,7 @@ function formatDateLabel(iso) {
 
 export default function BusinessToday() {
   const businessId = useAuthStore((s) => s.businessId);
+  const isOwner = useAuthStore((s) => s.role === 'business_owner');
   const [business, setBusiness] = useState(null);
   const [todayBookings, setTodayBookings] = useState([]);
   const [nextDay, setNextDay] = useState(null); // { date, bookings } — ближайший день с записями, если сегодня пусто
@@ -79,6 +82,21 @@ export default function BusinessToday() {
   const showingNextDay = todayBookings.length === 0 && !!nextDay;
   const bookings = showingNextDay ? nextDay.bookings : todayBookings;
 
+  // Подписка заканчивается через ≤ 5 дней или уже закончилась — салон
+  // пропадёт (или уже пропал) из каталога, владельцу нужно продлить.
+  const left = daysLeft(business?.paid_until);
+  const subscription =
+    left === null || left > 5
+      ? null
+      : left < 0
+        ? { expired: true, title: `Подписка закончилась ${formatDateRu(business.paid_until)} — салон скрыт из каталога` }
+        : { expired: false, title: `Подписка до ${formatDateRu(business.paid_until)} · осталось ${left} дн.` };
+
+  async function openPartnerWhatsapp() {
+    if (!hasPartnerWhatsapp()) return;
+    Linking.openURL(whatsappUrl(`Здравствуйте! Хочу продлить подписку для «${business?.name}».`, PARTNER_WHATSAPP)).catch(() => {});
+  }
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -115,9 +133,20 @@ export default function BusinessToday() {
         </View>
       </View>
 
-      <PressableScale style={styles.quickButton} onPress={() => router.push(`/manual-booking/${businessId}`)}>
-        <Text style={styles.quickButtonText}>+ Запись вручную</Text>
-      </PressableScale>
+      {isOwner && subscription && (
+        <PressableScale style={[styles.subBanner, subscription.expired && styles.subBannerOff]} onPress={openPartnerWhatsapp}>
+          <Text style={[styles.subTitle, subscription.expired && { color: COLORS.danger }]}>{subscription.title}</Text>
+          <Text style={styles.subText}>Продлите подписку в WhatsApp</Text>
+        </PressableScale>
+      )}
+
+      {/* Ручную запись к любому мастеру делает владелец; мастер видит
+          только своё расписание (0022). */}
+      {isOwner && (
+        <PressableScale style={styles.quickButton} onPress={() => router.push(`/manual-booking/${businessId}`)}>
+          <Text style={styles.quickButtonText}>+ Запись вручную</Text>
+        </PressableScale>
+      )}
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>
@@ -160,6 +189,10 @@ const styles = StyleSheet.create({
   kpiCard: { flex: 1, padding: 14, paddingHorizontal: 12, borderRadius: 20, backgroundColor: COLORS.surfaceAlt },
   kpiValue: { fontFamily: FONT.extrabold, fontSize: 19, color: COLORS.ink, letterSpacing: -0.3 },
   kpiLabel: { fontFamily: FONT.medium, fontSize: 11, color: COLORS.sub, marginTop: 6 },
+  subBanner: { marginTop: SPACING.md, marginHorizontal: SPACING.xl, padding: 14, borderRadius: RADIUS.md, backgroundColor: '#FFF4E0' },
+  subBannerOff: { backgroundColor: '#FDECEA' },
+  subTitle: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.warning },
+  subText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.xs, color: COLORS.sub, marginTop: 4 },
   quickButton: { height: 46, marginTop: SPACING.md, marginHorizontal: SPACING.xl, borderRadius: RADIUS.md, borderWidth: 1, borderColor: 'rgba(11,17,32,.1)', alignItems: 'center', justifyContent: 'center' },
   quickButtonText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.ink },
   sectionHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: SPACING.xxl, marginBottom: SPACING.md, paddingHorizontal: SPACING.xl },
