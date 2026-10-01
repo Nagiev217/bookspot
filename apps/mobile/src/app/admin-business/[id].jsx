@@ -17,9 +17,17 @@ import {
   formatDateRu,
 } from '@/utils/supabase/admin';
 import { friendlyError } from '@/utils/errors';
+import { getSetupStatus } from '@/utils/supabase/business';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 
 const EXTEND = [1, 3, 6, 12];
+const SETUP_STEPS = [
+  ['description', 'Описание'],
+  ['photos', 'Фото'],
+  ['masters', 'Мастера'],
+  ['schedule', 'Расписание'],
+  ['services', 'Услуги'],
+];
 
 export default function AdminBusinessCard() {
   const { id } = useLocalSearchParams();
@@ -27,8 +35,10 @@ export default function AdminBusinessCard() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [creds, setCreds] = useState(null);
+  const [setup, setSetup] = useState(null);
 
   const load = useCallback(() => {
+    getSetupStatus(id).then(setSetup).catch(() => setSetup(null));
     listAllBusinessesAdmin()
       .then((list) => setB(list.find((x) => x.id === id) ?? null))
       .catch((e) => Alert.alert('Ошибка', friendlyError(e)))
@@ -115,6 +125,20 @@ export default function AdminBusinessCard() {
           <Text style={styles.title} numberOfLines={1}>{b.name}</Text>
           <Text style={styles.muted}>{[b.city, b.district].filter(Boolean).join(' · ')}</Text>
         </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Публикация</Text>
+        <Text style={styles.big}>
+          {b.published_at
+            ? `Опубликован ${formatDateRu(b.published_at.slice(0, 10))}`
+            : `Настраивается · ${setup ? SETUP_STEPS.filter(([k]) => setup[k]).length : '…'}/5`}
+        </Text>
+        {!b.published_at && setup && (
+          <Text style={styles.muted}>
+            {SETUP_STEPS.map(([k, label]) => `${setup[k] ? '✓' : '○'} ${label}`).join('   ')}
+          </Text>
+        )}
       </View>
 
       <View style={styles.card}>

@@ -1,7 +1,7 @@
 // Страница салона — реальные данные из Supabase (businesses/services/masters).
 // [idx] теперь принимает uuid бизнеса, а не индекс мок-массива.
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Heart } from 'lucide-react-native';
@@ -11,6 +11,7 @@ import PressableScale from '@/components/PressableScale';
 import { getBusiness, listServices, listMasters } from '@/utils/supabase/catalog';
 import { isFavorite, addFavorite, removeFavorite } from '@/utils/supabase/favorites';
 import { listReviews } from '@/utils/supabase/reviews';
+import { listBusinessPhotos } from '@/utils/supabase/business';
 import { useAuthStore } from '@/utils/auth/store';
 import StarBadge from '@/components/StarBadge';
 
@@ -38,6 +39,9 @@ export default function SalonDetail() {
   const [services, setServices] = useState([]);
   const [masters, setMasters] = useState([]);
   const [reviews, setReviews] = useState([]);
+  const [photos, setPhotos] = useState([]);
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const { width: screenWidth } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [favorite, setFavorite] = useState(false);
@@ -54,14 +58,16 @@ export default function SalonDetail() {
         listMasters(businessId),
         uid ? isFavorite(uid, businessId) : false,
         listReviews(businessId),
+        listBusinessPhotos(businessId).catch(() => []),
       ])
-        .then(([b, s, m, fav, rv]) => {
+        .then(([b, s, m, fav, rv, ph]) => {
           if (cancelled) return;
           setBusiness(b);
           setServices(s);
           setMasters(m);
           setFavorite(fav);
           setReviews(rv);
+          setPhotos(ph);
         })
         .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить салон'))
         .finally(() => !cancelled && setLoading(false));
@@ -111,7 +117,29 @@ export default function SalonDetail() {
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={{ paddingBottom: 104 }}>
         <View style={[styles.hero, { backgroundColor: tint[0] }]}>
-          {business.logo_url && <Image source={{ uri: business.logo_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />}
+          {/* Галерея салона (до 5 фото, 0024); старые салоны без строк в
+              business_photos — по-прежнему одно фото logo_url. */}
+          {photos.length > 0 ? (
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={(e) => setPhotoIndex(Math.round(e.nativeEvent.contentOffset.x / screenWidth))}
+            >
+              {photos.map((p) => (
+                <Image key={p.id} source={{ uri: p.url }} style={{ width: screenWidth, height: '100%' }} contentFit="cover" />
+              ))}
+            </ScrollView>
+          ) : (
+            business.logo_url && <Image source={{ uri: business.logo_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+          )}
+          {photos.length > 1 && (
+            <View style={styles.dots} pointerEvents="none">
+              {photos.map((p, i) => (
+                <View key={p.id} style={[styles.dot, i === photoIndex && styles.dotActive]} />
+              ))}
+            </View>
+          )}
           <PressableScale style={styles.backButton} onPress={() => router.back()}>
             <ArrowLeft size={17} color={COLORS.ink} />
           </PressableScale>
@@ -140,6 +168,19 @@ export default function SalonDetail() {
             <View style={styles.tagRow}>
               <Text style={styles.tag}>{business.phone}</Text>
             </View>
+          )}
+
+          {(business.description?.trim() || business.address) && (
+            <>
+              <Text style={styles.sectionTitle}>О салоне</Text>
+              {business.description?.trim() ? <Text style={styles.about}>{business.description.trim()}</Text> : null}
+              {business.address ? (
+                <Text style={styles.address}>
+                  {business.city}
+                  {business.district ? `, ${business.district}` : ''}, {business.address}
+                </Text>
+              ) : null}
+            </>
           )}
 
           <Text style={styles.sectionTitle}>Услуги</Text>
@@ -218,6 +259,11 @@ const styles = StyleSheet.create({
   errorText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.danger, padding: SPACING.xl, textAlign: 'center' },
   emptyText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginBottom: SPACING.md },
   hero: { height: 240 },
+  dots: { position: 'absolute', bottom: 34, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 6 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,.55)' },
+  dotActive: { width: 18, backgroundColor: COLORS.white },
+  about: { fontFamily: FONT.regular, fontSize: TEXT_SIZE.md, color: '#3A4256', lineHeight: 21 },
+  address: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginTop: SPACING.sm },
   backButton: {
     position: 'absolute',
     left: 20,

@@ -109,6 +109,9 @@ async function ensureBusiness(ownerUid) {
     p_paid_until: null,
   });
   if (rpcErr) throw rpcErr;
+  // Новый салон скрыт, пока не пройдён чек-лист (0024). Тестовым фикстурам
+  // он не нужен — публикуем сразу через service_role.
+  await admin.from('businesses').update({ published_at: new Date().toISOString() }).eq('id', businessId);
   // Сид-владелец входит с известным паролем — смена временного пароля ему не нужна.
   await admin.from('profiles').update({ must_change_password: false }).eq('id', ownerUid);
   console.log(`✓ Создан бизнес: Atelier Nizami (${businessId})`);

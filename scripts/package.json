@@ -10,6 +10,7 @@
     "verify-selfserve": "node --env-file=.env verify-selfserve.js",
     "verify-release": "node --env-file=.env verify-release.js",
     "verify-admin": "node --env-file=.env verify-admin.js",
+    "verify-onboarding": "node --env-file=.env verify-onboarding.js",
     "make-admin": "node --env-file=.env make-admin.js"
   },
   "dependencies": {

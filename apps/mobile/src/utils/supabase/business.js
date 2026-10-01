@@ -235,10 +235,57 @@ async function uploadPhoto(path, base64, contentType) {
   return `${data.publicUrl}?t=${Date.now()}`; // кэш-бастер: путь фиксированный, upsert перезаписывает
 }
 
-export async function uploadBusinessPhoto(businessId, base64, ext = 'jpg') {
-  const url = await uploadPhoto(`business/${businessId}/logo.${ext}`, base64, `image/${ext === 'jpg' ? 'jpeg' : ext}`);
-  await updateBusiness(businessId, { logo_url: url });
-  return url;
+// ─── Галерея салона (до 5 фото, первое — обложка, 0024) ─────────────────
+// logo_url обновляет триггер sync_business_cover — отдельно его не пишем.
+
+export async function listBusinessPhotos(businessId) {
+  const { data, error } = await supabase
+    .from('business_photos')
+    .select('id, url, storage_path, position')
+    .eq('business_id', businessId)
+    .order('position')
+    .order('created_at');
+  if (error) throw error;
+  return data;
+}
+
+export async function addBusinessPhoto(businessId, base64, position, ext = 'jpg') {
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const path = `business/${businessId}/gallery/${id}.${ext}`;
+  const url = await uploadPhoto(path, base64, `image/${ext === 'jpg' ? 'jpeg' : ext}`);
+  const { error } = await supabase
+    .from('business_photos')
+    .insert({ business_id: businessId, url, storage_path: path, position });
+  if (error) {
+    await supabase.storage.from('photos').remove([path]);
+    throw error;
+  }
+}
+
+export async function deleteBusinessPhoto(photo) {
+  const { error } = await supabase.from('business_photos').delete().eq('id', photo.id);
+  if (error) throw error;
+  // Файл убираем после строки: если удаление файла не пройдёт, останется
+  // лишь мусор в storage, а не битая ссылка в карточке салона.
+  if (photo.storage_path) await supabase.storage.from('photos').remove([photo.storage_path]);
+}
+
+// Обложка — фото с минимальным position: ставим выбранное перед остальными.
+export async function setCoverPhoto(photos, photoId) {
+  const minPos = Math.min(...photos.map((p) => p.position));
+  const { error } = await supabase.from('business_photos').update({ position: minPos - 1 }).eq('id', photoId);
+  if (error) throw error;
+}
+
+export async function getSetupStatus(businessId) {
+  const { data, error } = await supabase.rpc('business_setup_status', { p_business_id: businessId });
+  if (error) throw error;
+  return data;
+}
+
+export async function publishBusiness(businessId) {
+  const { error } = await supabase.rpc('publish_business', { p_business_id: businessId });
+  if (error) throw error;
 }
 
 export async function uploadMasterPhoto(masterId, base64, ext = 'jpg') {

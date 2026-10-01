@@ -90,6 +90,9 @@ async function main() {
     check('admin создаёт салон и аккаунт владельца', cb.status === 200 && !!cb.data?.password, `${cb.status} ${cb.error}`);
     if (cb.status !== 200) throw new Error('дальше без салона нельзя');
     created.businessId = cb.data.businessId;
+    // Новый салон скрыт, пока не пройдён чек-лист (0024). Тестовым фикстурам
+    // он не нужен — публикуем сразу через service_role.
+    await admin.from('businesses').update({ published_at: new Date().toISOString() }).eq('id', created.businessId);
 
     const owner = await signIn(ownerEmail, cb.data.password);
     created.users.push(owner.uid);

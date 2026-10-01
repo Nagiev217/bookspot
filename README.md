@@ -70,7 +70,8 @@ One app, two modes. Every user is a client; if the account owns a business, a **
 | Marking a visit: "Showed up" / "No-show" | `0015_booking_lifecycle.sql` |
 | Manual booking for phone-in clients | `manual-booking/[businessId].jsx` |
 | Services, masters, weekly schedules and masters' days off | `services/…`, `master/[masterId].jsx`, `(business-tabs)/team.jsx` |
-| Salon and master photos (Supabase Storage) | `business-settings/[businessId].jsx` |
+| **Setup checklist** for a new salon, publishing | `salon-setup/[businessId].jsx`, `0024_salon_onboarding.sql` |
+| Salon photo gallery (up to 5, first one is the cover), master photos (Supabase Storage) | `business-photos/[businessId].jsx`, `master/[masterId].jsx` |
 | "New booking" push | `0018_push_outbox.sql` |
 
 ### Roles and partner onboarding
@@ -85,6 +86,8 @@ Salons become partners via WhatsApp and pay a subscription; there is no self-ser
 | **Client** | Signs up in the app | Books, reviews, favorites |
 
 Accounts are created by the `manage-accounts` Edge Function (creating Auth users needs the service role). A salon whose `paid_until` date has passed disappears from the catalog and stops accepting new bookings; existing bookings stay. See migration `0022`.
+
+**Salon setup before publishing.** A salon created by the admin starts hidden. On first sign-in the owner gets a "Set up your salon" checklist: a description (30+ characters), 1–5 salon photos, masters, a master's working hours, and services linked to a master. The "Publish" button unlocks once every item is done; the server re-checks the checklist (`business_setup_status`, `publish_business`) and only then shows the salon in the catalog. Until then it accepts no bookings. See migration `0024`.
 
 ## Tech stack
 
@@ -175,6 +178,8 @@ SUPABASE_ACCESS_TOKEN=<same token> npx supabase db push
 | 0017 | Access-control hardening, indexes, photo storage limits |
 | 0018 | Push notification queue + cron |
 | 0019 | Reviews and salon rating |
+| 0020–0023 | Admin role, owner/staff accounts, subscription, review anonymization fix |
+| 0024 | Salon setup checklist, publishing, photo gallery |
 
 ## Push notifications
 
@@ -209,6 +214,8 @@ npm run verify-booking      # booking core: creation, duplicates, overlaps, resc
 npm run verify-selfserve    # business self-service from sign-up to the first booking
 npm run verify-release      # negative scenarios: guest access, past/day-off bookings,
                             # privilege escalation, completing visits, reviews, account deletion
+npm run verify-admin        # admin, owner and staff roles, subscription
+npm run verify-onboarding   # new salon stays hidden until the setup checklist is done and published
 npm run seed                # test catalog
 npm run purge-demo          # remove demo salons before release
 ```

@@ -16,6 +16,10 @@ export const useAuthStore = create((set) => ({
   masterId: null,
   mustChangePassword: false,
   mode: 'client',
+  // Чек-лист настройки нового салона уже открывали в этой сессии — второй
+  // раз сам не выскакивает, остаётся баннер на «Сегодня». Хранится id
+  // салона, а не флаг: другой аккаунт на том же устройстве увидит свой.
+  setupPromptShownFor: null,
   setAuth: (patch) => set(patch),
   setMode: (mode) => set({ mode }),
 }));

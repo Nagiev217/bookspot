@@ -70,8 +70,16 @@ export default function AdminBusinesses() {
                   <Text style={styles.meta} numberOfLines={1}>
                     {b.owner_name || 'Владелец'} · {b.owner_email || '—'}
                   </Text>
-                  <View style={[styles.badge, { backgroundColor: TONE[badge.tone].bg }]}>
-                    <Text style={[styles.badgeText, { color: TONE[badge.tone].fg }]}>{badge.label}</Text>
+                  <View style={styles.badgeRow}>
+                    <View style={[styles.badge, { backgroundColor: TONE[badge.tone].bg }]}>
+                      <Text style={[styles.badgeText, { color: TONE[badge.tone].fg }]}>{badge.label}</Text>
+                    </View>
+                    {/* Салон ещё не прошёл чек-лист настройки и скрыт из каталога (0024). */}
+                    {!b.published_at && (
+                      <View style={[styles.badge, { backgroundColor: COLORS.indigo50 }]}>
+                        <Text style={[styles.badgeText, { color: COLORS.indigo }]}>Настраивается</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
@@ -97,7 +105,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, padding: 14, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md },
   name: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.base, color: COLORS.ink },
   meta: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginTop: 2 },
-  badge: { alignSelf: 'flex-start', borderRadius: RADIUS.pill, paddingVertical: 4, paddingHorizontal: 10, marginTop: SPACING.sm },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs, marginTop: SPACING.sm },
+  badge: { alignSelf: 'flex-start', borderRadius: RADIUS.pill, paddingVertical: 4, paddingHorizontal: 10 },
   badgeText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.xs },
   count: { fontFamily: FONT.extrabold, fontSize: TEXT_SIZE.lg, color: COLORS.ink },
   countLabel: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.xs, color: COLORS.sub },

@@ -8,7 +8,7 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Linking } from '
 import { router, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '@/utils/auth/store';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
-import { getMyBusiness, listBusinessBookings } from '@/utils/supabase/business';
+import { getMyBusiness, listBusinessBookings, getSetupStatus } from '@/utils/supabase/business';
 import { daysLeft, formatDateRu } from '@/utils/supabase/admin';
 import { PARTNER_WHATSAPP, hasPartnerWhatsapp, whatsappUrl } from '@/utils/contact';
 import { bakuToday } from '@/components/DateTimeGrid';
@@ -35,6 +35,7 @@ export default function BusinessToday() {
   const [business, setBusiness] = useState(null);
   const [todayBookings, setTodayBookings] = useState([]);
   const [nextDay, setNextDay] = useState(null); // { date, bookings } — ближайший день с записями, если сегодня пусто
+  const [setupDone, setSetupDone] = useState(null); // сколько пунктов чек-листа готово, пока салон не опубликован
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -53,6 +54,21 @@ export default function BusinessToday() {
         .then(([b, bk]) => {
           if (cancelled) return;
           setBusiness(b);
+          // Новый салон ещё не опубликован (0024): владельцу при первом
+          // заходе за сессию сразу открываем чек-лист, дальше — баннер.
+          if (!b.published_at && isOwner) {
+            getSetupStatus(businessId)
+              .then((s) => {
+                if (cancelled) return;
+                setSetupDone(['description', 'photos', 'masters', 'schedule', 'services'].filter((k) => s[k]).length);
+              })
+              .catch(() => {});
+            const { setupPromptShownFor, setAuth } = useAuthStore.getState();
+            if (setupPromptShownFor !== businessId) {
+              setAuth({ setupPromptShownFor: businessId });
+              router.push(`/salon-setup/${businessId}`);
+            }
+          }
           const confirmed = bk.filter((x) => x.status === 'confirmed');
           const todays = confirmed.filter((x) => localDateOf(x.starts_at) === today);
           setTodayBookings(todays);
@@ -73,7 +89,7 @@ export default function BusinessToday() {
       return () => {
         cancelled = true;
       };
-    }, [businessId])
+    }, [businessId, isOwner])
   );
 
   const todayDate = new Date(Date.now() + 4 * 3600000);
@@ -133,6 +149,22 @@ export default function BusinessToday() {
         </View>
       </View>
 
+      {business && !business.published_at && (
+        isOwner ? (
+          <PressableScale style={styles.setupBanner} onPress={() => router.push(`/salon-setup/${businessId}`)}>
+            <Text style={styles.setupTitle}>Салон не виден клиентам</Text>
+            <Text style={styles.setupText}>
+              Завершите настройку{setupDone !== null ? ` (${setupDone}/5)` : ''} и опубликуйте салон
+            </Text>
+          </PressableScale>
+        ) : (
+          <View style={styles.setupBanner}>
+            <Text style={styles.setupTitle}>Салон ещё настраивается владельцем</Text>
+            <Text style={styles.setupText}>Записи появятся после публикации</Text>
+          </View>
+        )
+      )}
+
       {isOwner && subscription && (
         <PressableScale style={[styles.subBanner, subscription.expired && styles.subBannerOff]} onPress={openPartnerWhatsapp}>
           <Text style={[styles.subTitle, subscription.expired && { color: COLORS.danger }]}>{subscription.title}</Text>
@@ -191,6 +223,9 @@ const styles = StyleSheet.create({
   kpiLabel: { fontFamily: FONT.medium, fontSize: 11, color: COLORS.sub, marginTop: 6 },
   subBanner: { marginTop: SPACING.md, marginHorizontal: SPACING.xl, padding: 14, borderRadius: RADIUS.md, backgroundColor: '#FFF4E0' },
   subBannerOff: { backgroundColor: '#FDECEA' },
+  setupBanner: { marginTop: SPACING.md, marginHorizontal: SPACING.xl, padding: 14, borderRadius: RADIUS.md, backgroundColor: COLORS.indigo50 },
+  setupTitle: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.indigo },
+  setupText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.xs, color: COLORS.sub, marginTop: 4 },
   subTitle: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.warning },
   subText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.xs, color: COLORS.sub, marginTop: 4 },
   quickButton: { height: 46, marginTop: SPACING.md, marginHorizontal: SPACING.xl, borderRadius: RADIUS.md, borderWidth: 1, borderColor: 'rgba(11,17,32,.1)', alignItems: 'center', justifyContent: 'center' },

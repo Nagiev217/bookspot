@@ -139,6 +139,8 @@ export default function RootLayout() {
         <Stack.Screen name="manual-booking/[businessId]" options={{ presentation: 'modal', gestureEnabled: true }} />
         <Stack.Screen name="services/[businessId]" options={{ presentation: 'modal', gestureEnabled: true }} />
         <Stack.Screen name="business-settings/[businessId]" options={{ presentation: 'modal', gestureEnabled: true }} />
+        <Stack.Screen name="business-photos/[businessId]" options={{ gestureEnabled: true }} />
+        <Stack.Screen name="salon-setup/[businessId]" options={{ gestureEnabled: true }} />
         <Stack.Screen name="master/[masterId]" options={{ presentation: 'modal', gestureEnabled: true }} />
       </Stack>
       <OfflineBanner />

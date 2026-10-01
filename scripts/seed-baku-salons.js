@@ -186,6 +186,7 @@ async function ensureSalon(salon, ownerUid, masterName) {
       district: salon.district,
       address: salon.address,
       phone: salon.phone,
+      published_at: new Date().toISOString(), // демо-салон сразу в каталоге (0024)
     })
     .select('id')
     .single();

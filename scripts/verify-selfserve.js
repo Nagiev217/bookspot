@@ -65,6 +65,9 @@ async function main() {
     });
     if (bizErr) throw bizErr;
     businessId = bizId;
+    // Новый салон скрыт, пока не пройдён чек-лист (0024). Тестовым фикстурам
+    // он не нужен — публикуем сразу через service_role.
+    await admin.from('businesses').update({ published_at: new Date().toISOString() }).eq('id', businessId);
     assert(!!businessId, 'admin создаёт салон с владельцем через admin_create_business()');
 
     const { data: service, error: svcErr } = await owner.client

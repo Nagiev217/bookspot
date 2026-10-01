@@ -5,12 +5,11 @@
 import { useCallback, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import PressableScale from '@/components/PressableScale';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Camera } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
-import { getMyBusiness, updateBusiness, uploadBusinessPhoto } from '@/utils/supabase/business';
+import { getMyBusiness, updateBusiness, listBusinessPhotos } from '@/utils/supabase/business';
 import { listCategories } from '@/utils/supabase/catalog';
 
 export default function BusinessSettingsScreen() {
@@ -22,17 +21,18 @@ export default function BusinessSettingsScreen() {
   const [error, setError] = useState(null);
   const [info, setInfo] = useState(null);
   const [photoUrl, setPhotoUrl] = useState(null);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoCount, setPhotoCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       setLoading(true);
-      Promise.all([getMyBusiness(businessId), listCategories()])
-        .then(([b, cats]) => {
+      Promise.all([getMyBusiness(businessId), listCategories(), listBusinessPhotos(businessId)])
+        .then(([b, cats, photos]) => {
           if (cancelled) return;
           setCategories(cats);
-          setPhotoUrl(b.logo_url);
+          setPhotoUrl(photos[0]?.url ?? null);
+          setPhotoCount(photos.length);
           setForm({
             name: b.name,
             categoryId: b.category_id,
@@ -53,30 +53,6 @@ export default function BusinessSettingsScreen() {
       };
     }, [businessId])
   );
-
-  async function handlePickPhoto() {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return setError('Нет доступа к галерее');
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.6,
-      base64: true,
-    });
-    if (result.canceled) return;
-    const asset = result.assets[0];
-    setUploadingPhoto(true);
-    setError(null);
-    try {
-      const url = await uploadBusinessPhoto(businessId, asset.base64);
-      setPhotoUrl(url);
-    } catch (e) {
-      setError(e.message || 'Не удалось загрузить фото');
-    } finally {
-      setUploadingPhoto(false);
-    }
-  }
 
   async function handleSave() {
     setError(null);
@@ -132,11 +108,12 @@ export default function BusinessSettingsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <PressableScale style={styles.photoBox} onPress={handlePickPhoto} disabled={uploadingPhoto}>
+        {/* Фото — отдельный экран-галерея (до 5, 0024); здесь только обложка. */}
+        <PressableScale style={styles.photoBox} onPress={() => router.push(`/business-photos/${businessId}`)}>
           {photoUrl ? <Image source={{ uri: photoUrl }} style={styles.photoImg} contentFit="cover" /> : null}
           <View style={styles.photoOverlay}>
-            {uploadingPhoto ? <ActivityIndicator color={COLORS.white} /> : <Camera size={20} color={COLORS.white} />}
-            <Text style={styles.photoOverlayText}>{photoUrl ? 'Сменить фото' : 'Добавить фото'}</Text>
+            <Camera size={20} color={COLORS.white} />
+            <Text style={styles.photoOverlayText}>Фото салона ({photoCount}/5)</Text>
           </View>
         </PressableScale>
 
@@ -168,12 +145,15 @@ export default function BusinessSettingsScreen() {
         />
         <TextInput
           style={[styles.input, styles.textarea]}
-          placeholder="Описание"
+          placeholder="Описание салона"
           placeholderTextColor={COLORS.sub}
           multiline
           value={form.description}
           onChangeText={(v) => setForm((f) => ({ ...f, description: v }))}
         />
+        <Text style={styles.hint}>
+          Минимум 30 символов — клиенты увидят это в карточке салона ({form.description.trim().length}/30)
+        </Text>
 
         <Text style={styles.sectionTitle}>Параметры бронирования</Text>
         <View style={styles.row3}>
@@ -218,6 +198,7 @@ const styles = StyleSheet.create({
   photoOverlayText: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: COLORS.white },
   input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, padding: SPACING.md, fontFamily: FONT.regular, fontSize: TEXT_SIZE.md, color: COLORS.text },
   textarea: { minHeight: 80, textAlignVertical: 'top' },
+  hint: { fontFamily: FONT.regular, fontSize: TEXT_SIZE.xs, color: COLORS.sub, marginTop: -SPACING.sm },
   label: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginBottom: SPACING.sm },
   chipRow: { gap: SPACING.sm, paddingBottom: SPACING.sm },
   chip: { paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.border },
