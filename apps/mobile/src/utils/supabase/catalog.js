@@ -9,8 +9,24 @@ export async function listCategories() {
   return data;
 }
 
+// Каталог показывает только то, что видит гость: активный, опубликованный
+// (0024) салон с неистёкшей подпиской (0022). RLS это уже гарантирует для
+// гостя и обычного клиента, но admin и участники салона по RLS видят и
+// неопубликованные/просроченные салоны — в клиентском режиме им их
+// показывать нельзя, поэтому те же условия дублируются в запросе.
+function bakuTodayISO() {
+  return new Date(Date.now() + 4 * 3600000).toISOString().slice(0, 10);
+}
+
+function onlyPublic(q, prefix = '') {
+  return q
+    .eq(`${prefix}status`, 'active')
+    .not(`${prefix}published_at`, 'is', null)
+    .or(`paid_until.is.null,paid_until.gte.${bakuTodayISO()}`, prefix ? { referencedTable: prefix.slice(0, -1) } : undefined);
+}
+
 export async function listBusinesses({ city, categoryId } = {}) {
-  let q = supabase.from('businesses').select('id, name, city, district, category_id, logo_url').eq('status', 'active');
+  let q = onlyPublic(supabase.from('businesses').select('id, name, city, district, category_id, logo_url'));
   if (city) q = q.eq('city', city);
   if (categoryId) q = q.eq('category_id', categoryId);
   const { data, error } = await q.order('name');
@@ -26,14 +42,13 @@ export async function searchBusinesses(query, { categoryId } = {}) {
   const q = query?.trim();
   if (!q) return listBusinesses({ categoryId });
 
-  let byName = supabase.from('businesses').select('id, name, city, district, category_id, logo_url').eq('status', 'active').ilike('name', `%${q}%`);
+  let byName = onlyPublic(supabase.from('businesses').select('id, name, city, district, category_id, logo_url')).ilike('name', `%${q}%`);
   if (categoryId) byName = byName.eq('category_id', categoryId);
 
-  let byService = supabase
-    .from('services')
-    .select('business:businesses!inner(id, name, city, district, category_id, status, logo_url)')
-    .eq('business.status', 'active')
-    .ilike('name', `%${q}%`);
+  let byService = onlyPublic(
+    supabase.from('services').select('business:businesses!inner(id, name, city, district, category_id, status, logo_url)'),
+    'business.'
+  ).ilike('name', `%${q}%`);
   if (categoryId) byService = byService.eq('business.category_id', categoryId);
 
   const [{ data: named, error: e1 }, { data: viaService, error: e2 }] = await Promise.all([byName, byService]);
