@@ -124,7 +124,8 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.group}>
-        {workMode && <MenuRow label={switchLabel} onPress={switchMode} last={role !== 'business_owner'} />}
+        {workMode && <MenuRow label={switchLabel} onPress={switchMode} last={role !== 'business_owner' && role !== 'staff'} />}
+        {role === 'staff' && <MenuRow label="Мой профиль мастера" onPress={() => router.push('/my-master-profile')} last />}
         {role === 'business_owner' && (
           <>
             <MenuRow label="Услуги" onPress={() => router.push(`/services/${businessId}`)} />

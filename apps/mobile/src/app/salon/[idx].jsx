@@ -210,12 +210,18 @@ export default function SalonDetail() {
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: SPACING.md }}>
               {masters.map((m) => (
-                <View key={m.id} style={styles.masterCard}>
+                <PressableScale
+                  key={m.id}
+                  style={styles.masterCard}
+                  onPress={() => router.push(`/master-info/${m.id}`)}
+                  accessibilityLabel={`Мастер ${m.name}`}
+                >
                   <View style={[styles.masterAvatar, { backgroundColor: tintFor(m.id)[0] }]}>
                     {m.photo_url && <Image source={{ uri: m.photo_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />}
                   </View>
-                  <Text style={styles.masterName}>{m.name}</Text>
-                </View>
+                  <Text style={styles.masterName} numberOfLines={1}>{m.name}</Text>
+                  <Text style={styles.masterMore}>Подробнее</Text>
+                </PressableScale>
               ))}
             </ScrollView>
           )}
@@ -311,6 +317,7 @@ const styles = StyleSheet.create({
   masterCard: { width: 92, alignItems: 'center' },
   masterAvatar: { width: 92, height: 92, borderRadius: RADIUS.lg, overflow: 'hidden' },
   masterName: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.ink, marginTop: 9 },
+  masterMore: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.xs, color: COLORS.indigo, marginTop: 2 },
   reviewCard: { padding: 14, backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, gap: 6 },
   reviewHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   reviewName: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.ink },

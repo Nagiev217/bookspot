@@ -38,6 +38,7 @@ function emptyWeek() {
 export default function MasterDetail() {
   const { masterId } = useLocalSearchParams();
   const [name, setName] = useState('');
+  const [bio, setBio] = useState('');
   const [active, setActive] = useState(true);
   const [photoUrl, setPhotoUrl] = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -56,6 +57,7 @@ export default function MasterDetail() {
         .then(([master, schedule, upcoming]) => {
           if (cancelled) return;
           setName(master.name);
+          setBio(master.bio || '');
           setActive(master.active);
           setPhotoUrl(master.photo_url);
           const w = emptyWeek();
@@ -112,7 +114,7 @@ export default function MasterDetail() {
     if (!name.trim()) return setError('Введите имя');
     setSaving(true);
     try {
-      await updateMaster(masterId, { name: name.trim(), active });
+      await updateMaster(masterId, { name: name.trim(), active, bio: bio.trim() });
       setInfo('Сохранено');
     } catch (e) {
       setError(e.message || 'Не удалось сохранить');
@@ -186,6 +188,15 @@ export default function MasterDetail() {
         </PressableScale>
 
         <TextInput style={styles.input} placeholder="Имя" placeholderTextColor={COLORS.sub} value={name} onChangeText={setName} />
+        <TextInput
+          style={[styles.input, styles.textarea]}
+          placeholder="О себе: опыт, специализация — клиенты увидят это на странице мастера"
+          placeholderTextColor={COLORS.sub}
+          multiline
+          maxLength={500}
+          value={bio}
+          onChangeText={setBio}
+        />
         <View style={styles.switchRow}>
           <Text style={styles.switchLabel}>Активен (принимает записи)</Text>
           <Switch value={active} onValueChange={setActive} trackColor={{ true: COLORS.indigo }} />
@@ -259,6 +270,7 @@ const styles = StyleSheet.create({
   // photoBox задаёт размер сам, поэтому 100% — тот же результат, но рабочий.
   photoImg: { width: '100%', height: '100%' },
   photoOverlay: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(11,17,32,.35)', ...StyleSheet.absoluteFillObject },
+  textarea: { minHeight: 90, textAlignVertical: 'top' },
   input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, padding: SPACING.md, fontFamily: FONT.regular, fontSize: TEXT_SIZE.md, color: COLORS.text },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   switchLabel: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.text },

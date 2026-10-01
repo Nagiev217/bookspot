@@ -1,7 +1,7 @@
 // Booking flow — полностью реальные данные. Услуга/мастер из Supabase,
 // дата/время из get_availability, запись — через create_booking (RPC,
 // EXCLUDE-constraint на bookings защищает от двойного бронирования).
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Check } from 'lucide-react-native';
@@ -53,6 +53,9 @@ export default function Booking() {
   const [masters, setMasters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Предвыбор со страницы мастера (master-info) — только при первой
+  // загрузке, чтобы возврат на экран (например, после входа) не сбрасывал шаг.
+  const prefilled = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -65,6 +68,15 @@ export default function Booking() {
           setMasters(m);
           const initial = params.serviceId ? s.findIndex((x) => x.id === params.serviceId) : 0;
           setServiceIdx(initial >= 0 ? initial : 0);
+          if (!prefilled.current && params.masterId) {
+            prefilled.current = true;
+            const mi = m.findIndex((x) => x.id === params.masterId);
+            if (mi >= 0) {
+              setMasterIdx(mi);
+              // Услуга и мастер уже выбраны — сразу к выбору даты.
+              if (initial >= 0 && params.serviceId) setStep(3);
+            }
+          }
         })
         .catch((e) => !cancelled && setError(friendlyError(e, 'Не удалось загрузить данные')))
         .finally(() => !cancelled && setLoading(false));

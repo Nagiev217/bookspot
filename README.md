@@ -52,6 +52,7 @@ One app, two modes. Every user is a client; if the account owns a business, a **
 | Salon catalog by category (Barber, Beauty, Nails, Lashes, Massage, Tattoo), search by name or service | `(client-tabs)/index.jsx`, `search.jsx` |
 | **Guest browsing** — the catalog and free slots are available without signing up | `0014_guest_catalog.sql`, `SignInPrompt.jsx` |
 | Salon page: photos, services with price and duration, masters, rating and reviews | `salon/[idx].jsx` |
+| **Master page**: photo, bio, the master's services with one-tap booking, reviews of visits to them | `master-info/[masterId].jsx` |
 | Booking in 4 steps: service → master → date → time (only genuinely free slots) | `booking/[idx].jsx` |
 | Rescheduling and cancelling (respecting the salon's cancellation window) | `reschedule/[bookingId].jsx` |
 | "My bookings": upcoming and history | `(client-tabs)/bookings.jsx` |
@@ -82,7 +83,7 @@ Salons become partners via WhatsApp and pay a subscription; there is no self-ser
 |---|---|---|
 | **Admin** (platform) | `npm run make-admin -- <email>` (service role) | Admin mode: create a salon together with its owner's account, extend the subscription (+1/3/6/12 months), block/unblock, reset the owner's password |
 | **Owner** | By the admin; temporary password sent via WhatsApp, must be changed on first login | Everything in business mode; give each master their own login in "Team", reset or revoke it |
-| **Master** (staff) | By the owner, same temporary-password flow | Sees only their own column in the calendar and their own bookings; can't change the salon, services or schedules |
+| **Master** (staff) | By the owner, same temporary-password flow | Sees only their own column in the calendar and their own bookings; edits their own avatar and bio ("My master profile"); can't change the salon, services or schedules |
 | **Client** | Signs up in the app | Books, reviews, favorites |
 
 Accounts are created by the `manage-accounts` Edge Function (creating Auth users needs the service role). A salon whose `paid_until` date has passed disappears from the catalog and stops accepting new bookings; existing bookings stay. See migration `0022`.
@@ -180,6 +181,7 @@ SUPABASE_ACCESS_TOKEN=<same token> npx supabase db push
 | 0019 | Reviews and salon rating |
 | 0020–0023 | Admin role, owner/staff accounts, subscription, review anonymization fix |
 | 0024 | Salon setup checklist, publishing, photo gallery |
+| 0025–0027 | Publish error fix; master bio and self-service avatar for staff; master photo upload policy fix |
 
 ## Push notifications
 
@@ -216,6 +218,7 @@ npm run verify-release      # negative scenarios: guest access, past/day-off boo
                             # privilege escalation, completing visits, reviews, account deletion
 npm run verify-admin        # admin, owner and staff roles, subscription
 npm run verify-onboarding   # new salon stays hidden until the setup checklist is done and published
+npm run verify-master-profile  # staff edits own avatar and bio only; clients see the master page
 npm run seed                # test catalog
 npm run purge-demo          # remove demo salons before release
 ```

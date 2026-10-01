@@ -81,10 +81,43 @@ export async function listServices(businessId) {
 export async function listMasters(businessId) {
   const { data, error } = await supabase
     .from('masters')
-    .select('id, name, photo_url')
+    .select('id, name, photo_url, bio')
     .eq('business_id', businessId)
     .eq('active', true)
     .order('name');
+  if (error) throw error;
+  return data;
+}
+
+// ─── Страница мастера для клиента ───────────────────────────────────────
+
+export async function getMasterPublic(masterId) {
+  const { data, error } = await supabase
+    .from('masters')
+    .select('id, name, photo_url, bio, business_id, active')
+    .eq('id', masterId)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// Услуги, которые выполняет мастер (service_masters), только активные.
+export async function listMasterServices(masterId) {
+  const { data, error } = await supabase
+    .from('service_masters')
+    .select('service:services!inner(id, name, price, duration_min, active)')
+    .eq('master_id', masterId)
+    .eq('service.active', true);
+  if (error) throw error;
+  return data.map((r) => r.service).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function listMasterReviews(masterId) {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('id, client_name, rating, comment, created_at')
+    .eq('master_id', masterId)
+    .order('created_at', { ascending: false });
   if (error) throw error;
   return data;
 }

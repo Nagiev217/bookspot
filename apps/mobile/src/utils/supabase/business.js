@@ -163,7 +163,7 @@ export async function setServiceMasters(serviceId, masterIds) {
 }
 
 export async function getMaster(masterId) {
-  const { data, error } = await supabase.from('masters').select('id, name, active, business_id, photo_url').eq('id', masterId).single();
+  const { data, error } = await supabase.from('masters').select('id, name, active, business_id, photo_url, bio').eq('id', masterId).single();
   if (error) throw error;
   return data;
 }
@@ -289,7 +289,18 @@ export async function publishBusiness(businessId) {
 }
 
 export async function uploadMasterPhoto(masterId, base64, ext = 'jpg') {
-  const url = await uploadPhoto(`master/${masterId}/photo.${ext}`, base64, `image/${ext === 'jpg' ? 'jpeg' : ext}`);
+  const url = await uploadMasterPhotoFile(masterId, base64, ext);
   await updateMaster(masterId, { photo_url: url });
   return url;
+}
+
+// Только файл, без записи в masters: мастер (staff) сохраняет ссылку через
+// update_my_master_profile — прямой UPDATE masters ему закрыт (0022/0026).
+export async function uploadMasterPhotoFile(masterId, base64, ext = 'jpg') {
+  return uploadPhoto(`master/${masterId}/photo.${ext}`, base64, `image/${ext === 'jpg' ? 'jpeg' : ext}`);
+}
+
+export async function updateMyMasterProfile({ bio, photoUrl = null }) {
+  const { error } = await supabase.rpc('update_my_master_profile', { p_bio: bio, p_photo_url: photoUrl });
+  if (error) throw error;
 }
