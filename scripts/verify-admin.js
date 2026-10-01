@@ -80,6 +80,23 @@ async function main() {
     const r3 = await client.client.rpc('create_business', { p_name: 'Самозванец', p_category_id: 'barber', p_city: 'Баку' });
     check('самостоятельная регистрация салона закрыта', !!r3.error, r3.error?.message);
 
+    // ── Серверные функции недоступны из приложения (0030) ───────────────
+    // До 0030 их мог вызвать любой: revoke from public не снимал EXECUTE,
+    // выданный Supabase ролям anon/authenticated напрямую.
+    const selfAdmin = await client.client.rpc('set_platform_admin', { p_user_id: client.uid, p_on: true });
+    const { data: stillClient } = await admin.from('profiles').select('role').eq('id', client.uid).single();
+    check('клиент не может назначить себя admin (set_platform_admin)', !!selfAdmin.error && stillClient.role === 'client', selfAdmin.error?.message || stillClient.role);
+    const anonClient = createClient(SUPABASE_URL, ANON_KEY, opts);
+    const anonAdmin = await anonClient.rpc('set_platform_admin', { p_user_id: client.uid, p_on: true });
+    check('гость не может вызвать set_platform_admin', !!anonAdmin.error, anonAdmin.error?.message);
+    const fakeBiz = await client.client.rpc('admin_create_business', {
+      p_owner_id: client.uid, p_name: 'Взлом', p_category_id: 'barber', p_city: 'Баку',
+      p_district: null, p_address: null, p_phone: null, p_paid_until: null,
+    });
+    check('клиент не может вызвать admin_create_business', !!fakeBiz.error, fakeBiz.error?.message);
+    const fakeLink = await client.client.rpc('link_staff', { p_business_id: client.uid, p_user_id: client.uid, p_master_id: client.uid });
+    check('клиент не может вызвать link_staff', !!fakeLink.error, fakeLink.error?.message);
+
     // ── Admin создаёт салон с владельцем ────────────────────────────────
     const ownerEmail = `verify-admin-owner-${stamp}@bookspot.dev`;
     const cb = await callFn(adminUser.client, {

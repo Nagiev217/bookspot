@@ -17,7 +17,7 @@ export async function listBusinessBookings({ businessId, from, days = 1 }) {
   toUtc.setUTCDate(toUtc.getUTCDate() + days);
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, master_id, service_name, price, starts_at, ends_at, status, client_name, client_phone')
+    .select('id, master_id, service_name, price, starts_at, ends_at, status, client_name, client_phone, expires_at, requested_starts_at')
     .eq('business_id', businessId)
     .gte('starts_at', fromUtc)
     .lt('starts_at', toUtc.toISOString())
@@ -50,7 +50,7 @@ const HISTORY_COLUMNS = 'id, master_id, service_name, price, starts_at, ends_at,
 export async function listBusinessHistory(businessId) {
   const nowIso = new Date().toISOString();
   const [nonConfirmed, overdueConfirmed] = await Promise.all([
-    supabase.from('bookings').select(HISTORY_COLUMNS).eq('business_id', businessId).neq('status', 'confirmed').order('starts_at', { ascending: false }).limit(100),
+    supabase.from('bookings').select(HISTORY_COLUMNS).eq('business_id', businessId).in('status', ['cancelled', 'completed', 'no_show']).order('starts_at', { ascending: false }).limit(100),
     supabase.from('bookings').select(HISTORY_COLUMNS).eq('business_id', businessId).eq('status', 'confirmed').lt('starts_at', nowIso).order('starts_at', { ascending: false }).limit(100),
   ]);
   if (nonConfirmed.error) throw nonConfirmed.error;
@@ -58,6 +58,30 @@ export async function listBusinessHistory(businessId) {
   return [...nonConfirmed.data, ...overdueConfirmed.data]
     .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime())
     .slice(0, 100);
+}
+
+// ─── Заявки клиентов (0029) ────────────────────────────────────────────────
+// pending — ждут ответа салона, proposed — салон предложил другое время и
+// ждёт клиента. RLS сама отдаёт мастеру только его заявки (0022).
+const REQUEST_COLUMNS =
+  'id, business_id, master_id, service_id, service_name, price, starts_at, ends_at, status, client_name, client_phone, expires_at, requested_starts_at, masters(name)';
+
+export async function listBookingRequests(businessId) {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(REQUEST_COLUMNS)
+    .eq('business_id', businessId)
+    .in('status', ['pending', 'proposed'])
+    .gt('starts_at', new Date().toISOString())
+    .order('expires_at');
+  if (error) throw error;
+  return data;
+}
+
+export async function getBookingRequest(bookingId) {
+  const { data, error } = await supabase.from('bookings').select(REQUEST_COLUMNS).eq('id', bookingId).single();
+  if (error) throw error;
+  return data;
 }
 
 export async function createManualBooking({ businessId, masterId, serviceId, date, start, clientName, clientPhone }) {

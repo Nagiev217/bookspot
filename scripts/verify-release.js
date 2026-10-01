@@ -182,10 +182,15 @@ async function main() {
     bookingId = goodBooking.data?.[0]?.id;
 
     if (bookingId) {
+      // С 0029 запись клиента — заявка: подтверждение и напоминание
+      // появляются, когда салон её примет.
+      const accepted = await owner.client.rpc('accept_booking', { p_booking_id: bookingId });
+      check('владелец принимает заявку клиента (0029)', !accepted.error, accepted.error?.message);
+
       const { data: outboxRows } = await admin.from('notification_outbox').select('type').eq('booking_id', bookingId);
       const types = (outboxRows || []).map((r) => r.type);
       check(
-        'notification_outbox наполняется при создании брони (0018)',
+        'notification_outbox наполняется при подтверждении брони (0018/0029)',
         types.includes('booking_confirmed') && types.includes('booking_reminder'),
         `типы в очереди: ${types.join(', ') || 'пусто'}`
       );

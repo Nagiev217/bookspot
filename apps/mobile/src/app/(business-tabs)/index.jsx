@@ -8,7 +8,7 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Linking } from '
 import { router, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '@/utils/auth/store';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
-import { getMyBusiness, listBusinessBookings, getSetupStatus } from '@/utils/supabase/business';
+import { getMyBusiness, listBusinessBookings, getSetupStatus, listBookingRequests } from '@/utils/supabase/business';
 import { daysLeft, formatDateRu } from '@/utils/supabase/admin';
 import { PARTNER_WHATSAPP, hasPartnerWhatsapp, whatsappUrl } from '@/utils/contact';
 import { bakuToday } from '@/components/DateTimeGrid';
@@ -36,6 +36,7 @@ export default function BusinessToday() {
   const [todayBookings, setTodayBookings] = useState([]);
   const [nextDay, setNextDay] = useState(null); // { date, bookings } — ближайший день с записями, если сегодня пусто
   const [setupDone, setSetupDone] = useState(null); // сколько пунктов чек-листа готово, пока салон не опубликован
+  const [requests, setRequests] = useState([]); // заявки клиентов, ждущие ответа (0029)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -50,10 +51,15 @@ export default function BusinessToday() {
       // Окно в 30 дней вперёд — чтобы найти ближайшую запись, если на
       // сегодня пусто. Один запрос вместо двух: KPI и список берутся из
       // одного и того же результата.
-      Promise.all([getMyBusiness(businessId), listBusinessBookings({ businessId, from: today, days: 30 })])
-        .then(([b, bk]) => {
+      Promise.all([
+        getMyBusiness(businessId),
+        listBusinessBookings({ businessId, from: today, days: 30 }),
+        listBookingRequests(businessId),
+      ])
+        .then(([b, bk, reqs]) => {
           if (cancelled) return;
           setBusiness(b);
+          setRequests(reqs);
           // Новый салон ещё не опубликован (0024): владельцу при первом
           // заходе за сессию сразу открываем чек-лист, дальше — баннер.
           if (!b.published_at && isOwner) {
@@ -180,6 +186,34 @@ export default function BusinessToday() {
         </PressableScale>
       )}
 
+      {/* Заявки клиентов (0029): сверху, потому что у них срок ответа — 2 часа. */}
+      {requests.length > 0 && (
+        <>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Заявки · {requests.length}</Text>
+          </View>
+          {requests.map((r) => {
+            const pending = r.status === 'pending';
+            return (
+              <PressableScale key={r.id} style={[styles.requestCard, pending && styles.requestCardPending]} onPress={() => router.push(`/booking-request/${r.id}`)}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.agendaClient}>{r.client_name || 'Клиент'}</Text>
+                  <Text style={styles.agendaService}>
+                    {r.service_name} · {formatDateLabel(localDateOf(r.starts_at))}, {formatTime(r.starts_at)}
+                  </Text>
+                  <Text style={[styles.requestHint, pending && { color: COLORS.warning }]}>
+                    {pending
+                      ? `Ответьте до ${formatTime(r.expires_at)}${r.masters?.name ? ` · ${r.masters.name}` : ''}`
+                      : `Ждём ответа клиента на ваше время`}
+                  </Text>
+                </View>
+                <Text style={[styles.requestAction, !pending && { color: COLORS.sub }]}>{pending ? 'Ответить' : 'Открыть'}</Text>
+              </PressableScale>
+            );
+          })}
+        </>
+      )}
+
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>
           {showingNextDay ? `Ближайшая запись — ${formatDateLabel(nextDay.date)}` : 'Расписание на сегодня'}
@@ -239,5 +273,9 @@ const styles = StyleSheet.create({
   agendaCard: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: SPACING.md, padding: 12, paddingHorizontal: 14, borderRadius: RADIUS.md, backgroundColor: COLORS.surfaceAlt, borderLeftWidth: 3, borderLeftColor: COLORS.indigo },
   agendaClient: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.ink },
   agendaService: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: '#5B6478', marginTop: 3 },
+  requestCard: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, marginHorizontal: SPACING.xl, marginBottom: SPACING.sm, padding: 14, borderRadius: RADIUS.md, backgroundColor: COLORS.indigo100 },
+  requestCardPending: { backgroundColor: '#FFF4E0' },
+  requestHint: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.xs, color: COLORS.sub, marginTop: 4 },
+  requestAction: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.indigo },
   agendaPrice: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.ink },
 });

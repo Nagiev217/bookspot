@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
 import PressableScale from '@/components/PressableScale';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { useAuthStore } from '@/utils/auth/store';
 import { listMasters } from '@/utils/supabase/catalog';
@@ -116,6 +116,11 @@ export default function BusinessCalendar() {
   // молча ничего не делал — выглядело как "не работает"; теперь для
   // будущей брони показываем просто карточку без действий, а не тишину.
   async function handleBookingTap(b) {
+    // Заявка (0029) — открываем экран ответа: принять / другое время / отклонить.
+    if (b.status === 'pending' || b.status === 'proposed') {
+      router.push(`/booking-request/${b.id}`);
+      return;
+    }
     if (b.status !== 'confirmed') return;
     const isPast = new Date(b.starts_at).getTime() <= Date.now();
     if (!isPast) {
@@ -242,20 +247,30 @@ export default function BusinessCalendar() {
                 {masters.map((m) => (
                   <View key={m.id} style={{ flex: 1, position: 'relative', minHeight: HOURS.length * HOUR_H }}>
                     {bookings
-                      .filter((b) => b.master_id === m.id && b.status === 'confirmed')
+                      // Заявки тоже занимают время мастера — показываем их в сетке,
+                      // но пунктиром и янтарным цветом, чтобы не спутать с записью.
+                      .filter((b) => b.master_id === m.id && ['pending', 'proposed', 'confirmed'].includes(b.status))
                       .map((b) => {
                         const startMin = localMinutes(b.starts_at);
                         const endMin = localMinutes(b.ends_at);
                         const top = ((startMin - DISPLAY_START) / 60) * HOUR_H;
                         const height = Math.max(((endMin - startMin) / 60) * HOUR_H - 3, 20);
                         const isPast = new Date(b.starts_at).getTime() < Date.now();
+                        const isRequest = b.status !== 'confirmed';
                         return (
                           <PressableScale
                             key={b.id}
-                            style={[styles.block, { top, height, backgroundColor: COLORS.indigo100, borderLeftColor: COLORS.indigo }]}
+                            style={[
+                              styles.block,
+                              { top, height, backgroundColor: COLORS.indigo100, borderLeftColor: COLORS.indigo },
+                              isRequest && styles.blockRequest,
+                            ]}
                             onPress={() => handleBookingTap(b)}
                           >
-                            <Text numberOfLines={1} style={styles.blockClient}>{b.client_name || 'Без имени'}</Text>
+                            <Text numberOfLines={1} style={styles.blockClient}>
+                              {isRequest ? (b.status === 'pending' ? 'Заявка · ' : 'Ждём клиента · ') : ''}
+                              {b.client_name || 'Без имени'}
+                            </Text>
                             {height > 40 && <Text numberOfLines={1} style={styles.blockService}>{b.service_name}</Text>}
                             {/* Точка-подсказка: прошедшую бронь можно тапнуть и отметить визит. */}
                             {isPast && height > 40 && <View style={styles.blockPastDot} />}
@@ -374,6 +389,7 @@ const styles = StyleSheet.create({
   staffName: { fontFamily: FONT.bold, fontSize: 12.5, color: COLORS.ink },
   gridRow: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: SPACING.xxl },
   hourLabel: { fontFamily: FONT.semibold, fontSize: 10.5, color: COLORS.subLight, paddingTop: 6 },
+  blockRequest: { backgroundColor: '#FFF4E0', borderLeftColor: COLORS.warning, borderStyle: 'dashed', borderWidth: 1, borderColor: COLORS.warning },
   block: { position: 'absolute', left: 0, right: 0, padding: 7, paddingHorizontal: 8, borderLeftWidth: 3, borderRadius: 11, overflow: 'hidden' },
   blockClient: { fontFamily: FONT.bold, fontSize: 11, color: COLORS.ink },
   blockService: { fontFamily: FONT.medium, fontSize: 10, color: '#5B6478', marginTop: 3 },

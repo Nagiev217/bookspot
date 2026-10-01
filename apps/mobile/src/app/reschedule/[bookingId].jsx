@@ -91,6 +91,7 @@ export default function Reschedule() {
     setSaveError(null);
     try {
       await rescheduleBooking({ bookingId, date: selectedDate, start: time });
+      Alert.alert('Новое время отправлено', 'Мастер подтвердит его в течение 2 часов — пришлём уведомление.');
       router.replace('/(client-tabs)/bookings');
     } catch (e) {
       if (e.code === '23P01') {
@@ -109,7 +110,7 @@ export default function Reschedule() {
   }
 
   function handleCancel() {
-    Alert.alert('Отменить запись?', booking.service_name, [
+    Alert.alert(booking.status === 'pending' ? 'Отменить заявку?' : 'Отменить запись?', booking.service_name, [
       { text: 'Не отменять', style: 'cancel' },
       {
         text: 'Отменить запись',

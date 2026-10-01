@@ -54,6 +54,7 @@ One app, two modes. Every user is a client; if the account owns a business, a **
 | Salon page: photos, services with price and duration, masters, rating and reviews | `salon/[idx].jsx` |
 | **Master page**: photo, bio, the master's services with one-tap booking, reviews of visits to them | `master-info/[masterId].jsx` |
 | Booking in 4 steps: service → master → date → time (only genuinely free slots) | `booking/[idx].jsx` |
+| **Booking requests**: a booking is a request until the master accepts it; the master can propose another time, which the client accepts or declines | `(client-tabs)/bookings.jsx`, `0029_booking_requests.sql` |
 | Rescheduling and cancelling (respecting the salon's cancellation window) | `reschedule/[bookingId].jsx` |
 | "My bookings": upcoming and history | `(client-tabs)/bookings.jsx` |
 | **Reviews** — 1–5 rating and a comment, only after a completed visit, editable by the author | `review/[bookingId].jsx`, `0019_reviews.sql` |
@@ -68,6 +69,7 @@ One app, two modes. Every user is a client; if the account owns a business, a **
 |---|---|
 | Self-service salon registration ("Become a partner") | `(client-tabs)/become-partner.jsx` |
 | Calendar: day view by master, week view with revenue, **visit history** | `(business-tabs)/calendar.jsx` |
+| **Answering requests**: accept, propose another free time, or decline; unanswered requests expire after 2 hours | `booking-request/[bookingId].jsx`, `(business-tabs)/index.jsx` |
 | Marking a visit: "Showed up" / "No-show" | `0015_booking_lifecycle.sql` |
 | Manual booking for phone-in clients | `manual-booking/[businessId].jsx` |
 | Services, masters, weekly schedules and masters' days off | `services/…`, `master/[masterId].jsx`, `(business-tabs)/team.jsx` |
@@ -183,6 +185,8 @@ SUPABASE_ACCESS_TOKEN=<same token> npx supabase db push
 | 0024 | Salon setup checklist, publishing, photo gallery |
 | 0025–0027 | Publish error fix; master bio and self-service avatar for staff; master photo upload policy fix |
 | 0028 | Master specialty and years of experience (from the design mockup) |
+| 0029 | Booking requests: pending → accepted / declined / another time proposed; 2-hour expiry via pg_cron |
+| 0030 | Security fix: server-only functions were executable by anon/authenticated |
 
 ## Push notifications
 
@@ -220,6 +224,7 @@ npm run verify-release      # negative scenarios: guest access, past/day-off boo
 npm run verify-admin        # admin, owner and staff roles, subscription
 npm run verify-onboarding   # new salon stays hidden until the setup checklist is done and published
 npm run verify-master-profile  # staff edits own avatar and bio only; clients see the master page
+npm run verify-requests     # booking requests: accept, decline, propose another time, expiry
 npm run seed                # test catalog
 npm run purge-demo          # remove demo salons before release
 ```
@@ -227,6 +232,7 @@ npm run purge-demo          # remove demo salons before release
 ## Project conventions
 
 - **Verification** — one runnable script per non-trivial feature (`scripts/verify-*.js`).
+- **Function grants**: `revoke ... from public` is not enough in Supabase — anon/authenticated get EXECUTE directly. Since 0030 new functions in `public` get no EXECUTE by default; grant it explicitly to `authenticated` (and `anon` for guest features).
 - **All writes to `bookings`** go through SECURITY DEFINER RPCs only; `bookings` has no DELETE policy — cancelling is a status change, not a row deletion.
 - **RPCs with `returns table`** always use explicit table aliases (`b.id`, not `id`): the output column names match the table columns, and without aliases Postgres fails with "column reference is ambiguous".
 - **Design tokens** come only from `src/theme/tokens.js` (indigo `#3D4EDB`, Manrope) — no hard-coded colors in screens.

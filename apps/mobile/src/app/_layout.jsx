@@ -100,11 +100,15 @@ export default function RootLayout() {
   }, [fontsLoaded]);
 
   useEffect(() => {
-    // Отдельного экрана "одна бронь" нет — тап по уведомлению ведёт в
-    // соответствующий список: бизнес-типы в календарь владельца, остальные
-    // (подтверждение/напоминание/отмена) — в список броней клиента.
+    // Новая заявка (0029) открывает экран ответа на неё; остальные
+    // бизнес-уведомления — календарь салона; клиентские
+    // (подтверждение/предложение/отказ/напоминание) — «Мои записи».
+    // booking_cancelled приходит обеим сторонам — решает текущий режим.
     const sub = addNotificationResponseListener((data) => {
-      if (data.type === 'new_booking_business') {
+      const businessMode = useAuthStore.getState().mode === 'business';
+      if (data.type === 'new_booking_business' && data.bookingId) {
+        router.push(`/booking-request/${data.bookingId}`);
+      } else if (data.type === 'proposal_answered' || (data.type === 'booking_cancelled' && businessMode)) {
         router.push('/(business-tabs)/calendar');
       } else {
         router.push('/(client-tabs)/bookings');
@@ -143,6 +147,7 @@ export default function RootLayout() {
         <Stack.Screen name="salon-setup/[businessId]" options={{ gestureEnabled: true }} />
         <Stack.Screen name="my-master-profile" options={{ gestureEnabled: true }} />
         <Stack.Screen name="master-info/[masterId]" options={{ gestureEnabled: true }} />
+        <Stack.Screen name="booking-request/[bookingId]" options={{ gestureEnabled: true }} />
         <Stack.Screen name="master/[masterId]" options={{ presentation: 'modal', gestureEnabled: true }} />
       </Stack>
       <OfflineBanner />

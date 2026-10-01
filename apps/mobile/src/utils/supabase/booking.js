@@ -42,7 +42,7 @@ export async function createBooking({ businessId, masterId, serviceId, date, sta
 export async function listMyBookings() {
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, business_id, master_id, service_id, service_name, price, starts_at, ends_at, status, businesses(name, city, district), reviews(id, rating)')
+    .select('id, business_id, master_id, service_id, service_name, price, starts_at, ends_at, status, requested_starts_at, expires_at, cancel_reason, masters(name), businesses(name, city, district), reviews(id, rating)')
     .order('starts_at', { ascending: false });
   if (error) throw error;
   return data;
@@ -51,7 +51,7 @@ export async function listMyBookings() {
 export async function getBooking(bookingId) {
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, business_id, master_id, service_id, service_name, price, starts_at, ends_at, status, businesses(name, city, district)')
+    .select('id, business_id, master_id, service_id, service_name, price, starts_at, ends_at, status, requested_starts_at, expires_at, cancel_reason, businesses(name, city, district)')
     .eq('id', bookingId)
     .single();
   if (error) throw error;
@@ -67,6 +67,38 @@ export async function cancelBooking(bookingId) {
 // перезапросить доступность и дать выбрать другое время.
 export async function rescheduleBooking({ bookingId, date, start }) {
   const { data, error } = await supabase.rpc('reschedule_booking', {
+    p_booking_id: bookingId,
+    p_date: date,
+    p_start: start,
+  });
+  if (error) throw error;
+  return data[0];
+}
+
+// ─── Заявки (0029): запись подтверждает мастер ─────────────────────────────
+// pending — ждёт мастера, proposed — мастер предложил другое время и ждёт
+// клиента. Обе держат время за клиентом, как и confirmed.
+export const ACTIVE_STATUSES = ['pending', 'proposed', 'confirmed'];
+
+// Клиент отвечает на предложенное мастером время.
+export async function respondToProposal(bookingId, accept) {
+  const { error } = await supabase.rpc('respond_to_proposal', { p_booking_id: bookingId, p_accept: accept });
+  if (error) throw error;
+}
+
+// Ответы салона: владелец или мастер этой записи.
+export async function acceptBooking(bookingId) {
+  const { error } = await supabase.rpc('accept_booking', { p_booking_id: bookingId });
+  if (error) throw error;
+}
+
+export async function declineBooking(bookingId) {
+  const { error } = await supabase.rpc('decline_booking', { p_booking_id: bookingId });
+  if (error) throw error;
+}
+
+export async function proposeBookingTime({ bookingId, date, start }) {
+  const { data, error } = await supabase.rpc('propose_booking_time', {
     p_booking_id: bookingId,
     p_date: date,
     p_start: start,

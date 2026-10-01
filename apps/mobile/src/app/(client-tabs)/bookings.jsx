@@ -2,12 +2,13 @@
 // дизайне (открывает страницу салона; нет geo-координат/карты в схеме,
 // чтобы построить настоящий маршрут). Отмена перенесена на экран "Перенести".
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import PressableScale from '@/components/PressableScale';
 import { router, useFocusEffect } from 'expo-router';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { tintFor } from '@/utils/tint';
-import { listMyBookings } from '@/utils/supabase/booking';
+import { listMyBookings, respondToProposal, ACTIVE_STATUSES } from '@/utils/supabase/booking';
+import { friendlyError } from '@/utils/errors';
 import { useAuthStore } from '@/utils/auth/store';
 import SignInPrompt from '@/components/SignInPrompt';
 import StarBadge from '@/components/StarBadge';
@@ -24,6 +25,27 @@ function myReviewOf(booking) {
 const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 const MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 
+function formatTimeBaku(isoUtc) {
+  const d = new Date(new Date(isoUtc).getTime() + 4 * 3600000);
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+}
+
+// Шапка карточки предстоящей записи по статусу заявки (0029).
+function upcomingStatus(b) {
+  if (b.status === 'pending') {
+    return {
+      label: 'Ждёт подтверждения',
+      color: COLORS.warning,
+      bg: '#FFF4E0',
+      hint: b.expires_at ? `Мастер ответит до ${formatTimeBaku(b.expires_at)}` : null,
+    };
+  }
+  if (b.status === 'proposed') {
+    return { label: 'Другое время', color: COLORS.indigo, bg: COLORS.indigo100, hint: null };
+  }
+  return { label: 'Подтверждено', color: COLORS.indigo, bg: COLORS.indigo100, hint: null };
+}
+
 function formatBaku(isoUtc) {
   const d = new Date(new Date(isoUtc).getTime() + 4 * 3600000);
   return `${DOW[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} · ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
@@ -35,6 +57,7 @@ export default function Bookings() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [respondingId, setRespondingId] = useState(null);
   const loadedOnce = useRef(false);
 
   const load = useCallback(() => {
@@ -67,8 +90,29 @@ export default function Bookings() {
   useFocusEffect(load);
 
   const now = Date.now();
-  const upcoming = bookings.filter((b) => b.status === 'confirmed' && new Date(b.starts_at).getTime() >= now);
-  const past = bookings.filter((b) => b.status !== 'confirmed' || new Date(b.starts_at).getTime() < now);
+  const isUpcoming = (b) => ACTIVE_STATUSES.includes(b.status) && new Date(b.starts_at).getTime() >= now;
+  // Предстоящие — по возрастанию времени: ближайший визит первым.
+  const upcoming = bookings.filter(isUpcoming).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
+  const past = bookings.filter((b) => !isUpcoming(b));
+
+  async function respond(b, accept) {
+    setRespondingId(b.id);
+    try {
+      await respondToProposal(b.id, accept);
+      load();
+    } catch (e) {
+      Alert.alert('Не получилось', friendlyError(e));
+    } finally {
+      setRespondingId(null);
+    }
+  }
+
+  function confirmDecline(b) {
+    Alert.alert('Отказаться от этого времени?', 'Запись будет отменена, время освободится.', [
+      { text: 'Назад', style: 'cancel' },
+      { text: 'Отказаться', style: 'destructive', onPress: () => respond(b, false) },
+    ]);
+  }
 
   if (!loading && !uid) {
     return (
@@ -108,14 +152,24 @@ export default function Bookings() {
           {upcoming.length === 0 ? (
             <Text style={styles.emptyText}>Пока нет предстоящих записей.</Text>
           ) : (
-            upcoming.map((b) => (
+            upcoming.map((b) => {
+              const st = upcomingStatus(b);
+              const busy = respondingId === b.id;
+              return (
               <View key={b.id} style={styles.upcomingCard}>
-                <View style={styles.upcomingHeader}>
-                  <View style={styles.dot} />
-                  <Text style={styles.whenText}>{formatBaku(b.starts_at)}</Text>
+                <View style={[styles.upcomingHeader, { backgroundColor: st.bg }]}>
+                  <View style={[styles.dot, { backgroundColor: st.color }]} />
+                  <Text style={[styles.whenText, { color: st.color }]}>{formatBaku(b.starts_at)}</Text>
                   <View style={{ flex: 1 }} />
-                  <Text style={styles.statusText}>Подтверждено</Text>
+                  <Text style={[styles.statusText, { color: st.color }]}>{st.label}</Text>
                 </View>
+                {b.status === 'proposed' && (
+                  <Text style={styles.proposalText}>
+                    {b.masters?.name || 'Мастер'} не может
+                    {b.requested_starts_at ? ` в ${formatBaku(b.requested_starts_at)}` : ' в выбранное время'} и предлагает {formatBaku(b.starts_at)}.
+                  </Text>
+                )}
+                {st.hint && <Text style={styles.hintText}>{st.hint}</Text>}
                 <PressableScale style={styles.upcomingBody} onPress={() => router.push(`/salon/${b.business_id}`)}>
                   <View style={[styles.thumb, { backgroundColor: tintFor(b.business_id)[0] }]} />
                   <View style={{ flex: 1, minWidth: 0 }}>
@@ -124,16 +178,28 @@ export default function Bookings() {
                   </View>
                   <Text style={styles.priceText}>{b.price} ₼</Text>
                 </PressableScale>
-                <View style={styles.upcomingActions}>
-                  <PressableScale style={styles.outlineButton} onPress={() => router.push(`/reschedule/${b.id}`)}>
-                    <Text style={styles.outlineButtonText}>Перенести</Text>
-                  </PressableScale>
-                  <PressableScale style={styles.darkButton} onPress={() => router.push(`/salon/${b.business_id}`)}>
-                    <Text style={styles.darkButtonText}>Маршрут</Text>
-                  </PressableScale>
-                </View>
+                {b.status === 'proposed' ? (
+                  <View style={styles.upcomingActions}>
+                    <PressableScale style={styles.outlineButton} onPress={() => confirmDecline(b)} disabled={busy}>
+                      <Text style={styles.outlineButtonText}>Отказаться</Text>
+                    </PressableScale>
+                    <PressableScale style={styles.primaryButton} onPress={() => respond(b, true)} disabled={busy}>
+                      {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.darkButtonText}>Принять время</Text>}
+                    </PressableScale>
+                  </View>
+                ) : (
+                  <View style={styles.upcomingActions}>
+                    <PressableScale style={styles.outlineButton} onPress={() => router.push(`/reschedule/${b.id}`)}>
+                      <Text style={styles.outlineButtonText}>{b.status === 'pending' ? 'Изменить' : 'Перенести'}</Text>
+                    </PressableScale>
+                    <PressableScale style={styles.darkButton} onPress={() => router.push(`/salon/${b.business_id}`)}>
+                      <Text style={styles.darkButtonText}>Маршрут</Text>
+                    </PressableScale>
+                  </View>
+                )}
               </View>
-            ))
+              );
+            })
           )}
         </ScrollView>
       ) : (
@@ -152,7 +218,7 @@ export default function Bookings() {
                       <Text style={styles.subText}>
                         {b.service_name} · {formatBaku(b.starts_at)}
                       </Text>
-                      <Text style={styles.statusMuted}>{statusLabel(b.status)}</Text>
+                      <Text style={styles.statusMuted}>{statusLabel(b)}</Text>
                     </View>
                   </PressableScale>
                   {b.status === 'completed' &&
@@ -176,16 +242,28 @@ export default function Bookings() {
   );
 }
 
-function statusLabel(status) {
-  switch (status) {
+// Причина отмены важна клиенту: «мастер не смог» и «салон не ответил» —
+// разные ситуации (0029).
+const CANCEL_REASON_LABEL = {
+  client: 'Отменена вами',
+  business: 'Отменена салоном',
+  declined: 'Мастер не смог принять',
+  expired: 'Не подтверждена вовремя',
+  proposal_declined: 'Вы отказались от другого времени',
+};
+
+function statusLabel(b) {
+  switch (b.status) {
     case 'cancelled':
-      return 'Отменена';
+      return CANCEL_REASON_LABEL[b.cancel_reason] || 'Отменена';
+    case 'confirmed':
+      return 'Визит прошёл';
     case 'completed':
       return 'Завершена';
     case 'no_show':
       return 'Неявка';
     default:
-      return status;
+      return b.status;
   }
 }
 
@@ -212,6 +290,9 @@ const styles = StyleSheet.create({
   subText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginTop: 2 },
   statusMuted: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.xs, color: COLORS.subLight, marginTop: 4 },
   priceText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.ink },
+  proposalText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.ink, lineHeight: 19, paddingHorizontal: 16, paddingTop: 14 },
+  hintText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.xs, color: COLORS.sub, paddingHorizontal: 16, paddingTop: 10 },
+  primaryButton: { flex: 1, height: 44, borderRadius: 14, backgroundColor: COLORS.indigo, alignItems: 'center', justifyContent: 'center' },
   upcomingActions: { flexDirection: 'row', gap: SPACING.sm, padding: 16, paddingTop: 0 },
   outlineButton: { flex: 1, height: 44, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(11,17,32,.12)', alignItems: 'center', justifyContent: 'center' },
   outlineButtonText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.ink },

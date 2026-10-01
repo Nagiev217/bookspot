@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { ArrowLeft, Check } from 'lucide-react-native';
+import { ArrowLeft, Check, Clock } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { tintFor } from '@/utils/tint';
 import { getBusiness, listServices, listMasters } from '@/utils/supabase/catalog';
@@ -337,10 +337,13 @@ function ConfirmScreen({ business, tint, booking, onDone }) {
   return (
     <View style={styles.confirmScreen}>
       <View style={styles.confirmIcon}>
-        <Check size={30} color={COLORS.indigo} strokeWidth={2.2} />
+        <Clock size={30} color={COLORS.indigo} strokeWidth={2.2} />
       </View>
-      <Text style={styles.confirmTitle}>Вы записаны</Text>
-      <Text style={styles.confirmSub}>Оплата на месте.</Text>
+      {/* С 0029 запись подтверждает мастер — до его ответа это заявка. */}
+      <Text style={styles.confirmTitle}>Заявка отправлена</Text>
+      <Text style={styles.confirmSub}>
+        Мастер подтвердит запись в течение 2 часов — пришлём уведомление. Время за вами держится. Оплата на месте.
+      </Text>
 
       <View style={styles.receiptCard}>
         <View style={styles.receiptHeader}>

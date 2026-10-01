@@ -12,6 +12,7 @@
     "verify-admin": "node --env-file=.env verify-admin.js",
     "verify-onboarding": "node --env-file=.env verify-onboarding.js",
     "verify-master-profile": "node --env-file=.env verify-master-profile.js",
+    "verify-requests": "node --env-file=.env verify-requests.js",
     "make-admin": "node --env-file=.env make-admin.js"
   },
   "dependencies": {
