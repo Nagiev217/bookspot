@@ -163,7 +163,7 @@ export async function setServiceMasters(serviceId, masterIds) {
 }
 
 export async function getMaster(masterId) {
-  const { data, error } = await supabase.from('masters').select('id, name, active, business_id, photo_url, bio').eq('id', masterId).single();
+  const { data, error } = await supabase.from('masters').select('id, name, active, business_id, photo_url, bio, specialty, experience_years').eq('id', masterId).single();
   if (error) throw error;
   return data;
 }
@@ -300,7 +300,12 @@ export async function uploadMasterPhotoFile(masterId, base64, ext = 'jpg') {
   return uploadPhoto(`master/${masterId}/photo.${ext}`, base64, `image/${ext === 'jpg' ? 'jpeg' : ext}`);
 }
 
-export async function updateMyMasterProfile({ bio, photoUrl = null }) {
-  const { error } = await supabase.rpc('update_my_master_profile', { p_bio: bio, p_photo_url: photoUrl });
+export async function updateMyMasterProfile({ bio, photoUrl = null, specialty = '', experienceYears = null }) {
+  const { error } = await supabase.rpc('update_my_master_profile', {
+    p_bio: bio,
+    p_photo_url: photoUrl,
+    p_specialty: specialty,
+    p_experience_years: experienceYears,
+  });
   if (error) throw error;
 }

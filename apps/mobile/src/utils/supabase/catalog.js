@@ -81,7 +81,7 @@ export async function listServices(businessId) {
 export async function listMasters(businessId) {
   const { data, error } = await supabase
     .from('masters')
-    .select('id, name, photo_url, bio')
+    .select('id, name, photo_url, bio, specialty')
     .eq('business_id', businessId)
     .eq('active', true)
     .order('name');
@@ -94,7 +94,7 @@ export async function listMasters(businessId) {
 export async function getMasterPublic(masterId) {
   const { data, error } = await supabase
     .from('masters')
-    .select('id, name, photo_url, bio, business_id, active')
+    .select('id, name, photo_url, bio, specialty, experience_years, business_id, active')
     .eq('id', masterId)
     .single();
   if (error) throw error;

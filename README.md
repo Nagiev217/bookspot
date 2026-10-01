@@ -182,6 +182,7 @@ SUPABASE_ACCESS_TOKEN=<same token> npx supabase db push
 | 0020–0023 | Admin role, owner/staff accounts, subscription, review anonymization fix |
 | 0024 | Salon setup checklist, publishing, photo gallery |
 | 0025–0027 | Publish error fix; master bio and self-service avatar for staff; master photo upload policy fix |
+| 0028 | Master specialty and years of experience (from the design mockup) |
 
 ## Push notifications
 

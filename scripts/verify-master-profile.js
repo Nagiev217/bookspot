@@ -96,16 +96,26 @@ async function main() {
     const staff = await signIn(staffEmail, cs.data.password);
     created.users.push(staff.uid);
 
-    const r1 = await staff.client.rpc('update_my_master_profile', { p_bio: '  Колорист, 7 лет опыта  ', p_photo_url: null });
-    const { data: aAfter } = await anon.from('masters').select('bio, photo_url').eq('id', mA.id).single();
+    const r1 = await staff.client.rpc('update_my_master_profile', {
+      p_bio: '  Колорист, 7 лет опыта  ',
+      p_photo_url: null,
+      p_specialty: ' Колорист ',
+      p_experience_years: 7,
+    });
+    const { data: aAfter } = await anon.from('masters').select('bio, photo_url, specialty, experience_years').eq('id', mA.id).single();
     check('мастер сохраняет «о себе», пробелы обрезаны, клиент это видит', !r1.error && aAfter.bio === 'Колорист, 7 лет опыта', r1.error?.message || aAfter.bio);
+    check('мастер сохраняет специализацию и опыт (0028)', aAfter.specialty === 'Колорист' && aAfter.experience_years === 7, JSON.stringify(aAfter));
+    const rYears = await staff.client.rpc('update_my_master_profile', { p_bio: 'x', p_photo_url: null, p_specialty: 'Колорист', p_experience_years: 99 });
+    check('опыт больше 70 лет отклонён', !!rYears.error, rYears.error?.message);
+    const rSpec = await staff.client.rpc('update_my_master_profile', { p_bio: 'x', p_photo_url: null, p_specialty: 'я'.repeat(41), p_experience_years: 7 });
+    check('специализация длиннее 40 символов отклонена', !!rSpec.error, rSpec.error?.message);
 
     const path = `master/${mA.id}/photo-${stamp}.png`;
     const up = await staff.client.storage.from('photos').upload(path, PNG_1PX, { contentType: 'image/png', upsert: true });
     check('мастер загружает фото в свою папку', !up.error, up.error?.message);
     if (!up.error) created.storagePaths.push(path);
     const url = staff.client.storage.from('photos').getPublicUrl(path).data.publicUrl;
-    const r2 = await staff.client.rpc('update_my_master_profile', { p_bio: 'Колорист, 7 лет опыта', p_photo_url: url });
+    const r2 = await staff.client.rpc('update_my_master_profile', { p_bio: 'Колорист, 7 лет опыта', p_photo_url: url, p_specialty: 'Колорист', p_experience_years: 7 });
     const { data: aPhoto } = await anon.from('masters').select('photo_url, bio').eq('id', mA.id).single();
     check('мастер ставит себе аватар, bio сохранилось', !r2.error && aPhoto.photo_url === url && aPhoto.bio === 'Колорист, 7 лет опыта', r2.error?.message);
 

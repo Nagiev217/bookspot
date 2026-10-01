@@ -39,6 +39,8 @@ export default function MasterDetail() {
   const { masterId } = useLocalSearchParams();
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
+  const [specialty, setSpecialty] = useState('');
+  const [experience, setExperience] = useState('');
   const [active, setActive] = useState(true);
   const [photoUrl, setPhotoUrl] = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -58,6 +60,8 @@ export default function MasterDetail() {
           if (cancelled) return;
           setName(master.name);
           setBio(master.bio || '');
+          setSpecialty(master.specialty || '');
+          setExperience(master.experience_years === null ? '' : String(master.experience_years));
           setActive(master.active);
           setPhotoUrl(master.photo_url);
           const w = emptyWeek();
@@ -112,9 +116,17 @@ export default function MasterDetail() {
     setError(null);
     setInfo(null);
     if (!name.trim()) return setError('Введите имя');
+    const years = experience.trim() === '' ? null : Number(experience);
+    if (years !== null && (!Number.isInteger(years) || years < 0 || years > 70)) return setError('Опыт — целое число лет от 0 до 70');
     setSaving(true);
     try {
-      await updateMaster(masterId, { name: name.trim(), active, bio: bio.trim() });
+      await updateMaster(masterId, {
+        name: name.trim(),
+        active,
+        bio: bio.trim(),
+        specialty: specialty.trim(),
+        experience_years: years,
+      });
       setInfo('Сохранено');
     } catch (e) {
       setError(e.message || 'Не удалось сохранить');
@@ -188,6 +200,24 @@ export default function MasterDetail() {
         </PressableScale>
 
         <TextInput style={styles.input} placeholder="Имя" placeholderTextColor={COLORS.sub} value={name} onChangeText={setName} />
+        <View style={styles.row2}>
+          <TextInput
+            style={[styles.input, { flex: 2 }]}
+            placeholder="Специализация: барбер, колорист…"
+            placeholderTextColor={COLORS.sub}
+            maxLength={40}
+            value={specialty}
+            onChangeText={setSpecialty}
+          />
+          <TextInput
+            style={[styles.input, { flex: 1 }]}
+            placeholder="Опыт, лет"
+            placeholderTextColor={COLORS.sub}
+            keyboardType="number-pad"
+            value={experience}
+            onChangeText={setExperience}
+          />
+        </View>
         <TextInput
           style={[styles.input, styles.textarea]}
           placeholder="О себе: опыт, специализация — клиенты увидят это на странице мастера"
@@ -271,6 +301,7 @@ const styles = StyleSheet.create({
   photoImg: { width: '100%', height: '100%' },
   photoOverlay: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(11,17,32,.35)', ...StyleSheet.absoluteFillObject },
   textarea: { minHeight: 90, textAlignVertical: 'top' },
+  row2: { flexDirection: 'row', gap: SPACING.sm },
   input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, padding: SPACING.md, fontFamily: FONT.regular, fontSize: TEXT_SIZE.md, color: COLORS.text },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   switchLabel: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.text },

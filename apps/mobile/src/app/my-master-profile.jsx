@@ -18,6 +18,8 @@ export default function MyMasterProfile() {
   const masterId = useAuthStore((s) => s.masterId);
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
+  const [specialty, setSpecialty] = useState('');
+  const [experience, setExperience] = useState('');
   const [photoUrl, setPhotoUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -37,6 +39,8 @@ export default function MyMasterProfile() {
           if (cancelled) return;
           setName(m.name);
           setBio(m.bio || '');
+          setSpecialty(m.specialty || '');
+          setExperience(m.experience_years === null ? '' : String(m.experience_years));
           setPhotoUrl(m.photo_url);
         })
         .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить'))
@@ -64,8 +68,9 @@ export default function MyMasterProfile() {
     try {
       const url = await uploadMasterPhotoFile(masterId, result.assets[0].base64);
       // Фото сохраняем сразу, как и у владельца: выбранная картинка не
-      // должна пропасть, если мастер не нажмёт «Сохранить».
-      await updateMyMasterProfile({ bio, photoUrl: url });
+      // должна пропасть, если мастер не нажмёт «Сохранить». Остальные поля
+      // передаём как есть, иначе RPC затёр бы их пустыми.
+      await updateMyMasterProfile({ bio, photoUrl: url, specialty, experienceYears: parsedYears() });
       setPhotoUrl(url);
       setInfo('Фото обновлено');
     } catch (e) {
@@ -75,12 +80,21 @@ export default function MyMasterProfile() {
     }
   }
 
+  // '' — опыт не указан; иначе целое число лет.
+  function parsedYears() {
+    return experience.trim() === '' ? null : Number(experience);
+  }
+
   async function handleSave() {
+    const years = parsedYears();
+    if (years !== null && (!Number.isInteger(years) || years < 0 || years > 70)) {
+      return setError('Опыт — целое число лет от 0 до 70');
+    }
     setSaving(true);
     setError(null);
     setInfo(null);
     try {
-      await updateMyMasterProfile({ bio });
+      await updateMyMasterProfile({ bio, specialty, experienceYears: years });
       setInfo('Сохранено');
     } catch (e) {
       setError(e.message || 'Не удалось сохранить');
@@ -123,6 +137,25 @@ export default function MyMasterProfile() {
         <Text style={styles.name}>{name}</Text>
         <Text style={styles.hint}>Фото и описание клиенты видят, когда открывают вас в карточке салона.</Text>
 
+        <View style={styles.row2}>
+          <TextInput
+            style={[styles.field, { flex: 2 }]}
+            placeholder="Барбер, колорист…"
+            placeholderTextColor={COLORS.sub}
+            maxLength={40}
+            value={specialty}
+            onChangeText={setSpecialty}
+          />
+          <TextInput
+            style={[styles.field, { flex: 1 }]}
+            placeholder="Опыт, лет"
+            placeholderTextColor={COLORS.sub}
+            keyboardType="number-pad"
+            value={experience}
+            onChangeText={setExperience}
+          />
+        </View>
+
         <Text style={styles.label}>О себе</Text>
         <TextInput
           style={styles.textarea}
@@ -161,6 +194,8 @@ const styles = StyleSheet.create({
   name: { alignSelf: 'center', fontFamily: FONT.extrabold, fontSize: 20, color: COLORS.ink, marginTop: SPACING.sm },
   hint: { alignSelf: 'center', textAlign: 'center', fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginBottom: SPACING.md },
   label: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: COLORS.ink },
+  row2: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.sm },
+  field: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, padding: SPACING.md, fontFamily: FONT.regular, fontSize: TEXT_SIZE.md, color: COLORS.text },
   textarea: { minHeight: 120, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, padding: SPACING.md, fontFamily: FONT.regular, fontSize: TEXT_SIZE.md, color: COLORS.text, textAlignVertical: 'top' },
   counter: { alignSelf: 'flex-end', fontFamily: FONT.medium, fontSize: TEXT_SIZE.xs, color: COLORS.sub },
   error: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.danger },

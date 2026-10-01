@@ -220,7 +220,7 @@ export default function SalonDetail() {
                     {m.photo_url && <Image source={{ uri: m.photo_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />}
                   </View>
                   <Text style={styles.masterName} numberOfLines={1}>{m.name}</Text>
-                  <Text style={styles.masterMore}>Подробнее</Text>
+                  <Text style={styles.masterRole} numberOfLines={1}>{m.specialty?.trim() || 'Подробнее'}</Text>
                 </PressableScale>
               ))}
             </ScrollView>
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   masterCard: { width: 92, alignItems: 'center' },
   masterAvatar: { width: 92, height: 92, borderRadius: RADIUS.lg, overflow: 'hidden' },
   masterName: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.ink, marginTop: 9 },
-  masterMore: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.xs, color: COLORS.indigo, marginTop: 2 },
+  masterRole: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginTop: 2 },
   reviewCard: { padding: 14, backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, gap: 6 },
   reviewHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   reviewName: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.ink },
