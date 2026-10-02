@@ -16,6 +16,8 @@ import {
   listServiceMasterIds,
   setServiceMasters,
 } from '@/utils/supabase/business';
+import { t } from '@/utils/i18n';
+import { friendlyError } from '@/utils/errors';
 
 const emptyForm = { id: null, name: '', price: '', durationMin: '', active: true, masterIds: [] };
 
@@ -36,7 +38,7 @@ export default function ServicesScreen() {
         setServices(s);
         setMasters(m);
       })
-      .catch((e) => setError(e.message || 'Не удалось загрузить'))
+      .catch((e) => setError(friendlyError(e, t('common.20'))))
       .finally(() => setLoading(false));
   }, [businessId]);
 
@@ -67,9 +69,9 @@ export default function ServicesScreen() {
     const name = form.name.trim();
     const price = Number(form.price);
     const durationMin = Number(form.durationMin);
-    if (!name) return setError('Введите название услуги');
-    if (!Number.isFinite(price) || price < 0) return setError('Некорректная цена');
-    if (!Number.isInteger(durationMin) || durationMin <= 0) return setError('Длительность — целое число минут больше 0');
+    if (!name) return setError(t('services_businessId.1'));
+    if (!Number.isFinite(price) || price < 0) return setError(t('services_businessId.2'));
+    if (!Number.isInteger(durationMin) || durationMin <= 0) return setError(t('services_businessId.3'));
 
     setSaving(true);
     try {
@@ -84,7 +86,7 @@ export default function ServicesScreen() {
       setForm(null);
       load();
     } catch (e) {
-      setError(e.message || 'Не удалось сохранить');
+      setError(friendlyError(e, t('common.65')));
     } finally {
       setSaving(false);
     }
@@ -97,7 +99,7 @@ export default function ServicesScreen() {
       setForm(null);
       load();
     } catch (e) {
-      setError(e.message || 'Не удалось удалить');
+      setError(friendlyError(e, t('services_businessId.4')));
     } finally {
       setSaving(false);
     }
@@ -109,7 +111,7 @@ export default function ServicesScreen() {
         <PressableScale style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={17} color={COLORS.ink} />
         </PressableScale>
-        <Text style={styles.title}>Услуги</Text>
+        <Text style={styles.title}>{t('common.48')}</Text>
         <PressableScale style={styles.addButton} onPress={() => setForm(emptyForm)}>
           <Plus size={18} color={COLORS.white} />
         </PressableScale>
@@ -122,14 +124,14 @@ export default function ServicesScreen() {
           {error && !form && <Text style={styles.error}>{error}</Text>}
 
           {services.length === 0 ? (
-            <Text style={styles.emptyText}>Пока нет ни одной услуги — добавьте первую.</Text>
+            <Text style={styles.emptyText}>{t('services_businessId.5')}</Text>
           ) : (
             services.map((s) => (
               <PressableScale key={s.id} style={styles.row} onPress={() => openEdit(s)}>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={[styles.rowName, !s.active && styles.rowNameOff]}>{s.name}</Text>
                   <Text style={styles.rowMeta}>
-                    {s.duration_min} мин{!s.active ? ' · выключена' : ''}
+                    {s.duration_min}{' '}{t('common.55')}{!s.active ? t('services_businessId.6') : ''}
                   </Text>
                 </View>
                 <Text style={styles.rowPrice}>{s.price} ₼</Text>
@@ -139,12 +141,12 @@ export default function ServicesScreen() {
 
           {form && (
             <View style={styles.form}>
-              <Text style={styles.formTitle}>{form.id ? 'Изменить услугу' : 'Новая услуга'}</Text>
-              <TextInput style={styles.input} placeholder="Название" placeholderTextColor={COLORS.sub} value={form.name} onChangeText={(v) => setForm((f) => ({ ...f, name: v }))} />
+              <Text style={styles.formTitle}>{form.id ? t('services_businessId.7') : t('services_businessId.8')}</Text>
+              <TextInput style={styles.input} placeholder={t('common.67')} placeholderTextColor={COLORS.sub} value={form.name} onChangeText={(v) => setForm((f) => ({ ...f, name: v }))} />
               <View style={{ flexDirection: 'row', gap: SPACING.md }}>
                 <TextInput
                   style={[styles.input, { flex: 1 }]}
-                  placeholder="Цена, ₼"
+                  placeholder={t('services_businessId.9')}
                   placeholderTextColor={COLORS.sub}
                   keyboardType="decimal-pad"
                   value={form.price}
@@ -152,7 +154,7 @@ export default function ServicesScreen() {
                 />
                 <TextInput
                   style={[styles.input, { flex: 1 }]}
-                  placeholder="Минут"
+                  placeholder={t('services_businessId.10')}
                   placeholderTextColor={COLORS.sub}
                   keyboardType="number-pad"
                   value={form.durationMin}
@@ -162,14 +164,14 @@ export default function ServicesScreen() {
 
               {form.id && (
                 <View style={styles.switchRow}>
-                  <Text style={styles.switchLabel}>Активна (видна клиентам)</Text>
+                  <Text style={styles.switchLabel}>{t('services_businessId.11')}</Text>
                   <Switch value={form.active} onValueChange={(v) => setForm((f) => ({ ...f, active: v }))} trackColor={{ true: COLORS.indigo }} />
                 </View>
               )}
 
-              <Text style={styles.label}>Мастера, которые её оказывают</Text>
+              <Text style={styles.label}>{t('services_businessId.12')}</Text>
               {masters.length === 0 ? (
-                <Text style={styles.emptyText}>Сначала добавьте мастеров во вкладке «Команда».</Text>
+                <Text style={styles.emptyText}>{t('services_businessId.13')}</Text>
               ) : (
                 <View style={{ gap: SPACING.sm }}>
                   {masters.map((m) => (
@@ -190,10 +192,10 @@ export default function ServicesScreen() {
                   </PressableScale>
                 )}
                 <PressableScale style={styles.cancelButton} onPress={() => setForm(null)} disabled={saving}>
-                  <Text style={styles.cancelButtonText}>Отмена</Text>
+                  <Text style={styles.cancelButtonText}>{t('common.23')}</Text>
                 </PressableScale>
                 <PressableScale style={styles.saveButton} onPress={handleSave} disabled={saving}>
-                  {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.saveButtonText}>Сохранить</Text>}
+                  {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.saveButtonText}>{t('common.68')}</Text>}
                 </PressableScale>
               </View>
             </View>

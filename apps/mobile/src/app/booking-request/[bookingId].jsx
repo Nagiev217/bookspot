@@ -13,9 +13,9 @@ import { getBookingRequest } from '@/utils/supabase/business';
 import { getAvailability, acceptBooking, declineBooking, proposeBookingTime } from '@/utils/supabase/booking';
 import { bakuToday, addDaysISO } from '@/components/DateTimeGrid';
 import { friendlyError } from '@/utils/errors';
+import { dowShort, dayMonthShort } from '@/utils/i18n/dates';
+import { t } from '@/utils/i18n';
 
-const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-const MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 const DAYS_WINDOW = 14;
 
 function bakuDate(isoUtc) {
@@ -23,7 +23,7 @@ function bakuDate(isoUtc) {
 }
 function formatWhen(isoUtc) {
   const d = bakuDate(isoUtc);
-  return `${DOW[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} · ${formatTime(isoUtc)}`;
+  return `${dowShort(d.getUTCDay())}, ${dayMonthShort(d.getUTCDate(), d.getUTCMonth())} · ${formatTime(isoUtc)}`;
 }
 function formatTime(isoUtc) {
   const d = bakuDate(isoUtc);
@@ -52,7 +52,7 @@ export default function BookingRequest() {
     let cancelled = false;
     getBookingRequest(bookingId)
       .then((b) => !cancelled && setBooking(b))
-      .catch((e) => !cancelled && setError(friendlyError(e, 'Не удалось загрузить заявку')))
+      .catch((e) => !cancelled && setError(friendlyError(e, t('booking_request_bookingId.1'))))
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
@@ -72,7 +72,7 @@ export default function BookingRequest() {
         const days = Object.keys(map).sort();
         setSelectedDate(map[requestedDay]?.length ? requestedDay : days[0] || bakuToday());
       })
-      .catch((e) => setActionError(friendlyError(e, 'Не удалось загрузить свободное время')))
+      .catch((e) => setActionError(friendlyError(e, t('common.51'))))
       .finally(() => setAvailLoading(false));
   }
 
@@ -94,19 +94,19 @@ export default function BookingRequest() {
 
   function handleAccept() {
     run('accept', () => acceptBooking(bookingId), () => {
-      Alert.alert('Запись подтверждена', 'Клиент получит уведомление.');
+      Alert.alert(t('booking_request_bookingId.2'), t('booking_request_bookingId.3'));
       router.back();
     });
   }
 
   function handleDecline() {
     Alert.alert(
-      booking.status === 'proposed' ? 'Отозвать предложение?' : 'Отклонить заявку?',
-      'Клиент получит уведомление, время освободится. Лучше предложить другое время — так клиент не уйдёт.',
+      booking.status === 'proposed' ? t('booking_request_bookingId.4') : t('booking_request_bookingId.5'),
+      t('booking_request_bookingId.6'),
       [
-        { text: 'Назад', style: 'cancel' },
+        { text: t('common.40'), style: 'cancel' },
         {
-          text: 'Отклонить',
+          text: t('booking_request_bookingId.7'),
           style: 'destructive',
           onPress: () => run('decline', () => declineBooking(bookingId), () => router.back()),
         },
@@ -120,7 +120,7 @@ export default function BookingRequest() {
       'propose',
       () => proposeBookingTime({ bookingId, date: selectedDate, start: time }),
       () => {
-        Alert.alert('Время предложено', 'Клиент получит уведомление и выберет: принять или отказаться.');
+        Alert.alert(t('booking_request_bookingId.8'), t('booking_request_bookingId.9'));
         router.back();
       }
     );
@@ -136,7 +136,7 @@ export default function BookingRequest() {
   if (error || !booking) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{error || 'Заявка не найдена'}</Text>
+        <Text style={styles.errorText}>{error || t('booking_request_bookingId.10')}</Text>
       </View>
     );
   }
@@ -148,48 +148,48 @@ export default function BookingRequest() {
   const timesForSelected = (selectedDate && availability?.[selectedDate]) || [];
 
   const rows = [
-    { k: 'Услуга', v: booking.service_name },
-    { k: 'Мастер', v: booking.masters?.name || '—' },
-    { k: 'Стоимость', v: `${booking.price} ₼` },
+    { k: t('common.58'), v: booking.service_name },
+    { k: t('common.21'), v: booking.masters?.name || '—' },
+    { k: t('booking_request_bookingId.11'), v: `${booking.price} ₼` },
   ];
 
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <PressableScale style={styles.backButton} onPress={() => router.back()} accessibilityLabel="Назад">
+        <PressableScale style={styles.backButton} onPress={() => router.back()} accessibilityLabel={t('common.40')}>
           <ArrowLeft size={17} color={COLORS.ink} />
         </PressableScale>
         <Text style={styles.title}>
-          {isProposed ? 'Ждём ответа клиента' : isPending ? 'Новая заявка' : booking.status === 'confirmed' ? 'Запись подтверждена' : 'Заявка закрыта'}
+          {isProposed ? t('booking_request_bookingId.12') : isPending ? t('booking_request_bookingId.13') : booking.status === 'confirmed' ? t('booking_request_bookingId.2') : t('booking_request_bookingId.14')}
         </Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
         <View style={[styles.whenCard, isPending && styles.whenCardPending]}>
           <Text style={[styles.whenLabel, isPending && { color: COLORS.warning }]}>
-            {isProposed ? 'Вы предложили' : isPending ? 'Клиент хочет' : 'Время'}
+            {isProposed ? t('booking_request_bookingId.15') : isPending ? t('booking_request_bookingId.16') : t('common.60')}
           </Text>
           <Text style={styles.whenText}>{formatWhen(booking.starts_at)}</Text>
           {isProposed && booking.requested_starts_at && (
-            <Text style={styles.whenSub}>вместо {formatWhen(booking.requested_starts_at)}</Text>
+            <Text style={styles.whenSub}>{t('booking_request_bookingId.17')}{' '}{formatWhen(booking.requested_starts_at)}</Text>
           )}
           {isOpen && booking.expires_at && (
             <Text style={styles.whenSub}>
-              {isPending ? `Ответьте до ${formatTime(booking.expires_at)} — иначе заявка отменится` : `Клиент ответит до ${formatTime(booking.expires_at)}`}
+              {isPending ? t('booking_request_bookingId.18', { p0: formatTime(booking.expires_at) }) : t('booking_request_bookingId.19', { p0: formatTime(booking.expires_at) })}
             </Text>
           )}
         </View>
 
         <View style={styles.clientRow}>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.clientName}>{booking.client_name || 'Клиент'}</Text>
+            <Text style={styles.clientName}>{booking.client_name || t('common.32')}</Text>
             {booking.client_phone ? <Text style={styles.clientPhone}>{booking.client_phone}</Text> : null}
           </View>
           {booking.client_phone ? (
             <PressableScale
               style={styles.callButton}
               onPress={() => Linking.openURL(`tel:${booking.client_phone}`).catch(() => {})}
-              accessibilityLabel="Позвонить клиенту"
+              accessibilityLabel={t('booking_request_bookingId.20')}
             >
               <Phone size={18} color={COLORS.indigo} />
             </PressableScale>
@@ -209,7 +209,7 @@ export default function BookingRequest() {
 
         {isPending && proposing && (
           <>
-            <Text style={styles.sectionTitle}>Другое время</Text>
+            <Text style={styles.sectionTitle}>{t('common.38')}</Text>
             {availLoading ? (
               <ActivityIndicator color={COLORS.indigo} style={{ marginTop: SPACING.lg }} />
             ) : (
@@ -228,14 +228,14 @@ export default function BookingRequest() {
                           setTime(null);
                         }}
                       >
-                        <Text style={[styles.dateDow, on && styles.textActive]}>{DOW[dowOf(iso)]}</Text>
+                        <Text style={[styles.dateDow, on && styles.textActive]}>{dowShort(dowOf(iso))}</Text>
                         <Text style={[styles.dateNum, on && styles.textActive, off && styles.textOff]}>{iso.slice(8, 10)}</Text>
                       </PressableScale>
                     );
                   })}
                 </View>
                 {timesForSelected.length === 0 ? (
-                  <Text style={styles.muted}>В этот день у мастера нет свободного времени.</Text>
+                  <Text style={styles.muted}>{t('booking_request_bookingId.21')}</Text>
                 ) : (
                   <View style={[styles.timeGrid, { marginTop: SPACING.md }]}>
                     {timesForSelected.map((t) => {
@@ -256,8 +256,8 @@ export default function BookingRequest() {
         {!isOpen && (
           <Text style={styles.muted}>
             {booking.status === 'confirmed'
-              ? 'Запись уже в календаре.'
-              : 'Заявка закрыта: её отменили или истёк срок ответа.'}
+              ? t('booking_request_bookingId.22')
+              : t('booking_request_bookingId.23')}
           </Text>
         )}
       </ScrollView>
@@ -267,7 +267,7 @@ export default function BookingRequest() {
           {isPending && !proposing && (
             <>
               <PressableScale style={styles.primaryButton} onPress={handleAccept} disabled={!!busy}>
-                {busy === 'accept' ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.primaryText}>Принять</Text>}
+                {busy === 'accept' ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.primaryText}>{t('booking_request_bookingId.24')}</Text>}
               </PressableScale>
               <View style={styles.secondaryRow}>
                 <PressableScale
@@ -278,10 +278,10 @@ export default function BookingRequest() {
                     loadAvailability(booking);
                   }}
                 >
-                  <Text style={styles.outlineText}>Другое время</Text>
+                  <Text style={styles.outlineText}>{t('common.38')}</Text>
                 </PressableScale>
                 <PressableScale style={styles.dangerButton} disabled={!!busy} onPress={handleDecline}>
-                  {busy === 'decline' ? <ActivityIndicator color={COLORS.danger} /> : <Text style={styles.dangerText}>Отклонить</Text>}
+                  {busy === 'decline' ? <ActivityIndicator color={COLORS.danger} /> : <Text style={styles.dangerText}>{t('booking_request_bookingId.7')}</Text>}
                 </PressableScale>
               </View>
             </>
@@ -292,17 +292,17 @@ export default function BookingRequest() {
                 {busy === 'propose' ? (
                   <ActivityIndicator color={COLORS.white} />
                 ) : (
-                  <Text style={styles.primaryText}>{time ? `Предложить ${time}` : 'Выберите время'}</Text>
+                  <Text style={styles.primaryText}>{time ? t('booking_request_bookingId.25', { time }) : t('common.50')}</Text>
                 )}
               </PressableScale>
               <PressableScale style={styles.textButton} onPress={() => setProposing(false)} disabled={!!busy}>
-                <Text style={styles.outlineText}>Назад к заявке</Text>
+                <Text style={styles.outlineText}>{t('booking_request_bookingId.26')}</Text>
               </PressableScale>
             </>
           )}
           {isProposed && (
             <PressableScale style={styles.dangerButtonWide} disabled={!!busy} onPress={handleDecline}>
-              {busy === 'decline' ? <ActivityIndicator color={COLORS.danger} /> : <Text style={styles.dangerText}>Отозвать предложение</Text>}
+              {busy === 'decline' ? <ActivityIndicator color={COLORS.danger} /> : <Text style={styles.dangerText}>{t('booking_request_bookingId.27')}</Text>}
             </PressableScale>
           )}
         </View>

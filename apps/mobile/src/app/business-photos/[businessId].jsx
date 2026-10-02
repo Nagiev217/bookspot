@@ -10,6 +10,8 @@ import { ArrowLeft, Plus, Trash2, Star } from 'lucide-react-native';
 import PressableScale from '@/components/PressableScale';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { listBusinessPhotos, addBusinessPhoto, deleteBusinessPhoto, setCoverPhoto } from '@/utils/supabase/business';
+import { t } from '@/utils/i18n';
+import { friendlyError } from '@/utils/errors';
 
 const MAX_PHOTOS = 5;
 
@@ -31,7 +33,7 @@ export default function BusinessPhotosScreen() {
       setLoading(true);
       listBusinessPhotos(businessId)
         .then((data) => !cancelled && setPhotos(data))
-        .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить фото'))
+        .catch((e) => !cancelled && setError(friendlyError(e, t('common.61'))))
         .finally(() => !cancelled && setLoading(false));
       return () => {
         cancelled = true;
@@ -46,7 +48,7 @@ export default function BusinessPhotosScreen() {
       await action();
       await reload();
     } catch (e) {
-      setError(e.message || 'Не получилось');
+      setError(friendlyError(e, t('common.39')));
     } finally {
       setBusy(false);
     }
@@ -54,7 +56,7 @@ export default function BusinessPhotosScreen() {
 
   async function handleAdd() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return setError('Нет доступа к галерее');
+    if (!perm.granted) return setError(t('common.62'));
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -68,9 +70,9 @@ export default function BusinessPhotosScreen() {
   }
 
   function handleDelete(photo) {
-    Alert.alert('Удалить фото?', 'Клиенты больше не увидят его в карточке салона.', [
-      { text: 'Отмена', style: 'cancel' },
-      { text: 'Удалить', style: 'destructive', onPress: () => run(() => deleteBusinessPhoto(photo)) },
+    Alert.alert(t('business_photos_businessId.1'), t('business_photos_businessId.2'), [
+      { text: t('common.23'), style: 'cancel' },
+      { text: t('common.63'), style: 'destructive', onPress: () => run(() => deleteBusinessPhoto(photo)) },
     ]);
   }
 
@@ -90,35 +92,33 @@ export default function BusinessPhotosScreen() {
         <PressableScale style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={17} color={COLORS.ink} />
         </PressableScale>
-        <Text style={styles.title}>Фото салона</Text>
+        <Text style={styles.title}>{t('business_photos_businessId.3')}</Text>
         <Text style={styles.counter}>
           {photos.length}/{MAX_PHOTOS}
         </Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.hint}>
-          Добавьте до {MAX_PHOTOS} фото интерьера и работ. Первое фото — обложка: его клиенты видят в каталоге.
-        </Text>
+        <Text style={styles.hint}>{t('photos.hint', { n: MAX_PHOTOS })}</Text>
 
         {photos.map((p, i) => (
           <View key={p.id} style={styles.photoCard}>
             <Image source={{ uri: p.url }} style={styles.photo} contentFit="cover" />
             {i === 0 && (
               <View style={styles.coverBadge}>
-                <Text style={styles.coverBadgeText}>Обложка</Text>
+                <Text style={styles.coverBadgeText}>{t('business_photos_businessId.6')}</Text>
               </View>
             )}
             <View style={styles.actions}>
               {i > 0 && (
                 <PressableScale style={styles.actionButton} disabled={busy} onPress={() => run(() => setCoverPhoto(photos, p.id))}>
                   <Star size={15} color={COLORS.ink} />
-                  <Text style={styles.actionText}>Сделать обложкой</Text>
+                  <Text style={styles.actionText}>{t('business_photos_businessId.7')}</Text>
                 </PressableScale>
               )}
-              <PressableScale style={styles.actionButton} disabled={busy} onPress={() => handleDelete(p)} accessibilityLabel="Удалить фото">
+              <PressableScale style={styles.actionButton} disabled={busy} onPress={() => handleDelete(p)} accessibilityLabel={t('business_photos_businessId.8')}>
                 <Trash2 size={15} color={COLORS.danger} />
-                <Text style={[styles.actionText, { color: COLORS.danger }]}>Удалить</Text>
+                <Text style={[styles.actionText, { color: COLORS.danger }]}>{t('common.63')}</Text>
               </PressableScale>
             </View>
           </View>
@@ -131,7 +131,7 @@ export default function BusinessPhotosScreen() {
             ) : (
               <>
                 <Plus size={22} color={COLORS.indigo} />
-                <Text style={styles.addText}>Добавить фото</Text>
+                <Text style={styles.addText}>{t('business_photos_businessId.9')}</Text>
               </>
             )}
           </PressableScale>

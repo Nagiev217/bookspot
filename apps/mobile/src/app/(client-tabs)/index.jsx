@@ -14,6 +14,8 @@ import { iconFor } from '@/data/categoryIcons';
 import { tintFor } from '@/utils/tint';
 import { listCategories, listBusinesses } from '@/utils/supabase/catalog';
 import { useReducedMotion } from '@/utils/useReducedMotion';
+import { t, categoryName } from '@/utils/i18n';
+import { friendlyError } from '@/utils/errors';
 
 export default function Home() {
   const [categories, setCategories] = useState([]);
@@ -29,7 +31,7 @@ export default function Home() {
       setCategories(cats);
       setBusinesses(biz);
     } catch (e) {
-      setError(e.message || 'Не удалось загрузить каталог');
+      setError(friendlyError(e, t('client_tabs_index.1')));
     } finally {
       setLoading(false);
     }
@@ -49,15 +51,15 @@ export default function Home() {
     >
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.location}>Баку</Text>
-          <Text style={styles.title}>Салоны рядом{'\n'}с вами</Text>
+          <Text style={styles.location}>{t('common.1')}</Text>
+          <Text style={styles.title}>{t('client_tabs_index.2')}{'\n'}{t('client_tabs_index.3')}</Text>
         </View>
         <View style={styles.avatarPlaceholder} />
       </View>
 
       <PressableScale style={styles.searchBar} onPress={() => router.push('/(client-tabs)/search')}>
         <Search size={18} color={COLORS.sub} />
-        <Text style={styles.searchPlaceholder}>Услуга, салон или мастер</Text>
+        <Text style={styles.searchPlaceholder}>{t('common.45')}</Text>
       </PressableScale>
 
       {error && <Text style={styles.errorText}>{error}</Text>}
@@ -73,26 +75,26 @@ export default function Home() {
                 <PressableScale
                   key={c.id}
                   style={styles.catItem}
-                  onPress={() => router.push({ pathname: '/(client-tabs)/search', params: { categoryId: c.id, title: c.name_ru } })}
+                  onPress={() => router.push({ pathname: '/(client-tabs)/search', params: { categoryId: c.id, title: categoryName(c) } })}
                 >
                   <View style={styles.catIcon}>
                     <Icon size={24} color={COLORS.indigo} strokeWidth={1.6} />
                   </View>
-                  <Text style={styles.catName}>{c.name_ru}</Text>
+                  <Text style={styles.catName}>{categoryName(c)}</Text>
                 </PressableScale>
               );
             })}
           </ScrollView>
 
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Салоны</Text>
-            <PressableScale onPress={() => router.push({ pathname: '/(client-tabs)/search', params: { title: 'Все салоны' } })}>
-              <Text style={styles.sectionLink}>Все</Text>
+            <Text style={styles.sectionTitle}>{t('common.13')}</Text>
+            <PressableScale onPress={() => router.push({ pathname: '/(client-tabs)/search', params: { title: t('common.46') } })}>
+              <Text style={styles.sectionLink}>{t('client_tabs_index.4')}</Text>
             </PressableScale>
           </View>
 
           {businesses.length === 0 ? (
-            <Text style={styles.emptyText}>Салонов пока нет — самое время «Стать партнёром».</Text>
+            <Text style={styles.emptyText}>{t('client_tabs_index.5')}</Text>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandRow}>
               {businesses.map((b, i) => (
@@ -105,7 +107,7 @@ export default function Home() {
                       {b.logo_url ? (
                         <Image source={{ uri: b.logo_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                       ) : (
-                        <Text style={styles.photoLabel}>ФОТО</Text>
+                        <Text style={styles.photoLabel}>{t('common.44')}</Text>
                       )}
                     </View>
                     <Text style={styles.brandName}>{b.name}</Text>

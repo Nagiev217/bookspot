@@ -19,6 +19,7 @@ import { addNotificationResponseListener } from '@/utils/notifications';
 import OfflineBanner from '@/components/OfflineBanner';
 import PressableScale from '@/components/PressableScale';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
+import { t, useLang, loadSavedLang, takeReturnRoute } from '@/utils/i18n';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -29,10 +30,10 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 export function ErrorBoundary({ error, retry }) {
   return (
     <View style={styles.errorScreen}>
-      <Text style={styles.errorTitle}>Что-то пошло не так</Text>
-      <Text style={styles.errorMessage}>{error?.message || 'Приложение столкнулось с неожиданной ошибкой.'}</Text>
+      <Text style={styles.errorTitle}>{t('layout.1')}</Text>
+      <Text style={styles.errorMessage}>{error?.message || t('layout.2')}</Text>
       <PressableScale style={styles.retryButton} onPress={retry}>
-        <Text style={styles.retryText}>Попробовать снова</Text>
+        <Text style={styles.retryText}>{t('layout.3')}</Text>
       </PressableScale>
     </View>
   );
@@ -48,6 +49,19 @@ export default function RootLayout() {
     Manrope_800ExtraBold,
   });
   const setAuth = useAuthStore((s) => s.setAuth);
+  const { lang, ready: langReady } = useLang();
+
+  useEffect(() => {
+    loadSavedLang();
+  }, []);
+
+  // После смены языка навигация перемонтирована и стоит на index — вернуть
+  // пользователя на экран, где он переключал язык. setTimeout — чтобы
+  // сработать после редиректа из index.jsx.
+  useEffect(() => {
+    const r = takeReturnRoute();
+    if (r) setTimeout(() => router.replace(r), 0);
+  }, [lang]);
 
   useEffect(() => {
     if (!IS_SUPABASE_READY) {
@@ -96,8 +110,8 @@ export default function RootLayout() {
   }, [setAuth]);
 
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
-  }, [fontsLoaded]);
+    if (fontsLoaded && langReady) SplashScreen.hideAsync().catch(() => {});
+  }, [fontsLoaded, langReady]);
 
   useEffect(() => {
     // Новая заявка (0029) открывает экран ответа на неё; остальные
@@ -117,11 +131,13 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded || !langReady) return null;
 
   return (
     <View style={{ flex: 1 }}>
-      <Stack screenOptions={{ headerShown: false, gestureEnabled: false }}>
+      {/* key={lang}: при смене языка навигация перемонтируется и все экраны
+          перечитывают тексты (t() — обычная функция, не хук). */}
+      <Stack key={lang} screenOptions={{ headerShown: false, gestureEnabled: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
         {/* fade — переключение Client/Business mode (switchMode делает

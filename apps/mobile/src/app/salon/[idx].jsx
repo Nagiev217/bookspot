@@ -14,6 +14,7 @@ import { listReviews } from '@/utils/supabase/reviews';
 import { listBusinessPhotos } from '@/utils/supabase/business';
 import { useAuthStore } from '@/utils/auth/store';
 import StarBadge from '@/components/StarBadge';
+import { t, tn } from '@/utils/i18n';
 
 // Азербайджан — UTC+4 без перехода на летнее время (та же ручная арифметика,
 // что и в booking/[idx].jsx — надёжного доступа к базе IANA-таймзон на
@@ -24,13 +25,7 @@ function formatReviewDate(isoUtc) {
 }
 
 // 1 отзыв, 2–4 отзыва, 5+ и 11–14 отзывов.
-function reviewsLabel(n) {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return `${n} отзыв`;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} отзыва`;
-  return `${n} отзывов`;
-}
+const reviewsLabel = (n) => tn('plural.reviews', n);
 
 export default function SalonDetail() {
   const { idx: businessId } = useLocalSearchParams();
@@ -69,7 +64,7 @@ export default function SalonDetail() {
           setReviews(rv);
           setPhotos(ph);
         })
-        .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить салон'))
+        .catch((e) => !cancelled && setError(friendlyError(e, t('salon_idx.4'))))
         .finally(() => !cancelled && setLoading(false));
       return () => {
         cancelled = true;
@@ -106,7 +101,7 @@ export default function SalonDetail() {
   if (error || !business) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{error || 'Салон не найден'}</Text>
+        <Text style={styles.errorText}>{error || t('common.49')}</Text>
       </View>
     );
   }
@@ -172,7 +167,7 @@ export default function SalonDetail() {
 
           {(business.description?.trim() || business.address) && (
             <>
-              <Text style={styles.sectionTitle}>О салоне</Text>
+              <Text style={styles.sectionTitle}>{t('salon_idx.5')}</Text>
               {business.description?.trim() ? <Text style={styles.about}>{business.description.trim()}</Text> : null}
               {business.address ? (
                 <Text style={styles.address}>
@@ -183,9 +178,9 @@ export default function SalonDetail() {
             </>
           )}
 
-          <Text style={styles.sectionTitle}>Услуги</Text>
+          <Text style={styles.sectionTitle}>{t('common.48')}</Text>
           {services.length === 0 ? (
-            <Text style={styles.emptyText}>Пока нет услуг.</Text>
+            <Text style={styles.emptyText}>{t('common.72')}</Text>
           ) : (
             <View style={{ gap: SPACING.sm }}>
               {services.map((v) => (
@@ -196,7 +191,7 @@ export default function SalonDetail() {
                 >
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.serviceName}>{v.name}</Text>
-                    <Text style={styles.serviceDur}>{v.duration_min} мин</Text>
+                    <Text style={styles.serviceDur}>{v.duration_min}{' '}{t('common.55')}</Text>
                   </View>
                   <Text style={styles.servicePrice}>{v.price} ₼</Text>
                 </PressableScale>
@@ -204,9 +199,9 @@ export default function SalonDetail() {
             </View>
           )}
 
-          <Text style={styles.sectionTitle}>Мастера</Text>
+          <Text style={styles.sectionTitle}>{t('common.47')}</Text>
           {masters.length === 0 ? (
-            <Text style={styles.emptyText}>Пока нет мастеров.</Text>
+            <Text style={styles.emptyText}>{t('salon_idx.6')}</Text>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: SPACING.md }}>
               {masters.map((m) => (
@@ -214,21 +209,21 @@ export default function SalonDetail() {
                   key={m.id}
                   style={styles.masterCard}
                   onPress={() => router.push(`/master-info/${m.id}`)}
-                  accessibilityLabel={`Мастер ${m.name}`}
+                  accessibilityLabel={t('salon_idx.7', { name: m.name })}
                 >
                   <View style={[styles.masterAvatar, { backgroundColor: tintFor(m.id)[0] }]}>
                     {m.photo_url && <Image source={{ uri: m.photo_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />}
                   </View>
                   <Text style={styles.masterName} numberOfLines={1}>{m.name}</Text>
-                  <Text style={styles.masterRole} numberOfLines={1}>{m.specialty?.trim() || 'Подробнее'}</Text>
+                  <Text style={styles.masterRole} numberOfLines={1}>{m.specialty?.trim() || t('salon_idx.8')}</Text>
                 </PressableScale>
               ))}
             </ScrollView>
           )}
 
-          <Text style={styles.sectionTitle}>Отзывы</Text>
+          <Text style={styles.sectionTitle}>{t('common.73')}</Text>
           {reviews.length === 0 ? (
-            <Text style={styles.emptyText}>Отзывов пока нет — станьте первым!</Text>
+            <Text style={styles.emptyText}>{t('salon_idx.9')}</Text>
           ) : (
             <View style={{ gap: SPACING.sm }}>
               {reviews.map((r) => (
@@ -252,7 +247,7 @@ export default function SalonDetail() {
           disabled={services.length === 0}
           onPress={() => router.push(`/booking/${business.id}`)}
         >
-          <Text style={styles.ctaText}>Записаться</Text>
+          <Text style={styles.ctaText}>{t('salon_idx.10')}</Text>
         </PressableScale>
       </View>
     </View>

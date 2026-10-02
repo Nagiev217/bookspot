@@ -11,6 +11,8 @@ import PressableScale from '@/components/PressableScale';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { useAuthStore } from '@/utils/auth/store';
 import { getMaster, uploadMasterPhotoFile, updateMyMasterProfile } from '@/utils/supabase/business';
+import { t } from '@/utils/i18n';
+import { friendlyError } from '@/utils/errors';
 
 const BIO_MAX = 500;
 
@@ -43,7 +45,7 @@ export default function MyMasterProfile() {
           setExperience(m.experience_years === null ? '' : String(m.experience_years));
           setPhotoUrl(m.photo_url);
         })
-        .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить'))
+        .catch((e) => !cancelled && setError(friendlyError(e, t('common.20'))))
         .finally(() => !cancelled && setLoading(false));
       return () => {
         cancelled = true;
@@ -53,7 +55,7 @@ export default function MyMasterProfile() {
 
   async function handlePickPhoto() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return setError('Нет доступа к галерее');
+    if (!perm.granted) return setError(t('common.62'));
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -72,9 +74,9 @@ export default function MyMasterProfile() {
       // передаём как есть, иначе RPC затёр бы их пустыми.
       await updateMyMasterProfile({ bio, photoUrl: url, specialty, experienceYears: parsedYears() });
       setPhotoUrl(url);
-      setInfo('Фото обновлено');
+      setInfo(t('my_master_profile.1'));
     } catch (e) {
-      setError(e.message || 'Не удалось загрузить фото');
+      setError(friendlyError(e, t('common.61')));
     } finally {
       setUploading(false);
     }
@@ -88,16 +90,16 @@ export default function MyMasterProfile() {
   async function handleSave() {
     const years = parsedYears();
     if (years !== null && (!Number.isInteger(years) || years < 0 || years > 70)) {
-      return setError('Опыт — целое число лет от 0 до 70');
+      return setError(t('common.69'));
     }
     setSaving(true);
     setError(null);
     setInfo(null);
     try {
       await updateMyMasterProfile({ bio, specialty, experienceYears: years });
-      setInfo('Сохранено');
+      setInfo(t('common.64'));
     } catch (e) {
-      setError(e.message || 'Не удалось сохранить');
+      setError(friendlyError(e, t('common.65')));
     } finally {
       setSaving(false);
     }
@@ -113,7 +115,7 @@ export default function MyMasterProfile() {
   if (!masterId) {
     return (
       <View style={styles.center}>
-        <Text style={styles.error}>Этот аккаунт не привязан к мастеру</Text>
+        <Text style={styles.error}>{t('my_master_profile.2')}</Text>
       </View>
     );
   }
@@ -121,26 +123,26 @@ export default function MyMasterProfile() {
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.header}>
-        <PressableScale style={styles.backButton} onPress={() => router.back()} accessibilityLabel="Назад">
+        <PressableScale style={styles.backButton} onPress={() => router.back()} accessibilityLabel={t('common.40')}>
           <ArrowLeft size={17} color={COLORS.ink} />
         </PressableScale>
-        <Text style={styles.title}>Мой профиль</Text>
+        <Text style={styles.title}>{t('my_master_profile.3')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <PressableScale style={styles.avatar} onPress={handlePickPhoto} disabled={uploading} accessibilityLabel="Сменить фото">
+        <PressableScale style={styles.avatar} onPress={handlePickPhoto} disabled={uploading} accessibilityLabel={t('my_master_profile.4')}>
           {photoUrl ? <Image source={{ uri: photoUrl }} style={styles.avatarImg} contentFit="cover" /> : null}
           <View style={styles.avatarOverlay}>
             {uploading ? <ActivityIndicator color={COLORS.white} /> : <Camera size={20} color={COLORS.white} />}
           </View>
         </PressableScale>
         <Text style={styles.name}>{name}</Text>
-        <Text style={styles.hint}>Фото и описание клиенты видят, когда открывают вас в карточке салона.</Text>
+        <Text style={styles.hint}>{t('my_master_profile.5')}</Text>
 
         <View style={styles.row2}>
           <TextInput
             style={[styles.field, { flex: 2 }]}
-            placeholder="Барбер, колорист…"
+            placeholder={t('my_master_profile.6')}
             placeholderTextColor={COLORS.sub}
             maxLength={40}
             value={specialty}
@@ -148,7 +150,7 @@ export default function MyMasterProfile() {
           />
           <TextInput
             style={[styles.field, { flex: 1 }]}
-            placeholder="Опыт, лет"
+            placeholder={t('common.70')}
             placeholderTextColor={COLORS.sub}
             keyboardType="number-pad"
             value={experience}
@@ -156,10 +158,10 @@ export default function MyMasterProfile() {
           />
         </View>
 
-        <Text style={styles.label}>О себе</Text>
+        <Text style={styles.label}>{t('common.71')}</Text>
         <TextInput
           style={styles.textarea}
-          placeholder="Опыт, специализация, любимые техники…"
+          placeholder={t('my_master_profile.7')}
           placeholderTextColor={COLORS.sub}
           multiline
           maxLength={BIO_MAX}
@@ -174,7 +176,7 @@ export default function MyMasterProfile() {
         {info && <Text style={styles.info}>{info}</Text>}
 
         <PressableScale style={styles.saveButton} onPress={handleSave} disabled={saving}>
-          {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.saveText}>Сохранить</Text>}
+          {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.saveText}>{t('common.68')}</Text>}
         </PressableScale>
       </ScrollView>
     </KeyboardAvoidingView>

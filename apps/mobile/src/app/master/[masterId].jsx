@@ -20,8 +20,10 @@ import {
   uploadMasterPhoto,
 } from '@/utils/supabase/business';
 import { bakuToday, addDaysISO } from '@/components/DateTimeGrid';
+import { dowShort } from '@/utils/i18n/dates';
+import { t } from '@/utils/i18n';
+import { friendlyError } from '@/utils/errors';
 
-const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 const HHMM_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 function toMin(hhmm) {
@@ -71,7 +73,7 @@ export default function MasterDetail() {
           setWeek(w);
           setDaysOff(upcoming);
         })
-        .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить'))
+        .catch((e) => !cancelled && setError(friendlyError(e, t('common.20'))))
         .finally(() => !cancelled && setLoading(false));
       return () => {
         cancelled = true;
@@ -91,7 +93,7 @@ export default function MasterDetail() {
 
   async function handlePickPhoto() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return setError('Нет доступа к галерее');
+    if (!perm.granted) return setError(t('common.62'));
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -106,7 +108,7 @@ export default function MasterDetail() {
       const url = await uploadMasterPhoto(masterId, result.assets[0].base64);
       setPhotoUrl(url);
     } catch (e) {
-      setError(e.message || 'Не удалось загрузить фото');
+      setError(friendlyError(e, t('common.61')));
     } finally {
       setUploadingPhoto(false);
     }
@@ -115,9 +117,9 @@ export default function MasterDetail() {
   async function handleSaveProfile() {
     setError(null);
     setInfo(null);
-    if (!name.trim()) return setError('Введите имя');
+    if (!name.trim()) return setError(t('common.19'));
     const years = experience.trim() === '' ? null : Number(experience);
-    if (years !== null && (!Number.isInteger(years) || years < 0 || years > 70)) return setError('Опыт — целое число лет от 0 до 70');
+    if (years !== null && (!Number.isInteger(years) || years < 0 || years > 70)) return setError(t('common.69'));
     setSaving(true);
     try {
       await updateMaster(masterId, {
@@ -127,9 +129,9 @@ export default function MasterDetail() {
         specialty: specialty.trim(),
         experience_years: years,
       });
-      setInfo('Сохранено');
+      setInfo(t('common.64'));
     } catch (e) {
-      setError(e.message || 'Не удалось сохранить');
+      setError(friendlyError(e, t('common.65')));
     } finally {
       setSaving(false);
     }
@@ -143,17 +145,17 @@ export default function MasterDetail() {
       for (const r of week[dow]) {
         const start = toMin(r.start);
         const end = toMin(r.end);
-        if (start === null || end === null) return setError('Время — в формате ЧЧ:ММ');
-        if (end <= start) return setError('Конец интервала должен быть позже начала');
+        if (start === null || end === null) return setError(t('master_masterId.1'));
+        if (end <= start) return setError(t('master_masterId.2'));
         rows.push({ day_of_week: Number(dow), start_min: start, end_min: end });
       }
     }
     setSaving(true);
     try {
       await replaceMasterSchedule(masterId, rows);
-      setInfo('Расписание сохранено');
+      setInfo(t('master_masterId.3'));
     } catch (e) {
-      setError(e.message || 'Не удалось сохранить расписание');
+      setError(friendlyError(e, t('master_masterId.4')));
     } finally {
       setSaving(false);
     }
@@ -166,7 +168,7 @@ export default function MasterDetail() {
       await setMasterDayOff(masterId, dateISO, !isOff);
       setDaysOff((prev) => (isOff ? prev.filter((d) => d !== dateISO) : [...prev, dateISO].sort()));
     } catch (e) {
-      setError(e.message || 'Не удалось изменить выходной');
+      setError(friendlyError(e, t('master_masterId.5')));
     } finally {
       setSaving(false);
     }
@@ -188,7 +190,7 @@ export default function MasterDetail() {
         <PressableScale style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={17} color={COLORS.ink} />
         </PressableScale>
-        <Text style={styles.title}>Мастер</Text>
+        <Text style={styles.title}>{t('common.21')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -199,11 +201,11 @@ export default function MasterDetail() {
           </View>
         </PressableScale>
 
-        <TextInput style={styles.input} placeholder="Имя" placeholderTextColor={COLORS.sub} value={name} onChangeText={setName} />
+        <TextInput style={styles.input} placeholder={t('common.12')} placeholderTextColor={COLORS.sub} value={name} onChangeText={setName} />
         <View style={styles.row2}>
           <TextInput
             style={[styles.input, { flex: 2 }]}
-            placeholder="Специализация: барбер, колорист…"
+            placeholder={t('master_masterId.6')}
             placeholderTextColor={COLORS.sub}
             maxLength={40}
             value={specialty}
@@ -211,7 +213,7 @@ export default function MasterDetail() {
           />
           <TextInput
             style={[styles.input, { flex: 1 }]}
-            placeholder="Опыт, лет"
+            placeholder={t('common.70')}
             placeholderTextColor={COLORS.sub}
             keyboardType="number-pad"
             value={experience}
@@ -220,7 +222,7 @@ export default function MasterDetail() {
         </View>
         <TextInput
           style={[styles.input, styles.textarea]}
-          placeholder="О себе: опыт, специализация — клиенты увидят это на странице мастера"
+          placeholder={t('master_masterId.7')}
           placeholderTextColor={COLORS.sub}
           multiline
           maxLength={500}
@@ -228,27 +230,27 @@ export default function MasterDetail() {
           onChangeText={setBio}
         />
         <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>Активен (принимает записи)</Text>
+          <Text style={styles.switchLabel}>{t('master_masterId.8')}</Text>
           <Switch value={active} onValueChange={setActive} trackColor={{ true: COLORS.indigo }} />
         </View>
         <PressableScale style={styles.smallSaveButton} onPress={handleSaveProfile} disabled={saving}>
-          <Text style={styles.smallSaveText}>Сохранить</Text>
+          <Text style={styles.smallSaveText}>{t('common.68')}</Text>
         </PressableScale>
 
-        <Text style={styles.sectionTitle}>Расписание по дням недели</Text>
+        <Text style={styles.sectionTitle}>{t('master_masterId.9')}</Text>
         {Object.keys(week)
           .map(Number)
           .sort((a, b) => a - b)
           .map((dow) => (
             <View key={dow} style={styles.dayBlock}>
               <View style={styles.dayHeader}>
-                <Text style={styles.dayName}>{DOW[dow]}</Text>
+                <Text style={styles.dayName}>{dowShort(dow)}</Text>
                 <PressableScale style={styles.addRangeButton} onPress={() => addRange(dow)}>
                   <Plus size={14} color={COLORS.indigo} />
                 </PressableScale>
               </View>
               {week[dow].length === 0 ? (
-                <Text style={styles.dayOffText}>Выходной</Text>
+                <Text style={styles.dayOffText}>{t('master_masterId.10')}</Text>
               ) : (
                 week[dow].map((r, idx) => (
                   <View key={idx} style={styles.rangeRow}>
@@ -264,16 +266,16 @@ export default function MasterDetail() {
             </View>
           ))}
         <PressableScale style={styles.saveButton} onPress={handleSaveSchedule} disabled={saving}>
-          {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.saveButtonText}>Сохранить расписание</Text>}
+          {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.saveButtonText}>{t('master_masterId.11')}</Text>}
         </PressableScale>
 
-        <Text style={styles.sectionTitle}>Выходные на ближайшие 2 недели</Text>
+        <Text style={styles.sectionTitle}>{t('master_masterId.12')}</Text>
         <View style={styles.dateGrid}>
           {nextDays.map((iso) => {
             const isOff = daysOff.includes(iso);
             return (
               <PressableScale key={iso} disabled={saving} style={[styles.dateCell, isOff && styles.dateCellOff]} onPress={() => toggleDayOff(iso)}>
-                <Text style={[styles.dateDow, isOff && styles.dateTextOff]}>{DOW[new Date(`${iso}T00:00:00Z`).getUTCDay()]}</Text>
+                <Text style={[styles.dateDow, isOff && styles.dateTextOff]}>{dowShort(new Date(`${iso}T00:00:00Z`).getUTCDay())}</Text>
                 <Text style={[styles.dateNum, isOff && styles.dateTextOff]}>{iso.slice(8, 10)}</Text>
               </PressableScale>
             );

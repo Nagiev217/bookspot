@@ -12,6 +12,7 @@ import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { getBooking } from '@/utils/supabase/booking';
 import { getReviewForBooking, createReview, updateReview } from '@/utils/supabase/reviews';
 import { friendlyError } from '@/utils/errors';
+import { t } from '@/utils/i18n';
 
 export default function ReviewScreen() {
   const { bookingId } = useLocalSearchParams();
@@ -37,7 +38,7 @@ export default function ReviewScreen() {
             setComment(r.comment || '');
           }
         })
-        .catch((e) => !cancelled && setError(friendlyError(e, 'Не удалось загрузить')))
+        .catch((e) => !cancelled && setError(friendlyError(e, t('common.20'))))
         .finally(() => !cancelled && setLoading(false));
       return () => {
         cancelled = true;
@@ -57,7 +58,7 @@ export default function ReviewScreen() {
       }
       router.back();
     } catch (e) {
-      setSaveError(friendlyError(e, 'Не удалось сохранить отзыв'));
+      setSaveError(friendlyError(e, t('review_bookingId.1')));
     } finally {
       setSaving(false);
     }
@@ -73,7 +74,7 @@ export default function ReviewScreen() {
   if (error || !booking) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{error || 'Бронь не найдена'}</Text>
+        <Text style={styles.errorText}>{error || t('common.74')}</Text>
       </View>
     );
   }
@@ -86,7 +87,7 @@ export default function ReviewScreen() {
             <ArrowLeft size={17} color={COLORS.ink} />
           </PressableScale>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>{existingReview ? 'Изменить отзыв' : 'Оставить отзыв'}</Text>
+            <Text style={styles.title}>{existingReview ? t('common.41') : t('common.42')}</Text>
             <Text style={styles.sub}>
               {booking.businesses?.name} · {booking.service_name}
             </Text>
@@ -105,10 +106,10 @@ export default function ReviewScreen() {
           ))}
         </View>
 
-        <Text style={styles.sectionLabel}>Комментарий (необязательно)</Text>
+        <Text style={styles.sectionLabel}>{t('review_bookingId.2')}</Text>
         <TextInput
           style={styles.commentInput}
-          placeholder="Что понравилось или что можно улучшить?"
+          placeholder={t('review_bookingId.3')}
           placeholderTextColor={COLORS.sub}
           multiline
           value={comment}
@@ -118,7 +119,7 @@ export default function ReviewScreen() {
 
       <View style={styles.ctaBar}>
         <PressableScale style={[styles.ctaButton, (rating < 1 || saving) && styles.ctaButtonOff]} disabled={rating < 1 || saving} onPress={handleSubmit}>
-          {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.ctaText}>{existingReview ? 'Сохранить' : 'Отправить отзыв'}</Text>}
+          {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.ctaText}>{existingReview ? t('common.68') : t('review_bookingId.4')}</Text>}
         </PressableScale>
       </View>
     </View>

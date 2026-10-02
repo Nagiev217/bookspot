@@ -5,8 +5,9 @@
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import PressableScale from '@/components/PressableScale';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
+import { dowShort } from '@/utils/i18n/dates';
+import { t } from '@/utils/i18n';
 
-const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
 export function bakuToday() {
   return new Date(Date.now() + 4 * 3600000).toISOString().slice(0, 10);
@@ -28,7 +29,7 @@ export default function DateTimeGrid({ loading, availability, selectedDate, onSe
 
   return (
     <View>
-      <Text style={styles.sectionLabel}>Дата</Text>
+      <Text style={styles.sectionLabel}>{t('common.59')}</Text>
       <View style={styles.dateGrid}>
         {dateList.map((iso) => {
           const count = availability?.[iso]?.length ?? 0;
@@ -41,16 +42,16 @@ export default function DateTimeGrid({ loading, availability, selectedDate, onSe
               style={[styles.dateCell, on && styles.dateCellActive, off && styles.dateCellOff]}
               onPress={() => onSelectDate(iso)}
             >
-              <Text style={[styles.dateDow, on && styles.dateTextActive]}>{DOW[dowOf(iso)]}</Text>
+              <Text style={[styles.dateDow, on && styles.dateTextActive]}>{dowShort(dowOf(iso))}</Text>
               <Text style={[styles.dateNum, on && styles.dateTextActive, off && styles.dateTextOff]}>{iso.slice(8, 10)}</Text>
             </PressableScale>
           );
         })}
       </View>
 
-      <Text style={styles.sectionLabel}>Время</Text>
+      <Text style={styles.sectionLabel}>{t('common.60')}</Text>
       {timesForSelected.length === 0 ? (
-        <Text style={styles.emptyText}>На этот день свободного времени не осталось.</Text>
+        <Text style={styles.emptyText}>{t('common.56')}</Text>
       ) : (
         <View style={styles.timeGrid}>
           {timesForSelected.map((t) => {

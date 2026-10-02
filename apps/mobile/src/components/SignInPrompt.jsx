@@ -8,6 +8,7 @@ import { router } from 'expo-router';
 import { LogIn } from 'lucide-react-native';
 import PressableScale from '@/components/PressableScale';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
+import { t } from '@/utils/i18n';
 
 export default function SignInPrompt({ title, subtitle, redirect }) {
   return (
@@ -21,7 +22,7 @@ export default function SignInPrompt({ title, subtitle, redirect }) {
         style={styles.button}
         onPress={() => router.push({ pathname: '/(auth)/login', params: redirect ? { redirect } : undefined })}
       >
-        <Text style={styles.buttonText}>Войти</Text>
+        <Text style={styles.buttonText}>{t('common.17')}</Text>
       </PressableScale>
     </View>
   );

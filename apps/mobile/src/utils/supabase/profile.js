@@ -5,11 +5,12 @@
 // пересекает границы таблиц/прав — создание бизнеса.
 import { supabase } from './config';
 import { setCachedRole, resolveMode } from '@/utils/auth/roleCache';
+import { t, getLang } from '@/utils/i18n';
 
 export async function getMyProfile(uid) {
   const { data, error } = await supabase
     .from('profiles')
-    .select('role, business_id, must_change_password')
+    .select('role, business_id, must_change_password, lang')
     .eq('id', uid)
     .single();
   if (error) throw error;
@@ -19,14 +20,16 @@ export async function getMyProfile(uid) {
     const { data: m } = await supabase.from('masters').select('id').eq('user_id', uid).maybeSingle();
     masterId = m?.id ?? null;
   }
-  return { role: data.role, businessId: data.business_id, masterId, mustChangePassword: !!data.must_change_password };
+  return { role: data.role, businessId: data.business_id, masterId, mustChangePassword: !!data.must_change_password, lang: data.lang };
 }
 
 // Собирает всё состояние авторизации после входа — одно место для
 // _layout.jsx, login.jsx и register.jsx, чтобы правила режима и кэша не
 // расходились между ними.
 export async function buildSession(uid) {
-  const profile = await getMyProfile(uid);
+  const { lang, ...profile } = await getMyProfile(uid);
+  // Язык приложения — в профиль: по нему сервер выбирает язык push (0031).
+  if (lang !== getLang()) saveMyLang(getLang()).catch(() => {});
   const mode = await resolveMode(uid, profile.role);
   await setCachedRole(uid, profile.role, profile.businessId, profile.masterId);
   return { status: 'signedIn', uid, ...profile, mode };
@@ -40,11 +43,20 @@ export async function changeMyPassword(password) {
   if (rpcErr) throw rpcErr;
 }
 
+export async function saveMyLang(lang) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  const { error } = await supabase.from('profiles').update({ lang }).eq('id', user.id);
+  if (error) throw error;
+}
+
 export async function savePushToken(token) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error('Не авторизован');
+  if (!user) throw new Error(t('utils_supabase_profile.1'));
   const { error } = await supabase.from('profiles').update({ fcm_token: token }).eq('id', user.id);
   if (error) throw error;
 }

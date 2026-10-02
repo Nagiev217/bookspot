@@ -15,6 +15,8 @@ import { listAllMasters, createMaster, setMasterDayOff, isMasterOffOn, getMyBusi
 import { grantStaffAccess, revokeStaffAccess, resetPassword } from '@/utils/supabase/admin';
 import CredentialsCard from '@/components/CredentialsCard';
 import { bakuToday } from '@/components/DateTimeGrid';
+import { t } from '@/utils/i18n';
+import { friendlyError } from '@/utils/errors';
 
 export default function BusinessTeam() {
   const businessId = useAuthStore((s) => s.businessId);
@@ -55,7 +57,7 @@ export default function BusinessTeam() {
         setOffToday(map);
         loadedOnce.current = true;
       })
-      .catch((e) => setError(e.message || 'Не удалось загрузить'))
+      .catch((e) => setError(friendlyError(e, t('common.20'))))
       .finally(() => setLoading(false));
   }, [businessId]);
 
@@ -73,7 +75,7 @@ export default function BusinessTeam() {
       await setMasterDayOff(masterId, bakuToday(), nextOff);
       setOffToday((s) => ({ ...s, [masterId]: nextOff }));
     } catch (e) {
-      setError(e.message || 'Не удалось изменить статус');
+      setError(friendlyError(e, t('business_tabs_team.1')));
     } finally {
       setTogglingId(null);
     }
@@ -82,7 +84,7 @@ export default function BusinessTeam() {
   async function grantAccess(m) {
     const email = grantEmail.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      Alert.alert('Проверьте email', 'Введите email мастера — он будет логином.');
+      Alert.alert(t('business_tabs_team.2'), t('business_tabs_team.3'));
       return;
     }
     setAccessBusy(m.id);
@@ -92,17 +94,17 @@ export default function BusinessTeam() {
       setGrantFor(null);
       load();
     } catch (e) {
-      Alert.alert('Не удалось выдать доступ', e.message);
+      Alert.alert(t('business_tabs_team.4'), e.message);
     } finally {
       setAccessBusy(null);
     }
   }
 
   function resetAccess(m) {
-    Alert.alert('Сбросить пароль?', `Старый пароль ${m.name} перестанет работать.`, [
-      { text: 'Отмена', style: 'cancel' },
+    Alert.alert(t('business_tabs_team.5'), t('business_tabs_team.6', { name: m.name }), [
+      { text: t('common.23'), style: 'cancel' },
       {
-        text: 'Сбросить',
+        text: t('common.34'),
         style: 'destructive',
         onPress: async () => {
           setAccessBusy(m.id);
@@ -110,7 +112,7 @@ export default function BusinessTeam() {
             const res = await resetPassword(m.user_id);
             setCreds({ masterId: m.id, ...res });
           } catch (e) {
-            Alert.alert('Не удалось сбросить пароль', e.message);
+            Alert.alert(t('business_tabs_team.7'), e.message);
           } finally {
             setAccessBusy(null);
           }
@@ -120,10 +122,10 @@ export default function BusinessTeam() {
   }
 
   function revokeAccess(m) {
-    Alert.alert('Забрать доступ?', `${m.name} больше не сможет входить в приложение. Мастер и его записи останутся.`, [
-      { text: 'Отмена', style: 'cancel' },
+    Alert.alert(t('business_tabs_team.8'), t('business_tabs_team.9', { name: m.name }), [
+      { text: t('common.23'), style: 'cancel' },
       {
-        text: 'Забрать',
+        text: t('business_tabs_team.10'),
         style: 'destructive',
         onPress: async () => {
           setAccessBusy(m.id);
@@ -132,7 +134,7 @@ export default function BusinessTeam() {
             if (creds?.masterId === m.id) setCreds(null);
             load();
           } catch (e) {
-            Alert.alert('Не удалось забрать доступ', e.message);
+            Alert.alert(t('business_tabs_team.11'), e.message);
           } finally {
             setAccessBusy(null);
           }
@@ -150,7 +152,7 @@ export default function BusinessTeam() {
       setAddingName(null);
       load();
     } catch (e) {
-      setError(e.message || 'Не удалось добавить мастера');
+      setError(friendlyError(e, t('business_tabs_team.12')));
     } finally {
       setSaving(false);
     }
@@ -166,7 +168,7 @@ export default function BusinessTeam() {
   if (!businessId) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>Нет доступа к бизнесу — войдите под аккаунтом владельца</Text>
+        <Text style={styles.errorText}>{t('common.25')}</Text>
       </View>
     );
   }
@@ -174,7 +176,7 @@ export default function BusinessTeam() {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <Text style={styles.title}>Команда</Text>
+        <Text style={styles.title}>{t('common.35')}</Text>
         <PressableScale style={styles.addButton} onPress={() => setAddingName((v) => (v === null ? '' : null))}>
           <Plus size={18} color={COLORS.white} />
         </PressableScale>
@@ -187,20 +189,20 @@ export default function BusinessTeam() {
           <View style={styles.addForm}>
             <TextInput
               style={styles.addInput}
-              placeholder="Имя мастера"
+              placeholder={t('business_tabs_team.13')}
               placeholderTextColor={COLORS.sub}
               value={addingName}
               onChangeText={setAddingName}
               autoFocus
             />
             <PressableScale style={styles.addSaveButton} onPress={handleAddMaster} disabled={saving}>
-              {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.addSaveText}>Добавить</Text>}
+              {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.addSaveText}>{t('business_tabs_team.14')}</Text>}
             </PressableScale>
           </View>
         )}
 
         {masters.length === 0 ? (
-          <Text style={styles.emptyText}>В этом бизнесе пока нет мастеров.</Text>
+          <Text style={styles.emptyText}>{t('common.28')}</Text>
         ) : (
           masters.map((m) => {
             const isOn = !offToday[m.id];
@@ -214,7 +216,7 @@ export default function BusinessTeam() {
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={[styles.name, !m.active && styles.nameOff]}>{m.name}</Text>
                     <Text style={styles.sub}>
-                      {!m.active ? 'Отключён' : isOn ? 'Работает сегодня' : 'Выходной сегодня'}
+                      {!m.active ? t('business_tabs_team.15') : isOn ? t('business_tabs_team.16') : t('business_tabs_team.17')}
                     </Text>
                   </View>
                   <PressableScale
@@ -233,13 +235,13 @@ export default function BusinessTeam() {
                 <View style={styles.access}>
                   {m.user_id ? (
                     <>
-                      <Text style={styles.accessOn}>Есть доступ в приложение</Text>
+                      <Text style={styles.accessOn}>{t('business_tabs_team.18')}</Text>
                       <View style={styles.accessActions}>
                         <PressableScale style={styles.accessBtn} disabled={accessBusy === m.id} onPress={() => resetAccess(m)}>
-                          <Text style={styles.accessBtnText}>Сбросить пароль</Text>
+                          <Text style={styles.accessBtnText}>{t('business_tabs_team.19')}</Text>
                         </PressableScale>
                         <PressableScale style={styles.accessBtn} disabled={accessBusy === m.id} onPress={() => revokeAccess(m)}>
-                          <Text style={[styles.accessBtnText, { color: COLORS.danger }]}>Забрать доступ</Text>
+                          <Text style={[styles.accessBtnText, { color: COLORS.danger }]}>{t('business_tabs_team.20')}</Text>
                         </PressableScale>
                       </View>
                     </>
@@ -247,7 +249,7 @@ export default function BusinessTeam() {
                     <View style={styles.addForm}>
                       <TextInput
                         style={styles.addInput}
-                        placeholder="Email мастера — будет логином"
+                        placeholder={t('business_tabs_team.21')}
                         placeholderTextColor={COLORS.sub}
                         autoCapitalize="none"
                         keyboardType="email-address"
@@ -256,7 +258,7 @@ export default function BusinessTeam() {
                         autoFocus
                       />
                       <PressableScale style={styles.addSaveButton} onPress={() => grantAccess(m)} disabled={accessBusy === m.id}>
-                        {accessBusy === m.id ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.addSaveText}>Выдать</Text>}
+                        {accessBusy === m.id ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.addSaveText}>{t('business_tabs_team.22')}</Text>}
                       </PressableScale>
                     </View>
                   ) : (
@@ -267,13 +269,13 @@ export default function BusinessTeam() {
                         setGrantEmail('');
                       }}
                     >
-                      <Text style={styles.accessBtnText}>Выдать доступ в приложение</Text>
+                      <Text style={styles.accessBtnText}>{t('business_tabs_team.23')}</Text>
                     </PressableScale>
                   )}
                 </View>
               </PressableScale>
               {creds?.masterId === m.id && (
-                <CredentialsCard title={`Доступ для ${m.name}`} name={m.name} email={creds.email} password={creds.password} businessName={businessName} />
+                <CredentialsCard title={t('business_tabs_team.24', { name: m.name })} name={m.name} email={creds.email} password={creds.password} businessName={businessName} />
               )}
               </View>
             );

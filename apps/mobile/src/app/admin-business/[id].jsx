@@ -19,14 +19,15 @@ import {
 import { friendlyError } from '@/utils/errors';
 import { getSetupStatus } from '@/utils/supabase/business';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
+import { t } from '@/utils/i18n';
 
 const EXTEND = [1, 3, 6, 12];
-const SETUP_STEPS = [
-  ['description', 'Описание'],
-  ['photos', 'Фото'],
-  ['masters', 'Мастера'],
-  ['schedule', 'Расписание'],
-  ['services', 'Услуги'],
+const setupSteps = () => [
+  ['description', t('admin_business_id.1')],
+  ['photos', t('admin_business_id.2')],
+  ['masters', t('common.47')],
+  ['schedule', t('common.26')],
+  ['services', t('common.48')],
 ];
 
 export default function AdminBusinessCard() {
@@ -41,7 +42,7 @@ export default function AdminBusinessCard() {
     getSetupStatus(id).then(setSetup).catch(() => setSetup(null));
     listAllBusinessesAdmin()
       .then((list) => setB(list.find((x) => x.id === id) ?? null))
-      .catch((e) => Alert.alert('Ошибка', friendlyError(e)))
+      .catch((e) => Alert.alert(t('admin_business_id.3'), friendlyError(e)))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -53,7 +54,7 @@ export default function AdminBusinessCard() {
       await fn();
       load();
     } catch (e) {
-      Alert.alert('Не получилось', friendlyError(e));
+      Alert.alert(t('common.39'), friendlyError(e));
     } finally {
       setBusy(false);
     }
@@ -65,29 +66,29 @@ export default function AdminBusinessCard() {
     const today = bakuTodayISO();
     const from = b.paid_until && b.paid_until > today ? b.paid_until : today;
     const next = addMonthsISO(from, months);
-    Alert.alert('Продлить подписку?', `«${b.name}» — до ${formatDateRu(next)}`, [
-      { text: 'Отмена', style: 'cancel' },
-      { text: 'Продлить', onPress: () => run(() => setSubscription(b.id, next)) },
+    Alert.alert(t('admin_business_id.4'), t('admin_business_id.5', { name: b.name, p1: formatDateRu(next) }), [
+      { text: t('common.23'), style: 'cancel' },
+      { text: t('admin_business_id.6'), onPress: () => run(() => setSubscription(b.id, next)) },
     ]);
   }
 
   function toggleBlock() {
     const blocking = b.status === 'active';
     Alert.alert(
-      blocking ? 'Заблокировать салон?' : 'Разблокировать салон?',
-      blocking ? 'Салон пропадёт из каталога и перестанет принимать записи. Уже созданные записи сохранятся.' : 'Салон снова появится в каталоге.',
+      blocking ? t('admin_business_id.7') : t('admin_business_id.8'),
+      blocking ? t('admin_business_id.9') : t('admin_business_id.10'),
       [
-        { text: 'Отмена', style: 'cancel' },
-        { text: blocking ? 'Заблокировать' : 'Разблокировать', style: blocking ? 'destructive' : 'default', onPress: () => run(() => setBusinessStatus(b.id, blocking ? 'blocked' : 'active')) },
+        { text: t('common.23'), style: 'cancel' },
+        { text: blocking ? t('admin_business_id.11') : t('admin_business_id.12'), style: blocking ? 'destructive' : 'default', onPress: () => run(() => setBusinessStatus(b.id, blocking ? 'blocked' : 'active')) },
       ]
     );
   }
 
   function resetOwner() {
-    Alert.alert('Сбросить пароль владельцу?', 'Старый пароль перестанет работать. Новый временный нужно будет отправить владельцу.', [
-      { text: 'Отмена', style: 'cancel' },
+    Alert.alert(t('admin_business_id.13'), t('admin_business_id.14'), [
+      { text: t('common.23'), style: 'cancel' },
       {
-        text: 'Сбросить',
+        text: t('common.34'),
         style: 'destructive',
         onPress: () =>
           run(async () => {
@@ -108,7 +109,7 @@ export default function AdminBusinessCard() {
   if (!b) {
     return (
       <View style={styles.center}>
-        <Text style={styles.muted}>Салон не найден</Text>
+        <Text style={styles.muted}>{t('common.49')}</Text>
       </View>
     );
   }
@@ -128,45 +129,45 @@ export default function AdminBusinessCard() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Публикация</Text>
+        <Text style={styles.cardTitle}>{t('admin_business_id.15')}</Text>
         <Text style={styles.big}>
           {b.published_at
-            ? `Опубликован ${formatDateRu(b.published_at.slice(0, 10))}`
-            : `Настраивается · ${setup ? SETUP_STEPS.filter(([k]) => setup[k]).length : '…'}/5`}
+            ? t('admin_business_id.16', { p0: formatDateRu(b.published_at.slice(0, 10)) })
+            : t('admin_business_id.17', { p0: setup ? setupSteps().filter(([k]) => setup[k]).length : '…' })}
         </Text>
         {!b.published_at && setup && (
           <Text style={styles.muted}>
-            {SETUP_STEPS.map(([k, label]) => `${setup[k] ? '✓' : '○'} ${label}`).join('   ')}
+            {setupSteps().map(([k, label]) => `${setup[k] ? '✓' : '○'} ${label}`).join('   ')}
           </Text>
         )}
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Подписка</Text>
+        <Text style={styles.cardTitle}>{t('common.9')}</Text>
         <Text style={styles.big}>{badge.label}</Text>
-        <Text style={styles.label}>Продлить на</Text>
+        <Text style={styles.label}>{t('admin_business_id.18')}</Text>
         <View style={styles.chips}>
           {EXTEND.map((m) => (
             <PressableScale key={m} style={styles.chip} onPress={() => extend(m)} disabled={busy}>
-              <Text style={styles.chipText}>+{m} мес.</Text>
+              <Text style={styles.chipText}>+{m}{' '}{t('common.10')}</Text>
             </PressableScale>
           ))}
         </View>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Владелец</Text>
+        <Text style={styles.cardTitle}>{t('common.11')}</Text>
         <Text style={styles.value}>{b.owner_name || '—'}</Text>
         <Text style={styles.muted} selectable>{b.owner_email || '—'}</Text>
         {b.owner_phone ? <Text style={styles.muted} selectable>{b.owner_phone}</Text> : null}
         <PressableScale style={styles.outline} onPress={resetOwner} disabled={busy}>
-          <Text style={styles.outlineText}>Сбросить пароль владельцу</Text>
+          <Text style={styles.outlineText}>{t('admin_business_id.19')}</Text>
         </PressableScale>
       </View>
 
       {creds && (
         <CredentialsCard
-          title="Новый временный пароль"
+          title={t('admin_business_id.20')}
           name={b.owner_name}
           email={creds.email}
           password={creds.password}
@@ -176,14 +177,14 @@ export default function AdminBusinessCard() {
       )}
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Салон</Text>
-        <Text style={styles.muted}>Ближайших записей: {b.upcoming_bookings}</Text>
+        <Text style={styles.cardTitle}>{t('common.4')}</Text>
+        <Text style={styles.muted}>{t('admin_business_id.21')}{' '}{b.upcoming_bookings}</Text>
         <PressableScale style={styles.outline} onPress={() => router.push(`/salon/${b.id}`)}>
-          <Text style={styles.outlineText}>Открыть страницу салона</Text>
+          <Text style={styles.outlineText}>{t('admin_business_id.22')}</Text>
         </PressableScale>
         <PressableScale style={[styles.outline, b.status === 'active' && styles.danger]} onPress={toggleBlock} disabled={busy}>
           <Text style={[styles.outlineText, b.status === 'active' && { color: COLORS.danger }]}>
-            {b.status === 'active' ? 'Заблокировать' : 'Разблокировать'}
+            {b.status === 'active' ? t('admin_business_id.11') : t('admin_business_id.12')}
           </Text>
         </PressableScale>
       </View>

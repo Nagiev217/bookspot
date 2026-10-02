@@ -62,6 +62,7 @@ One app, two modes. Every user is a client; if the account owns a business, a **
 | Push: booking confirmation, 2-hour reminder, cancellation | `utils/notifications.js`, `0018_push_outbox.sql` |
 | Account deletion (App Store guideline 5.1.1(v)) — bookings are anonymized, not deleted | `ProfileScreen.jsx`, `0013_delete_account.sql` |
 | Privacy policy and terms of use | `utils/legal.js`, `docs/legal/` |
+| **Languages: Azerbaijani, Russian, English** — switch in Profile; defaults to the phone language. Push notifications arrive in each recipient's language | `utils/i18n/`, `components/LanguagePicker.jsx`, `0031_i18n_push_and_categories.sql` |
 
 ### Business (salon owner)
 
@@ -187,6 +188,7 @@ SUPABASE_ACCESS_TOKEN=<same token> npx supabase db push
 | 0028 | Master specialty and years of experience (from the design mockup) |
 | 0029 | Booking requests: pending → accepted / declined / another time proposed; 2-hour expiry via pg_cron |
 | 0030 | Security fix: server-only functions were executable by anon/authenticated |
+| 0031 | Category names and push notifications in az/ru/en (by `profiles.lang`) |
 
 ## Push notifications
 
@@ -235,6 +237,7 @@ npm run purge-demo          # remove demo salons before release
 - **Function grants**: `revoke ... from public` is not enough in Supabase — anon/authenticated get EXECUTE directly. Since 0030 new functions in `public` get no EXECUTE by default; grant it explicitly to `authenticated` (and `anon` for guest features).
 - **All writes to `bookings`** go through SECURITY DEFINER RPCs only; `bookings` has no DELETE policy — cancelling is a status change, not a row deletion.
 - **RPCs with `returns table`** always use explicit table aliases (`b.id`, not `id`): the output column names match the table columns, and without aliases Postgres fails with "column reference is ambiguous".
+- **Texts** go through `t('key')` from `utils/i18n` — never a literal in a screen. A new string needs the key in all three of `utils/i18n/locales/{az,ru,en}.js`; counts use `tn()` (Russian has three plural forms). `t()` is a plain function, so never compute translated text at module level — language changes remount the navigation and only render-time calls pick it up. New server error texts get a line in `utils/errors.js`.
 - **Design tokens** come only from `src/theme/tokens.js` (indigo `#3D4EDB`, Manrope) — no hard-coded colors in screens.
 - **Taps** go through the shared `PressableScale`.
 

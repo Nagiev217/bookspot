@@ -12,8 +12,10 @@ import { listServices, listMasters } from '@/utils/supabase/catalog';
 import { createManualBooking } from '@/utils/supabase/business';
 import { getAvailability } from '@/utils/supabase/booking';
 import DateTimeGrid, { bakuToday } from '@/components/DateTimeGrid';
+import { t } from '@/utils/i18n';
+import { friendlyError } from '@/utils/errors';
 
-const STEPS = ['Услуга', 'Мастер', 'Время', 'Клиент'];
+const steps = () => [t('common.58'), t('common.21'), t('common.60'), t('common.32')];
 
 export default function ManualBooking() {
   const { businessId } = useLocalSearchParams();
@@ -31,7 +33,7 @@ export default function ManualBooking() {
           setServices(s);
           setMasters(m);
         })
-        .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить'))
+        .catch((e) => !cancelled && setError(friendlyError(e, t('common.20'))))
         .finally(() => !cancelled && setLoading(false));
       return () => {
         cancelled = true;
@@ -63,13 +65,13 @@ export default function ManualBooking() {
         const first = Object.keys(map).sort()[0];
         setSelectedDate(first || bakuToday());
       })
-      .catch((e) => setError(e.message || 'Не удалось загрузить доступность'))
+      .catch((e) => setError(friendlyError(e, t('manual_booking_businessId.1'))))
       .finally(() => setAvailLoading(false));
   }
 
   async function handleSubmit() {
     if (!clientName.trim()) {
-      setSaveError('Укажите имя клиента');
+      setSaveError(t('manual_booking_businessId.2'));
       return;
     }
     setSaving(true);
@@ -87,9 +89,9 @@ export default function ManualBooking() {
       router.replace('/(business-tabs)');
     } catch (e) {
       if (e.code === '23P01') {
-        setSaveError('Этот слот только что заняли — вернитесь и выберите другое время.');
+        setSaveError(t('manual_booking_businessId.3'));
       } else {
-        setSaveError(e.message || 'Не удалось создать запись');
+        setSaveError(friendlyError(e, t('manual_booking_businessId.4')));
       }
     } finally {
       setSaving(false);
@@ -106,7 +108,7 @@ export default function ManualBooking() {
   if (error || services.length === 0) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{error || 'Сначала добавьте услуги'}</Text>
+        <Text style={styles.errorText}>{error || t('manual_booking_businessId.5')}</Text>
       </View>
     );
   }
@@ -118,9 +120,8 @@ export default function ManualBooking() {
           <ArrowLeft size={17} color={COLORS.ink} />
         </PressableScale>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Запись вручную</Text>
-          <Text style={styles.sub}>
-            Шаг {step} из 4 · {STEPS[step - 1]}
+          <Text style={styles.title}>{t('manual_booking_businessId.6')}</Text>
+          <Text style={styles.sub}>{t('common.53')}{' '}{step}{' '}{t('common.54')}{' '}{steps()[step - 1]}
           </Text>
         </View>
       </View>
@@ -134,13 +135,13 @@ export default function ManualBooking() {
               <PressableScale key={v.id} style={[styles.row, serviceIdx === i && styles.rowActive]} onPress={() => setServiceIdx(i)}>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.rowName}>{v.name}</Text>
-                  <Text style={styles.rowSub}>{v.duration_min} мин</Text>
+                  <Text style={styles.rowSub}>{v.duration_min}{' '}{t('common.55')}</Text>
                 </View>
                 <Text style={styles.rowPrice}>{v.price} ₼</Text>
               </PressableScale>
             ))}
             <PressableScale style={styles.nextButton} onPress={() => setStep(2)}>
-              <Text style={styles.nextButtonText}>Далее</Text>
+              <Text style={styles.nextButtonText}>{t('common.57')}</Text>
             </PressableScale>
           </View>
         )}
@@ -148,7 +149,7 @@ export default function ManualBooking() {
         {step === 2 && (
           <View style={{ gap: SPACING.sm }}>
             {masters.length === 0 ? (
-              <Text style={styles.rowSub}>Нет мастеров.</Text>
+              <Text style={styles.rowSub}>{t('manual_booking_businessId.7')}</Text>
             ) : (
               masters.map((m, i) => (
                 <PressableScale key={m.id} style={[styles.row, masterIdx === i && styles.rowActive]} onPress={() => setMasterIdx(i)}>
@@ -158,7 +159,7 @@ export default function ManualBooking() {
               ))
             )}
             <PressableScale style={[styles.nextButton, masterIdx === null && styles.nextButtonOff]} disabled={masterIdx === null} onPress={goToTimeStep}>
-              <Text style={styles.nextButtonText}>Далее</Text>
+              <Text style={styles.nextButtonText}>{t('common.57')}</Text>
             </PressableScale>
           </View>
         )}
@@ -177,7 +178,7 @@ export default function ManualBooking() {
               onSelectTime={setTime}
             />
             <PressableScale style={[styles.nextButton, !time && styles.nextButtonOff]} disabled={!time} onPress={() => setStep(4)}>
-              <Text style={styles.nextButtonText}>Далее</Text>
+              <Text style={styles.nextButtonText}>{t('common.57')}</Text>
             </PressableScale>
           </View>
         )}
@@ -186,21 +187,21 @@ export default function ManualBooking() {
           <View style={{ gap: SPACING.md }}>
             <TextInput
               style={styles.input}
-              placeholder="Имя клиента"
+              placeholder={t('manual_booking_businessId.8')}
               placeholderTextColor={COLORS.sub}
               value={clientName}
               onChangeText={setClientName}
             />
             <TextInput
               style={styles.input}
-              placeholder="Телефон (необязательно)"
+              placeholder={t('manual_booking_businessId.9')}
               placeholderTextColor={COLORS.sub}
               keyboardType="phone-pad"
               value={clientPhone}
               onChangeText={setClientPhone}
             />
             <PressableScale style={styles.nextButton} disabled={saving} onPress={handleSubmit}>
-              {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.nextButtonText}>Создать запись</Text>}
+              {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.nextButtonText}>{t('manual_booking_businessId.10')}</Text>}
             </PressableScale>
           </View>
         )}

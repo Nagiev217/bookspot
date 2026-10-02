@@ -8,6 +8,7 @@ import PressableScale from '@/components/PressableScale';
 import { listAllBusinessesAdmin, subscriptionBadge } from '@/utils/supabase/admin';
 import { friendlyError } from '@/utils/errors';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
+import { t } from '@/utils/i18n';
 
 const TONE = {
   ok: { bg: '#E8F7EE', fg: COLORS.success },
@@ -25,7 +26,7 @@ export default function AdminBusinesses() {
     setError(null);
     listAllBusinessesAdmin()
       .then(setItems)
-      .catch((e) => setError(friendlyError(e, 'Не удалось загрузить салоны')))
+      .catch((e) => setError(friendlyError(e, t('admin_tabs_index.1'))))
       .finally(() => setLoading(false));
   }, []);
 
@@ -38,12 +39,12 @@ export default function AdminBusinesses() {
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.title}>Салоны</Text>
+      <Text style={styles.title}>{t('common.13')}</Text>
       <View style={styles.search}>
         <Search size={17} color={COLORS.sub} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Салон, владелец или email"
+          placeholder={t('admin_tabs_index.2')}
           placeholderTextColor={COLORS.sub}
           value={query}
           onChangeText={setQuery}
@@ -60,7 +61,7 @@ export default function AdminBusinesses() {
           keyExtractor={(b) => b.id}
           contentContainerStyle={{ gap: SPACING.sm, paddingBottom: SPACING.xxl }}
           refreshControl={<RefreshControl refreshing={false} onRefresh={load} tintColor={COLORS.indigo} />}
-          ListEmptyComponent={<Text style={styles.empty}>Салонов пока нет — создайте первый во вкладке «Новый салон».</Text>}
+          ListEmptyComponent={<Text style={styles.empty}>{t('admin_tabs_index.3')}</Text>}
           renderItem={({ item: b }) => {
             const badge = subscriptionBadge(b);
             return (
@@ -68,7 +69,7 @@ export default function AdminBusinesses() {
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.name} numberOfLines={1}>{b.name}</Text>
                   <Text style={styles.meta} numberOfLines={1}>
-                    {b.owner_name || 'Владелец'} · {b.owner_email || '—'}
+                    {b.owner_name || t('common.11')} · {b.owner_email || '—'}
                   </Text>
                   <View style={styles.badgeRow}>
                     <View style={[styles.badge, { backgroundColor: TONE[badge.tone].bg }]}>
@@ -77,14 +78,14 @@ export default function AdminBusinesses() {
                     {/* Салон ещё не прошёл чек-лист настройки и скрыт из каталога (0024). */}
                     {!b.published_at && (
                       <View style={[styles.badge, { backgroundColor: COLORS.indigo50 }]}>
-                        <Text style={[styles.badgeText, { color: COLORS.indigo }]}>Настраивается</Text>
+                        <Text style={[styles.badgeText, { color: COLORS.indigo }]}>{t('admin_tabs_index.4')}</Text>
                       </View>
                     )}
                   </View>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={styles.count}>{b.upcoming_bookings}</Text>
-                  <Text style={styles.countLabel}>записей</Text>
+                  <Text style={styles.countLabel}>{t('admin_tabs_index.5')}</Text>
                 </View>
               </PressableScale>
             );

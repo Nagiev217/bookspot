@@ -10,7 +10,10 @@
     "ios": {
       "bundleIdentifier": "com.bookspot.app",
       "buildNumber": "1",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "CFBundleAllowMixedLocalizations": true
+      }
     },
     "android": {
       "package": "com.bookspot.app",
@@ -39,7 +42,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Нужен доступ к фото, чтобы загрузить логотип салона и фотографии мастеров.",
+          "photosPermission": "Photo access is needed to upload photos of the salon and its masters.",
           "cameraPermission": false,
           "microphonePermission": false
         }
@@ -60,6 +63,11 @@
         "projectId": "dc12ae3c-45be-4b2f-be5b-a9ee9f74339f"
       }
     },
-    "owner": "nagiev217"
+    "owner": "nagiev217",
+    "locales": {
+      "az": "./locales/az.json",
+      "ru": "./locales/ru.json",
+      "en": "./locales/en.json"
+    }
   }
 }

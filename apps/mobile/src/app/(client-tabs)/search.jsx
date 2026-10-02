@@ -14,6 +14,8 @@ import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { tintFor } from '@/utils/tint';
 import { searchBusinesses } from '@/utils/supabase/catalog';
 import { useReducedMotion } from '@/utils/useReducedMotion';
+import { t, tn } from '@/utils/i18n';
+import { friendlyError } from '@/utils/errors';
 
 export default function Search() {
   const { title, categoryId, q: initialQuery } = useLocalSearchParams();
@@ -38,7 +40,7 @@ export default function Search() {
           setBusinesses(data);
           loadedOnce.current = true;
         })
-        .catch((e) => !signal.cancelled && setError(e.message || 'Не удалось загрузить список'))
+        .catch((e) => !signal.cancelled && setError(friendlyError(e, t('client_tabs_search.1'))))
         .finally(() => !signal.cancelled && setLoading(false));
     },
     [query, categoryId]
@@ -68,12 +70,12 @@ export default function Search() {
   return (
     <View style={styles.screen}>
       <View style={styles.headerBar}>
-        <Text style={styles.title}>{title || 'Все салоны'}</Text>
+        <Text style={styles.title}>{title || t('common.46')}</Text>
         <View style={styles.searchBar}>
           <SearchIcon size={16} color={COLORS.sub} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Услуга, салон или мастер"
+            placeholder={t('common.45')}
             placeholderTextColor={COLORS.sub}
             value={query}
             onChangeText={setQuery}
@@ -81,7 +83,7 @@ export default function Search() {
             returnKeyType="search"
           />
         </View>
-        <Text style={styles.count}>{businesses.length} салон(ов) · Баку</Text>
+        <Text style={styles.count}>{tn('plural.salons', businesses.length)} · {t('common.1')}</Text>
       </View>
 
       {loading ? (
@@ -91,7 +93,7 @@ export default function Search() {
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
           {businesses.length === 0 ? (
-            <Text style={styles.emptyText}>Ничего не найдено.</Text>
+            <Text style={styles.emptyText}>{t('client_tabs_search.3')}</Text>
           ) : (
             businesses.map((b, i) => (
               <Animated.View key={b.id} entering={reducedMotion ? undefined : FadeIn.duration(220).delay(i * 30)}>
@@ -100,7 +102,7 @@ export default function Search() {
                   {b.logo_url ? (
                     <Image source={{ uri: b.logo_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                   ) : (
-                    <Text style={styles.photoLabel}>ФОТО</Text>
+                    <Text style={styles.photoLabel}>{t('common.44')}</Text>
                   )}
                 </View>
                 <View style={styles.cardRow}>

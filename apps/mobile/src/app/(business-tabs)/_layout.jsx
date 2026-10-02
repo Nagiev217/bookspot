@@ -4,6 +4,7 @@ import { House, Calendar, Users, User } from 'lucide-react-native';
 import { COLORS } from '@/theme/tokens';
 import { registerForPush } from '@/utils/notifications';
 import { useAuthStore } from '@/utils/auth/store';
+import { t } from '@/utils/i18n';
 
 export default function BusinessTabsLayout() {
   const isOwner = useAuthStore((s) => s.role === 'business_owner');
@@ -19,25 +20,25 @@ export default function BusinessTabsLayout() {
     <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: COLORS.indigo, tabBarInactiveTintColor: '#A3AAB8', lazy: false }}>
       <Tabs.Screen
         name="index"
-        options={{ title: 'Сегодня', tabBarIcon: ({ color, size }) => <House color={color} size={size} /> }}
+        options={{ title: t('business_tabs_layout.1'), tabBarIcon: ({ color, size }) => <House color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="calendar"
-        options={{ title: 'Календарь', tabBarIcon: ({ color, size }) => <Calendar color={color} size={size} /> }}
+        options={{ title: t('common.33'), tabBarIcon: ({ color, size }) => <Calendar color={color} size={size} /> }}
       />
       {/* Команду (мастера, выходные, доступы) ведёт только владелец —
           мастер видит своё расписание во вкладках «Сегодня» и «Календарь». */}
       <Tabs.Screen
         name="team"
         options={{
-          title: 'Команда',
+          title: t('common.35'),
           href: isOwner ? undefined : null,
           tabBarIcon: ({ color, size }) => <Users color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="profile"
-        options={{ title: 'Профиль', tabBarIcon: ({ color, size }) => <User color={color} size={size} /> }}
+        options={{ title: t('common.14'), tabBarIcon: ({ color, size }) => <User color={color} size={size} /> }}
       />
     </Tabs>
   );

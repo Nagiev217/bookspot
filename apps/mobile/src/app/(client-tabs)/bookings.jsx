@@ -12,6 +12,8 @@ import { friendlyError } from '@/utils/errors';
 import { useAuthStore } from '@/utils/auth/store';
 import SignInPrompt from '@/components/SignInPrompt';
 import StarBadge from '@/components/StarBadge';
+import { dowShort, dayMonthShort } from '@/utils/i18n/dates';
+import { t } from '@/utils/i18n';
 
 // PostgREST может вернуть обратную embedded-связь (reviews.booking_id —
 // unique FK) и как массив, и как одиночный объект в зависимости от версии —
@@ -22,8 +24,6 @@ function myReviewOf(booking) {
   return Array.isArray(r) ? r[0] || null : r;
 }
 
-const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-const MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 
 function formatTimeBaku(isoUtc) {
   const d = new Date(new Date(isoUtc).getTime() + 4 * 3600000);
@@ -34,21 +34,21 @@ function formatTimeBaku(isoUtc) {
 function upcomingStatus(b) {
   if (b.status === 'pending') {
     return {
-      label: 'Ждёт подтверждения',
+      label: t('client_tabs_bookings.1'),
       color: COLORS.warning,
       bg: '#FFF4E0',
-      hint: b.expires_at ? `Мастер ответит до ${formatTimeBaku(b.expires_at)}` : null,
+      hint: b.expires_at ? t('client_tabs_bookings.2', { p0: formatTimeBaku(b.expires_at) }) : null,
     };
   }
   if (b.status === 'proposed') {
-    return { label: 'Другое время', color: COLORS.indigo, bg: COLORS.indigo100, hint: null };
+    return { label: t('common.38'), color: COLORS.indigo, bg: COLORS.indigo100, hint: null };
   }
-  return { label: 'Подтверждено', color: COLORS.indigo, bg: COLORS.indigo100, hint: null };
+  return { label: t('common.31'), color: COLORS.indigo, bg: COLORS.indigo100, hint: null };
 }
 
 function formatBaku(isoUtc) {
   const d = new Date(new Date(isoUtc).getTime() + 4 * 3600000);
-  return `${DOW[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} · ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+  return `${dowShort(d.getUTCDay())}, ${dayMonthShort(d.getUTCDate(), d.getUTCMonth())} · ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
 }
 
 export default function Bookings() {
@@ -74,7 +74,7 @@ export default function Bookings() {
         setBookings(data);
         loadedOnce.current = true;
       })
-      .catch((e) => setError(e.message || 'Не удалось загрузить записи'))
+      .catch((e) => setError(friendlyError(e, t('client_tabs_bookings.3'))))
       .finally(() => setLoading(false));
   }, [uid]);
 
@@ -101,16 +101,16 @@ export default function Bookings() {
       await respondToProposal(b.id, accept);
       load();
     } catch (e) {
-      Alert.alert('Не получилось', friendlyError(e));
+      Alert.alert(t('common.39'), friendlyError(e));
     } finally {
       setRespondingId(null);
     }
   }
 
   function confirmDecline(b) {
-    Alert.alert('Отказаться от этого времени?', 'Запись будет отменена, время освободится.', [
-      { text: 'Назад', style: 'cancel' },
-      { text: 'Отказаться', style: 'destructive', onPress: () => respond(b, false) },
+    Alert.alert(t('client_tabs_bookings.4'), t('client_tabs_bookings.5'), [
+      { text: t('common.40'), style: 'cancel' },
+      { text: t('client_tabs_bookings.6'), style: 'destructive', onPress: () => respond(b, false) },
     ]);
   }
 
@@ -118,11 +118,11 @@ export default function Bookings() {
     return (
       <View style={styles.screen}>
         <View style={styles.header}>
-          <Text style={styles.title}>Мои записи</Text>
+          <Text style={styles.title}>{t('client_tabs_bookings.7')}</Text>
         </View>
         <SignInPrompt
-          title="Войдите, чтобы увидеть записи"
-          subtitle="Здесь появятся ваши предстоящие визиты и история."
+          title={t('client_tabs_bookings.8')}
+          subtitle={t('client_tabs_bookings.9')}
           redirect="/(client-tabs)/bookings"
         />
       </View>
@@ -132,13 +132,13 @@ export default function Bookings() {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <Text style={styles.title}>Мои записи</Text>
+        <Text style={styles.title}>{t('client_tabs_bookings.7')}</Text>
         <View style={styles.segment}>
           <PressableScale style={[styles.segTab, tab === 'up' && styles.segTabOn]} onPress={() => setTab('up')}>
-            <Text style={[styles.segText, tab === 'up' && styles.segTextOn]}>Предстоящие</Text>
+            <Text style={[styles.segText, tab === 'up' && styles.segTextOn]}>{t('client_tabs_bookings.10')}</Text>
           </PressableScale>
           <PressableScale style={[styles.segTab, tab === 'past' && styles.segTabOn]} onPress={() => setTab('past')}>
-            <Text style={[styles.segText, tab === 'past' && styles.segTextOn]}>История</Text>
+            <Text style={[styles.segText, tab === 'past' && styles.segTextOn]}>{t('common.27')}</Text>
           </PressableScale>
         </View>
       </View>
@@ -150,7 +150,7 @@ export default function Bookings() {
       ) : tab === 'up' ? (
         <ScrollView contentContainerStyle={styles.list}>
           {upcoming.length === 0 ? (
-            <Text style={styles.emptyText}>Пока нет предстоящих записей.</Text>
+            <Text style={styles.emptyText}>{t('client_tabs_bookings.11')}</Text>
           ) : (
             upcoming.map((b) => {
               const st = upcomingStatus(b);
@@ -165,8 +165,9 @@ export default function Bookings() {
                 </View>
                 {b.status === 'proposed' && (
                   <Text style={styles.proposalText}>
-                    {b.masters?.name || 'Мастер'} не может
-                    {b.requested_starts_at ? ` в ${formatBaku(b.requested_starts_at)}` : ' в выбранное время'} и предлагает {formatBaku(b.starts_at)}.
+                    {b.requested_starts_at
+                      ? t('bookings.proposal', { master: b.masters?.name || t('common.21'), from: formatBaku(b.requested_starts_at), to: formatBaku(b.starts_at) })
+                      : t('bookings.proposalNoFrom', { master: b.masters?.name || t('common.21'), to: formatBaku(b.starts_at) })}
                   </Text>
                 )}
                 {st.hint && <Text style={styles.hintText}>{st.hint}</Text>}
@@ -181,19 +182,19 @@ export default function Bookings() {
                 {b.status === 'proposed' ? (
                   <View style={styles.upcomingActions}>
                     <PressableScale style={styles.outlineButton} onPress={() => confirmDecline(b)} disabled={busy}>
-                      <Text style={styles.outlineButtonText}>Отказаться</Text>
+                      <Text style={styles.outlineButtonText}>{t('client_tabs_bookings.6')}</Text>
                     </PressableScale>
                     <PressableScale style={styles.primaryButton} onPress={() => respond(b, true)} disabled={busy}>
-                      {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.darkButtonText}>Принять время</Text>}
+                      {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.darkButtonText}>{t('client_tabs_bookings.16')}</Text>}
                     </PressableScale>
                   </View>
                 ) : (
                   <View style={styles.upcomingActions}>
                     <PressableScale style={styles.outlineButton} onPress={() => router.push(`/reschedule/${b.id}`)}>
-                      <Text style={styles.outlineButtonText}>{b.status === 'pending' ? 'Изменить' : 'Перенести'}</Text>
+                      <Text style={styles.outlineButtonText}>{b.status === 'pending' ? t('client_tabs_bookings.17') : t('client_tabs_bookings.18')}</Text>
                     </PressableScale>
                     <PressableScale style={styles.darkButton} onPress={() => router.push(`/salon/${b.business_id}`)}>
-                      <Text style={styles.darkButtonText}>Маршрут</Text>
+                      <Text style={styles.darkButtonText}>{t('client_tabs_bookings.19')}</Text>
                     </PressableScale>
                   </View>
                 )}
@@ -205,7 +206,7 @@ export default function Bookings() {
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
           {past.length === 0 ? (
-            <Text style={styles.emptyText}>Истории пока нет.</Text>
+            <Text style={styles.emptyText}>{t('client_tabs_bookings.20')}</Text>
           ) : (
             past.map((b) => {
               const myReview = myReviewOf(b);
@@ -225,11 +226,11 @@ export default function Bookings() {
                     (myReview ? (
                       <PressableScale style={styles.reviewRow} onPress={() => router.push(`/review/${b.id}`)}>
                         <StarBadge rating={myReview.rating} />
-                        <Text style={styles.reviewEditText}>Изменить отзыв</Text>
+                        <Text style={styles.reviewEditText}>{t('common.41')}</Text>
                       </PressableScale>
                     ) : (
                       <PressableScale style={styles.reviewButton} onPress={() => router.push(`/review/${b.id}`)}>
-                        <Text style={styles.reviewButtonText}>Оставить отзыв</Text>
+                        <Text style={styles.reviewButtonText}>{t('common.42')}</Text>
                       </PressableScale>
                     ))}
                 </View>
@@ -244,24 +245,24 @@ export default function Bookings() {
 
 // Причина отмены важна клиенту: «мастер не смог» и «салон не ответил» —
 // разные ситуации (0029).
-const CANCEL_REASON_LABEL = {
-  client: 'Отменена вами',
-  business: 'Отменена салоном',
-  declined: 'Мастер не смог принять',
-  expired: 'Не подтверждена вовремя',
-  proposal_declined: 'Вы отказались от другого времени',
-};
+const cancelReasonLabel = () => ({
+  client: t('client_tabs_bookings.21'),
+  business: t('client_tabs_bookings.22'),
+  declined: t('client_tabs_bookings.23'),
+  expired: t('client_tabs_bookings.24'),
+  proposal_declined: t('client_tabs_bookings.25'),
+});
 
 function statusLabel(b) {
   switch (b.status) {
     case 'cancelled':
-      return CANCEL_REASON_LABEL[b.cancel_reason] || 'Отменена';
+      return cancelReasonLabel()[b.cancel_reason] || t('common.30');
     case 'confirmed':
-      return 'Визит прошёл';
+      return t('client_tabs_bookings.26');
     case 'completed':
-      return 'Завершена';
+      return t('client_tabs_bookings.27');
     case 'no_show':
-      return 'Неявка';
+      return t('common.29');
     default:
       return b.status;
   }

@@ -9,8 +9,9 @@ import { ArrowLeft } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { getBooking, getAvailability, rescheduleBooking, cancelBooking } from '@/utils/supabase/booking';
 import { friendlyError } from '@/utils/errors';
+import { dowShort } from '@/utils/i18n/dates';
+import { t } from '@/utils/i18n';
 
-const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 const DAYS_WINDOW = 14;
 
 function bakuToday() {
@@ -54,7 +55,7 @@ export default function Reschedule() {
           const first = Object.keys(map).sort()[0];
           setSelectedDate(first || bakuToday());
         })
-        .catch((e) => !cancelled && setError(friendlyError(e, 'Не удалось загрузить')))
+        .catch((e) => !cancelled && setError(friendlyError(e, t('common.20'))))
         .finally(() => {
           if (!cancelled) {
             setLoading(false);
@@ -77,7 +78,7 @@ export default function Reschedule() {
   if (error || !booking) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{error || 'Бронь не найдена'}</Text>
+        <Text style={styles.errorText}>{error || t('common.74')}</Text>
       </View>
     );
   }
@@ -91,18 +92,18 @@ export default function Reschedule() {
     setSaveError(null);
     try {
       await rescheduleBooking({ bookingId, date: selectedDate, start: time });
-      Alert.alert('Новое время отправлено', 'Мастер подтвердит его в течение 2 часов — пришлём уведомление.');
+      Alert.alert(t('reschedule_bookingId.1'), t('reschedule_bookingId.2'));
       router.replace('/(client-tabs)/bookings');
     } catch (e) {
       if (e.code === '23P01') {
-        setSaveError('Этот слот только что заняли — выберите другое время.');
+        setSaveError(t('common.52'));
         setTime(null);
         setAvailLoading(true);
         getAvailability({ masterId: booking.master_id, serviceId: booking.service_id, from: bakuToday(), days: DAYS_WINDOW })
           .then(setAvailability)
           .finally(() => setAvailLoading(false));
       } else {
-        setSaveError(friendlyError(e, 'Не удалось перенести бронь'));
+        setSaveError(friendlyError(e, t('reschedule_bookingId.3')));
       }
     } finally {
       setSaving(false);
@@ -110,10 +111,10 @@ export default function Reschedule() {
   }
 
   function handleCancel() {
-    Alert.alert(booking.status === 'pending' ? 'Отменить заявку?' : 'Отменить запись?', booking.service_name, [
-      { text: 'Не отменять', style: 'cancel' },
+    Alert.alert(booking.status === 'pending' ? t('reschedule_bookingId.4') : t('reschedule_bookingId.5'), booking.service_name, [
+      { text: t('reschedule_bookingId.6'), style: 'cancel' },
       {
-        text: 'Отменить запись',
+        text: t('reschedule_bookingId.7'),
         style: 'destructive',
         onPress: async () => {
           setCancelling(true);
@@ -121,7 +122,7 @@ export default function Reschedule() {
             await cancelBooking(bookingId);
             router.replace('/(client-tabs)/bookings');
           } catch (e) {
-            Alert.alert('Не удалось отменить', friendlyError(e));
+            Alert.alert(t('reschedule_bookingId.8'), friendlyError(e));
             setCancelling(false);
           }
         },
@@ -137,7 +138,7 @@ export default function Reschedule() {
             <ArrowLeft size={17} color={COLORS.ink} />
           </PressableScale>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Перенести запись</Text>
+            <Text style={styles.title}>{t('reschedule_bookingId.9')}</Text>
             <Text style={styles.sub}>{booking.service_name}</Text>
           </View>
         </View>
@@ -150,7 +151,7 @@ export default function Reschedule() {
           <ActivityIndicator color={COLORS.indigo} />
         ) : (
           <>
-            <Text style={styles.sectionLabel}>Дата</Text>
+            <Text style={styles.sectionLabel}>{t('common.59')}</Text>
             <View style={styles.dateGrid}>
               {dateList.map((iso) => {
                 const count = availability?.[iso]?.length ?? 0;
@@ -166,16 +167,16 @@ export default function Reschedule() {
                       setTime(null);
                     }}
                   >
-                    <Text style={[styles.dateDow, on && styles.dateTextActive]}>{DOW[dowOf(iso)]}</Text>
+                    <Text style={[styles.dateDow, on && styles.dateTextActive]}>{dowShort(dowOf(iso))}</Text>
                     <Text style={[styles.dateNum, on && styles.dateTextActive, off && styles.dateTextOff]}>{iso.slice(8, 10)}</Text>
                   </PressableScale>
                 );
               })}
             </View>
 
-            <Text style={styles.sectionLabel}>Время</Text>
+            <Text style={styles.sectionLabel}>{t('common.60')}</Text>
             {timesForSelected.length === 0 ? (
-              <Text style={styles.sub}>На этот день свободного времени не осталось.</Text>
+              <Text style={styles.sub}>{t('common.56')}</Text>
             ) : (
               <View style={styles.timeGrid}>
                 {timesForSelected.map((t) => {
@@ -194,10 +195,10 @@ export default function Reschedule() {
 
       <View style={styles.ctaBar}>
         <PressableScale style={[styles.ctaButton, (!time || saving) && styles.ctaButtonOff]} disabled={!time || saving} onPress={handleSave}>
-          {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.ctaText}>Перенести на выбранное время</Text>}
+          {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.ctaText}>{t('reschedule_bookingId.10')}</Text>}
         </PressableScale>
         <PressableScale style={styles.cancelButton} disabled={cancelling} onPress={handleCancel}>
-          {cancelling ? <ActivityIndicator color={COLORS.danger} /> : <Text style={styles.cancelText}>Отменить запись</Text>}
+          {cancelling ? <ActivityIndicator color={COLORS.danger} /> : <Text style={styles.cancelText}>{t('reschedule_bookingId.7')}</Text>}
         </PressableScale>
       </View>
     </View>

@@ -7,33 +7,34 @@ import { MessageCircle, CalendarCheck, Users, BellRing } from 'lucide-react-nati
 import PressableScale from '@/components/PressableScale';
 import { PARTNER_WHATSAPP, hasPartnerWhatsapp, whatsappUrl } from '@/utils/contact';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
+import { t } from '@/utils/i18n';
 
-const POINTS = [
-  { Icon: CalendarCheck, text: 'Клиенты записываются сами — только на реально свободное время' },
-  { Icon: BellRing, text: 'Подтверждения и напоминания клиентам приходят автоматически' },
-  { Icon: Users, text: 'У каждого мастера — свой доступ и своё расписание' },
+const points = () => [
+  { Icon: CalendarCheck, text: t('client_tabs_become_partner.1') },
+  { Icon: BellRing, text: t('client_tabs_become_partner.2') },
+  { Icon: Users, text: t('client_tabs_become_partner.3') },
 ];
 
 export default function BecomePartner() {
   async function openWhatsapp() {
     if (!hasPartnerWhatsapp()) {
-      Alert.alert('Скоро', 'Контакт для партнёров появится в ближайшем обновлении.');
+      Alert.alert(t('client_tabs_become_partner.4'), t('client_tabs_become_partner.5'));
       return;
     }
     try {
-      await Linking.openURL(whatsappUrl('Здравствуйте! Хочу подключить свой салон к BookSpot.', PARTNER_WHATSAPP));
+      await Linking.openURL(whatsappUrl(t('client_tabs_become_partner.6'), PARTNER_WHATSAPP));
     } catch {
-      Alert.alert('WhatsApp не открылся', 'Проверьте, что WhatsApp установлен.');
+      Alert.alert(t('common.36'), t('client_tabs_become_partner.7'));
     }
   }
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.title}>Стать партнёром</Text>
-      <Text style={styles.subtitle}>Подключите свой салон к BookSpot. Напишите нам в WhatsApp — расскажем о подписке и за пару минут создадим аккаунт для вашего салона.</Text>
+      <Text style={styles.title}>{t('common.37')}</Text>
+      <Text style={styles.subtitle}>{t('client_tabs_become_partner.8')}</Text>
 
       <View style={styles.points}>
-        {POINTS.map(({ Icon, text }) => (
+        {points().map(({ Icon, text }) => (
           <View key={text} style={styles.point}>
             <View style={styles.pointIcon}>
               <Icon size={18} color={COLORS.indigo} />
@@ -45,7 +46,7 @@ export default function BecomePartner() {
 
       <PressableScale style={styles.button} onPress={openWhatsapp}>
         <MessageCircle size={18} color={COLORS.white} />
-        <Text style={styles.buttonText}>Написать в WhatsApp</Text>
+        <Text style={styles.buttonText}>{t('client_tabs_become_partner.9')}</Text>
       </PressableScale>
     </ScrollView>
   );

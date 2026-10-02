@@ -8,19 +8,13 @@ import { buildSession } from '@/utils/supabase/profile';
 import { useAuthStore } from '@/utils/auth/store';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { PRIVACY_POLICY_URL, TERMS_URL } from '@/utils/legal';
-
-const LANGS = [
-  { code: 'az', label: 'AZ' },
-  { code: 'ru', label: 'RU' },
-  { code: 'en', label: 'EN' },
-];
+import { t, getLang } from '@/utils/i18n';
 
 export default function Register() {
   const { redirect } = useLocalSearchParams();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [lang, setLang] = useState('ru');
   const [error, setError] = useState(null);
   const [info, setInfo] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -29,9 +23,9 @@ export default function Register() {
   async function handleRegister() {
     setError(null);
     setInfo(null);
-    if (!name.trim()) return setError('Введите имя');
-    if (!email.trim() || !password) return setError('Введите email и пароль');
-    if (password.length < 6) return setError('Пароль должен быть не короче 6 символов');
+    if (!name.trim()) return setError(t('common.19'));
+    if (!email.trim() || !password) return setError(t('common.16'));
+    if (password.length < 6) return setError(t('auth_register.1'));
 
     setBusy(true);
     try {
@@ -40,13 +34,13 @@ export default function Register() {
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { data: { name: name.trim(), lang } },
+        options: { data: { name: name.trim(), lang: getLang() } },
       });
       if (signUpError) throw signUpError;
 
       if (!data.session) {
         // Подтверждение email включено в настройках проекта — сессии ещё нет.
-        setInfo('Проверьте почту и подтвердите email, затем войдите.');
+        setInfo(t('auth_register.2'));
         return;
       }
 
@@ -61,11 +55,11 @@ export default function Register() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.title}>Регистрация</Text>
+      <Text style={styles.title}>{t('auth_register.3')}</Text>
 
       <TextInput
         style={styles.input}
-        placeholder="Имя"
+        placeholder={t('common.12')}
         placeholderTextColor={COLORS.sub}
         value={name}
         onChangeText={setName}
@@ -81,64 +75,43 @@ export default function Register() {
       />
       <TextInput
         style={styles.input}
-        placeholder="Пароль (мин. 6 символов)"
+        placeholder={t('auth_register.4')}
         placeholderTextColor={COLORS.sub}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
       />
 
-      <View style={styles.langRow}>
-        {LANGS.map((l) => (
-          <PressableScale
-            key={l.code}
-            style={[styles.langChip, lang === l.code && styles.langChipActive]}
-            onPress={() => setLang(l.code)}
-          >
-            <Text style={[styles.langChipText, lang === l.code && styles.langChipTextActive]}>{l.label}</Text>
-          </PressableScale>
-        ))}
-      </View>
 
       {error && <Text style={styles.error}>{error}</Text>}
       {info && <Text style={styles.info}>{info}</Text>}
 
       <PressableScale style={styles.button} onPress={handleRegister} disabled={busy}>
-        {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.buttonText}>Зарегистрироваться</Text>}
+        {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.buttonText}>{t('auth_register.5')}</Text>}
       </PressableScale>
 
-      <Text style={styles.legalText}>
-        Регистрируясь, вы принимаете{' '}
-        <Text style={styles.legalLink} onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)}>
-          условия использования
-        </Text>{' '}
-        и{' '}
-        <Text style={styles.legalLink} onPress={() => WebBrowser.openBrowserAsync(PRIVACY_POLICY_URL)}>
-          политику конфиденциальности
-        </Text>
+      <Text style={styles.legalText}>{t('auth_register.6')}{' '}
+        <Text style={styles.legalLink} onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)}>{t('auth_register.7')}</Text>{' '}{t('auth_register.8')}{' '}
+        <Text style={styles.legalLink} onPress={() => WebBrowser.openBrowserAsync(PRIVACY_POLICY_URL)}>{t('auth_register.9')}</Text>
       </Text>
 
       <Link
         href={{ pathname: '/(auth)/login', params: redirect ? { redirect } : undefined }}
         style={styles.link}
-      >
-        Уже есть аккаунт? Войти
-      </Link>
+      >{t('auth_register.10')}</Link>
 
-      <Link href="/(client-tabs)" style={styles.backLink}>
-        Назад к каталогу
-      </Link>
+      <Link href="/(client-tabs)" style={styles.backLink}>{t('common.18')}</Link>
     </ScrollView>
   );
 }
 
 function mapAuthError(message) {
-  if (!message) return 'Не удалось зарегистрироваться. Попробуйте ещё раз';
-  if (message.includes('already registered')) return 'Этот email уже зарегистрирован';
-  if (message.includes('Password should be')) return 'Пароль слишком простой';
-  if (message.includes('Unable to validate email')) return 'Некорректный email';
-  if (message.includes('rate limit')) return 'Слишком много попыток — подождите пару минут и повторите';
-  return 'Не удалось зарегистрироваться. Попробуйте ещё раз';
+  if (!message) return t('auth_register.11');
+  if (message.includes('already registered')) return t('auth_register.12');
+  if (message.includes('Password should be')) return t('auth_register.13');
+  if (message.includes('Unable to validate email')) return t('auth_register.14');
+  if (message.includes('rate limit')) return t('auth_register.15');
+  return t('auth_register.11');
 }
 
 const styles = StyleSheet.create({
@@ -154,17 +127,6 @@ const styles = StyleSheet.create({
     fontSize: TEXT_SIZE.md,
     color: COLORS.text,
   },
-  langRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md },
-  langChip: {
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    borderRadius: RADIUS.pill,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  langChipActive: { backgroundColor: COLORS.indigo50, borderColor: COLORS.indigo },
-  langChipText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub },
-  langChipTextActive: { color: COLORS.indigo },
   error: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.danger, marginBottom: SPACING.md },
   info: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.success, marginBottom: SPACING.md },
   button: { backgroundColor: COLORS.indigo, borderRadius: RADIUS.sm, padding: SPACING.md, alignItems: 'center' },

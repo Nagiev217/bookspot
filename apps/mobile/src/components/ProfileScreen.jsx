@@ -17,6 +17,9 @@ import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { PRIVACY_POLICY_URL, TERMS_URL } from '@/utils/legal';
 import PressableScale from '@/components/PressableScale';
 import SignInPrompt from '@/components/SignInPrompt';
+import LanguagePicker from '@/components/LanguagePicker';
+import { t } from '@/utils/i18n';
+import { friendlyError } from '@/utils/errors';
 
 export default function ProfileScreen() {
   const { uid, role, businessId, mode, setMode } = useAuthStore();
@@ -37,7 +40,7 @@ export default function ProfileScreen() {
   }
 
   const switchLabel =
-    mode !== 'client' ? 'Переключиться в Client mode' : workMode === 'admin' ? 'Перейти в админку' : 'Переключиться в Business mode';
+    mode !== 'client' ? t('components_ProfileScreen.1') : workMode === 'admin' ? t('components_ProfileScreen.2') : t('components_ProfileScreen.3');
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -57,17 +60,17 @@ export default function ProfileScreen() {
   // проверяет на сервере) с понятным текстом, почему нельзя.
   function handleDeleteAccount() {
     Alert.alert(
-      'Удалить аккаунт?',
-      'Это необратимо. Личные данные будут удалены; история визитов останется у салонов, но без вашего имени и телефона.',
+      t('components_ProfileScreen.4'),
+      t('components_ProfileScreen.5'),
       [
-        { text: 'Отмена', style: 'cancel' },
+        { text: t('common.23'), style: 'cancel' },
         {
-          text: 'Удалить',
+          text: t('common.63'),
           style: 'destructive',
           onPress: () => {
-            Alert.alert('Вы уверены?', 'Аккаунт нельзя будет восстановить.', [
-              { text: 'Отмена', style: 'cancel' },
-              { text: 'Удалить навсегда', style: 'destructive', onPress: confirmDeleteAccount },
+            Alert.alert(t('components_ProfileScreen.6'), t('components_ProfileScreen.7'), [
+              { text: t('common.23'), style: 'cancel' },
+              { text: t('components_ProfileScreen.8'), style: 'destructive', onPress: confirmDeleteAccount },
             ]);
           },
         },
@@ -81,7 +84,7 @@ export default function ProfileScreen() {
       await deleteMyAccount();
       router.replace('/(auth)/login');
     } catch (e) {
-      Alert.alert('Не удалось удалить аккаунт', e.message || 'Попробуйте ещё раз');
+      Alert.alert(t('components_ProfileScreen.9'), friendlyError(e, t('common.24')));
     } finally {
       setDeleting(false);
     }
@@ -93,19 +96,20 @@ export default function ProfileScreen() {
   if (!uid) {
     return (
       <View style={styles.screen}>
-        <Text style={styles.title}>Профиль</Text>
+        <Text style={styles.title}>{t('common.14')}</Text>
         <SignInPrompt
-          title="Вы не вошли в аккаунт"
-          subtitle="Войдите, чтобы записываться, сохранять избранное и управлять своим бизнесом."
+          title={t('components_ProfileScreen.10')}
+          subtitle={t('components_ProfileScreen.11')}
           redirect="/(client-tabs)/profile"
         />
+        <LanguagePicker />
         <View style={styles.legalRow}>
           <Pressable onPress={openPrivacyPolicy}>
-            <Text style={styles.legalLink}>Политика конфиденциальности</Text>
+            <Text style={styles.legalLink}>{t('components_ProfileScreen.12')}</Text>
           </Pressable>
           <Text style={styles.legalDot}>·</Text>
           <Pressable onPress={openTerms}>
-            <Text style={styles.legalLink}>Условия использования</Text>
+            <Text style={styles.legalLink}>{t('components_ProfileScreen.13')}</Text>
           </Pressable>
         </View>
       </View>
@@ -114,7 +118,7 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.title}>Профиль</Text>
+      <Text style={styles.title}>{t('common.14')}</Text>
 
       <View style={styles.card}>
         <View style={styles.avatar} />
@@ -125,26 +129,28 @@ export default function ProfileScreen() {
 
       <View style={styles.group}>
         {workMode && <MenuRow label={switchLabel} onPress={switchMode} last={role !== 'business_owner' && role !== 'staff'} />}
-        {role === 'staff' && <MenuRow label="Мой профиль мастера" onPress={() => router.push('/my-master-profile')} last />}
+        {role === 'staff' && <MenuRow label={t('components_ProfileScreen.14')} onPress={() => router.push('/my-master-profile')} last />}
         {role === 'business_owner' && (
           <>
-            <MenuRow label="Услуги" onPress={() => router.push(`/services/${businessId}`)} />
-            <MenuRow label="Настройки бизнеса" onPress={() => router.push(`/business-settings/${businessId}`)} last />
+            <MenuRow label={t('common.48')} onPress={() => router.push(`/services/${businessId}`)} />
+            <MenuRow label={t('common.66')} onPress={() => router.push(`/business-settings/${businessId}`)} last />
           </>
         )}
         {role === 'client' && (
-          <MenuRow label="Стать партнёром" onPress={() => router.push('/(client-tabs)/become-partner')} last />
+          <MenuRow label={t('common.37')} onPress={() => router.push('/(client-tabs)/become-partner')} last />
         )}
       </View>
 
+      <LanguagePicker />
+
       <View style={styles.group}>
-        <MenuRow label="Политика конфиденциальности" onPress={openPrivacyPolicy} />
-        <MenuRow label="Условия использования" onPress={openTerms} last />
+        <MenuRow label={t('components_ProfileScreen.12')} onPress={openPrivacyPolicy} />
+        <MenuRow label={t('components_ProfileScreen.13')} onPress={openTerms} last />
       </View>
 
       <PressableScale style={styles.signOutButton} onPress={handleSignOut}>
         <LogOut size={18} color={COLORS.danger} />
-        <Text style={styles.signOutText}>Выйти</Text>
+        <Text style={styles.signOutText}>{t('common.15')}</Text>
       </PressableScale>
 
       <PressableScale style={styles.deleteRow} onPress={handleDeleteAccount} disabled={deleting}>
@@ -153,12 +159,12 @@ export default function ProfileScreen() {
         ) : (
           <>
             <Trash2 size={16} color="#B6BCC8" />
-            <Text style={styles.deleteText}>Удалить аккаунт</Text>
+            <Text style={styles.deleteText}>{t('components_ProfileScreen.15')}</Text>
           </>
         )}
       </PressableScale>
 
-      <Text style={styles.version}>Версия 1.0 · Баку</Text>
+      <Text style={styles.version}>{t('components_ProfileScreen.16')}</Text>
     </ScrollView>
   );
 }
@@ -175,13 +181,13 @@ function MenuRow({ label, onPress, last }) {
 function roleLabel(role) {
   switch (role) {
     case 'business_owner':
-      return 'Владелец бизнеса';
+      return t('components_ProfileScreen.17');
     case 'staff':
-      return 'Мастер';
+      return t('common.21');
     case 'admin':
-      return 'Администратор';
+      return t('components_ProfileScreen.18');
     default:
-      return 'Клиент';
+      return t('common.32');
   }
 }
 

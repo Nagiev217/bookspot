@@ -7,6 +7,7 @@ import { buildSession } from '@/utils/supabase/profile';
 import { useAuthStore } from '@/utils/auth/store';
 import { friendlyError } from '@/utils/errors';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
+import { t } from '@/utils/i18n';
 
 export default function Login() {
   // Ставится экранами, требующими аккаунта (бронь, избранное), когда гость
@@ -21,7 +22,7 @@ export default function Login() {
   async function handleLogin() {
     setError(null);
     if (!email.trim() || !password) {
-      setError('Введите email и пароль');
+      setError(t('common.16'));
       return;
     }
     setBusy(true);
@@ -55,12 +56,10 @@ export default function Login() {
   return (
     <View style={styles.screen}>
       <Text style={styles.title}>BookSpot</Text>
-      <Text style={styles.subtitle}>Войти в аккаунт</Text>
+      <Text style={styles.subtitle}>{t('auth_login.1')}</Text>
 
       {!IS_SUPABASE_READY && (
-        <Text style={styles.warning}>
-          Supabase не настроен — заполните apps/mobile/.env
-        </Text>
+        <Text style={styles.warning}>{t('auth_login.2')}</Text>
       )}
 
       <TextInput
@@ -74,7 +73,7 @@ export default function Login() {
       />
       <TextInput
         style={styles.input}
-        placeholder="Пароль"
+        placeholder={t('auth_login.3')}
         placeholderTextColor={COLORS.sub}
         secureTextEntry
         value={password}
@@ -84,19 +83,15 @@ export default function Login() {
       {error && <Text style={styles.error}>{error}</Text>}
 
       <PressableScale style={styles.button} onPress={handleLogin} disabled={busy}>
-        {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.buttonText}>Войти</Text>}
+        {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.buttonText}>{t('common.17')}</Text>}
       </PressableScale>
 
       <Link
         href={{ pathname: '/(auth)/register', params: redirect ? { redirect } : undefined }}
         style={styles.link}
-      >
-        Нет аккаунта? Зарегистрироваться
-      </Link>
+      >{t('auth_login.4')}</Link>
 
-      <Link href="/(client-tabs)" style={styles.backLink}>
-        Назад к каталогу
-      </Link>
+      <Link href="/(client-tabs)" style={styles.backLink}>{t('common.18')}</Link>
     </View>
   );
 }
@@ -106,10 +101,10 @@ function mapAuthError(e) {
   // Сеть/офлайн важно отличать от неверного пароля первым делом — иначе
   // пользователь при обрыве связи решит, что забыл пароль, и начнёт его
   // сбрасывать вместо того, чтобы просто проверить интернет.
-  if (!message) return 'Не удалось войти. Попробуйте ещё раз';
-  if (message.includes('Invalid login credentials')) return 'Неверный email или пароль';
-  if (message.includes('Email not confirmed')) return 'Подтвердите email — проверьте почту';
-  return friendlyError(e, 'Не удалось войти. Попробуйте ещё раз');
+  if (!message) return t('auth_login.5');
+  if (message.includes('Invalid login credentials')) return t('auth_login.6');
+  if (message.includes('Email not confirmed')) return t('auth_login.7');
+  return friendlyError(e, t('auth_login.5'));
 }
 
 const styles = StyleSheet.create({

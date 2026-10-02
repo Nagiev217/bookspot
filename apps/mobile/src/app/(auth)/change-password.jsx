@@ -10,6 +10,7 @@ import { changeMyPassword } from '@/utils/supabase/profile';
 import { useAuthStore } from '@/utils/auth/store';
 import { friendlyError } from '@/utils/errors';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
+import { t } from '@/utils/i18n';
 
 export default function ChangePassword() {
   const setAuth = useAuthStore((s) => s.setAuth);
@@ -20,15 +21,15 @@ export default function ChangePassword() {
 
   async function handleSave() {
     setError(null);
-    if (password.length < 8) return setError('Пароль должен быть не короче 8 символов');
-    if (password !== repeat) return setError('Пароли не совпадают');
+    if (password.length < 8) return setError(t('auth_change_password.1'));
+    if (password !== repeat) return setError(t('auth_change_password.2'));
     setBusy(true);
     try {
       await changeMyPassword(password);
       setAuth({ mustChangePassword: false });
       router.replace('/');
     } catch (e) {
-      setError(friendlyError(e, 'Не удалось сменить пароль'));
+      setError(friendlyError(e, t('auth_change_password.3')));
     } finally {
       setBusy(false);
     }
@@ -41,12 +42,12 @@ export default function ChangePassword() {
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.title}>Придумайте пароль</Text>
-      <Text style={styles.subtitle}>Вы вошли по временному паролю. Задайте свой — его будете знать только вы.</Text>
+      <Text style={styles.title}>{t('auth_change_password.4')}</Text>
+      <Text style={styles.subtitle}>{t('auth_change_password.5')}</Text>
 
       <TextInput
         style={styles.input}
-        placeholder="Новый пароль"
+        placeholder={t('auth_change_password.6')}
         placeholderTextColor={COLORS.sub}
         secureTextEntry
         autoCapitalize="none"
@@ -55,7 +56,7 @@ export default function ChangePassword() {
       />
       <TextInput
         style={styles.input}
-        placeholder="Повторите пароль"
+        placeholder={t('auth_change_password.7')}
         placeholderTextColor={COLORS.sub}
         secureTextEntry
         autoCapitalize="none"
@@ -66,11 +67,11 @@ export default function ChangePassword() {
       {error && <Text style={styles.error}>{error}</Text>}
 
       <PressableScale style={styles.button} onPress={handleSave} disabled={busy}>
-        {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.buttonText}>Сохранить пароль</Text>}
+        {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.buttonText}>{t('auth_change_password.8')}</Text>}
       </PressableScale>
 
       <PressableScale onPress={handleSignOut}>
-        <Text style={styles.backLink}>Выйти</Text>
+        <Text style={styles.backLink}>{t('common.15')}</Text>
       </PressableScale>
     </View>
   );

@@ -13,10 +13,10 @@ import { useAuthStore } from '@/utils/auth/store';
 import { registerForPush } from '@/utils/notifications';
 import { friendlyError } from '@/utils/errors';
 import PressableScale from '@/components/PressableScale';
+import { dowShort, dayMonth } from '@/utils/i18n/dates';
+import { t, tn } from '@/utils/i18n';
 
-const STEP_TITLES = ['Выберите услугу', 'Выберите мастера', 'Выберите дату', 'Выберите время'];
-const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+const stepTitles = () => [t('booking_idx.1'), t('booking_idx.2'), t('booking_idx.3'), t('common.50')];
 const DAYS_WINDOW = 14;
 
 // Азербайджан — UTC+4 без перехода на летнее время (см. shared/time.js);
@@ -36,9 +36,8 @@ function dowOf(iso) {
 function formatBakuDateTime(isoUtc) {
   const d = new Date(new Date(isoUtc).getTime() + 4 * 3600000);
   return {
-    dow: DOW[d.getUTCDay()],
-    day: d.getUTCDate(),
-    month: MONTHS[d.getUTCMonth()],
+    dow: dowShort(d.getUTCDay()),
+    date: dayMonth(d.getUTCDate(), d.getUTCMonth()),
     time: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
   };
 }
@@ -78,7 +77,7 @@ export default function Booking() {
             }
           }
         })
-        .catch((e) => !cancelled && setError(friendlyError(e, 'Не удалось загрузить данные')))
+        .catch((e) => !cancelled && setError(friendlyError(e, t('booking_idx.4'))))
         .finally(() => !cancelled && setLoading(false));
       return () => {
         cancelled = true;
@@ -114,7 +113,7 @@ export default function Booking() {
           setSelectedDate(firstFree || bakuToday());
         }
       })
-      .catch((e) => setAvailError(friendlyError(e, 'Не удалось загрузить свободное время')))
+      .catch((e) => setAvailError(friendlyError(e, t('common.51'))))
       .finally(() => setAvailLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [master?.id, service?.id]);
@@ -133,7 +132,7 @@ export default function Booking() {
   if (error || !business || services.length === 0) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{error || 'В этом салоне пока нет услуг'}</Text>
+        <Text style={styles.errorText}>{error || t('booking_idx.5')}</Text>
       </View>
     );
   }
@@ -173,12 +172,12 @@ export default function Booking() {
         setConfirmed(booking);
       } catch (e) {
         if (e.code === '23P01') {
-          setConfirmError('Этот слот только что заняли — выберите другое время.');
+          setConfirmError(t('common.52'));
           setTime(null);
           setAvailability(null); // перезагрузится при возврате на шаг 3→4
           setStep(3);
         } else {
-          setConfirmError(friendlyError(e, 'Не удалось создать бронь'));
+          setConfirmError(friendlyError(e, t('booking_idx.6')));
         }
       } finally {
         setConfirming(false);
@@ -200,9 +199,8 @@ export default function Booking() {
             <ArrowLeft size={17} color={COLORS.ink} />
           </PressableScale>
           <View style={{ flex: 1 }}>
-            <Text style={styles.stepTitle}>{STEP_TITLES[step - 1]}</Text>
-            <Text style={styles.stepSub}>
-              Шаг {step} из 4 · {business.name}
+            <Text style={styles.stepTitle}>{stepTitles()[step - 1]}</Text>
+            <Text style={styles.stepSub}>{t('common.53')}{' '}{step}{' '}{t('common.54')}{' '}{business.name}
             </Text>
           </View>
         </View>
@@ -222,7 +220,7 @@ export default function Booking() {
               <PressableScale key={v.id} style={[styles.row, serviceIdx === i && styles.rowActive]} onPress={() => setServiceIdx(i)}>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.rowName}>{v.name}</Text>
-                  <Text style={styles.rowSub}>{v.duration_min} мин</Text>
+                  <Text style={styles.rowSub}>{v.duration_min}{' '}{t('common.55')}</Text>
                 </View>
                 <Text style={styles.rowPrice}>{v.price} ₼</Text>
               </PressableScale>
@@ -233,7 +231,7 @@ export default function Booking() {
         {step === 2 && (
           <View style={{ gap: SPACING.sm }}>
             {masters.length === 0 ? (
-              <Text style={styles.rowSub}>В этом салоне пока нет мастеров.</Text>
+              <Text style={styles.rowSub}>{t('booking_idx.7')}</Text>
             ) : (
               masters.map((m, i) => (
                 <PressableScale key={m.id} style={[styles.row, masterIdx === i && styles.rowActive]} onPress={() => setMasterIdx(i)}>
@@ -268,10 +266,10 @@ export default function Booking() {
                       setTime(null);
                     }}
                   >
-                    <Text style={[styles.dateDow, on && styles.dateTextActive]}>{DOW[dowOf(iso)]}</Text>
+                    <Text style={[styles.dateDow, on && styles.dateTextActive]}>{dowShort(dowOf(iso))}</Text>
                     <Text style={[styles.dateNum, on && styles.dateTextActive, off && styles.dateTextOff]}>{iso.slice(8, 10)}</Text>
                     <Text style={[styles.dateFree, on && styles.dateTextActive, off && styles.dateTextOff]}>
-                      {off ? '—' : `${count} слот${count === 1 ? '' : count < 5 ? 'а' : 'ов'}`}
+                      {off ? '—' : tn('plural.slots', count)}
                     </Text>
                   </PressableScale>
                 );
@@ -281,7 +279,7 @@ export default function Booking() {
 
         {step === 4 &&
           (timesForSelected.length === 0 ? (
-            <Text style={styles.rowSub}>На этот день свободного времени не осталось.</Text>
+            <Text style={styles.rowSub}>{t('common.56')}</Text>
           ) : (
             <View style={styles.timeGrid}>
               {timesForSelected.map((t) => {
@@ -299,7 +297,7 @@ export default function Booking() {
       <View style={styles.ctaBar}>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryText} numberOfLines={1}>
-            {[service.name, master?.name, step >= 3 ? selectedDate : null, time].filter(Boolean).join(' · ') || 'Выберите услугу'}
+            {[service.name, master?.name, step >= 3 ? selectedDate : null, time].filter(Boolean).join(' · ') || t('booking_idx.1')}
           </Text>
           <Text style={styles.summaryPrice}>{service.price} ₼</Text>
         </View>
@@ -311,7 +309,7 @@ export default function Booking() {
           {confirming ? (
             <ActivityIndicator color={COLORS.white} />
           ) : (
-            <Text style={[styles.ctaText, !canNext && styles.ctaTextOff]}>{step === 4 ? 'Подтвердить запись' : 'Далее'}</Text>
+            <Text style={[styles.ctaText, !canNext && styles.ctaTextOff]}>{step === 4 ? t('booking_idx.11') : t('common.57')}</Text>
           )}
         </PressableScale>
       </View>
@@ -329,9 +327,9 @@ function ConfirmScreen({ business, tint, booking, onDone }) {
 
   const start = formatBakuDateTime(booking.starts_at);
   const receipt = [
-    { k: 'Услуга', v: booking.service_name },
-    { k: 'Дата', v: `${start.dow}, ${start.day} ${start.month}` },
-    { k: 'Время', v: start.time },
+    { k: t('common.58'), v: booking.service_name },
+    { k: t('common.59'), v: `${start.dow}, ${start.date}` },
+    { k: t('common.60'), v: start.time },
   ];
 
   return (
@@ -340,10 +338,8 @@ function ConfirmScreen({ business, tint, booking, onDone }) {
         <Clock size={30} color={COLORS.indigo} strokeWidth={2.2} />
       </View>
       {/* С 0029 запись подтверждает мастер — до его ответа это заявка. */}
-      <Text style={styles.confirmTitle}>Заявка отправлена</Text>
-      <Text style={styles.confirmSub}>
-        Мастер подтвердит запись в течение 2 часов — пришлём уведомление. Время за вами держится. Оплата на месте.
-      </Text>
+      <Text style={styles.confirmTitle}>{t('booking_idx.12')}</Text>
+      <Text style={styles.confirmSub}>{t('booking_idx.13')}</Text>
 
       <View style={styles.receiptCard}>
         <View style={styles.receiptHeader}>
@@ -365,14 +361,14 @@ function ConfirmScreen({ business, tint, booking, onDone }) {
         ))}
         <View style={styles.divider} />
         <View style={[styles.receiptRow, styles.receiptTotal]}>
-          <Text style={styles.rowName}>Итого</Text>
+          <Text style={styles.rowName}>{t('booking_idx.14')}</Text>
           <Text style={styles.confirmPrice}>{booking.price} ₼</Text>
         </View>
       </View>
 
       <View style={{ flex: 1 }} />
       <PressableScale style={styles.ctaButton} onPress={onDone}>
-        <Text style={styles.ctaText}>Готово</Text>
+        <Text style={styles.ctaText}>{t('booking_idx.15')}</Text>
       </PressableScale>
     </View>
   );

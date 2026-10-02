@@ -8,6 +8,8 @@ import CredentialsCard from '@/components/CredentialsCard';
 import { listCategories } from '@/utils/supabase/catalog';
 import { createBusinessWithOwner, bakuTodayISO, addMonthsISO, formatDateRu } from '@/utils/supabase/admin';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
+import { t, categoryName } from '@/utils/i18n';
+import { friendlyError } from '@/utils/errors';
 
 const PERIODS = [1, 3, 6, 12];
 
@@ -15,7 +17,7 @@ export default function AdminCreateBusiness() {
   const [categories, setCategories] = useState([]);
   const [categoryId, setCategoryId] = useState(null);
   const [name, setName] = useState('');
-  const [city, setCity] = useState('Баку');
+  const [city, setCity] = useState(t('common.1'));
   const [district, setDistrict] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
@@ -46,11 +48,11 @@ export default function AdminCreateBusiness() {
 
   async function handleSubmit() {
     setError(null);
-    if (!categoryId) return setError('Выберите категорию');
-    if (name.trim().length < 2) return setError('Введите название салона');
-    if (!city.trim()) return setError('Введите город');
-    if (!ownerName.trim()) return setError('Введите имя владельца');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail.trim())) return setError('Введите email владельца');
+    if (!categoryId) return setError(t('admin_tabs_create.1'));
+    if (name.trim().length < 2) return setError(t('admin_tabs_create.2'));
+    if (!city.trim()) return setError(t('common.2'));
+    if (!ownerName.trim()) return setError(t('admin_tabs_create.3'));
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail.trim())) return setError(t('admin_tabs_create.4'));
 
     setBusy(true);
     try {
@@ -68,7 +70,7 @@ export default function AdminCreateBusiness() {
       });
       setResult({ ...res, businessName: name.trim(), ownerName: ownerName.trim(), ownerPhone: ownerPhone.trim() || phone.trim() || null });
     } catch (e) {
-      setError(e.message || 'Не удалось создать салон');
+      setError(friendlyError(e, t('admin_tabs_create.5')));
     } finally {
       setBusy(false);
     }
@@ -77,12 +79,11 @@ export default function AdminCreateBusiness() {
   if (result) {
     return (
       <ScrollView contentContainerStyle={styles.screen}>
-        <Text style={styles.title}>Салон создан</Text>
+        <Text style={styles.title}>{t('admin_tabs_create.6')}</Text>
         <Text style={styles.subtitle}>
-          «{result.businessName}» — подписка до {formatDateRu(paidUntil)}. Отправьте владельцу данные для входа.
-        </Text>
+          «{result.businessName}{t('admin_tabs_create.7')}{' '}{formatDateRu(paidUntil)}{t('admin_tabs_create.8')}</Text>
         <CredentialsCard
-          title="Аккаунт владельца"
+          title={t('admin_tabs_create.9')}
           name={result.ownerName}
           email={result.email}
           password={result.password}
@@ -90,10 +91,10 @@ export default function AdminCreateBusiness() {
           businessName={result.businessName}
         />
         <PressableScale style={styles.secondary} onPress={() => router.push(`/admin-business/${result.businessId}`)}>
-          <Text style={styles.secondaryText}>Открыть карточку салона</Text>
+          <Text style={styles.secondaryText}>{t('admin_tabs_create.10')}</Text>
         </PressableScale>
         <PressableScale style={styles.secondary} onPress={reset}>
-          <Text style={styles.secondaryText}>Создать ещё один</Text>
+          <Text style={styles.secondaryText}>{t('admin_tabs_create.11')}</Text>
         </PressableScale>
       </ScrollView>
     );
@@ -101,38 +102,38 @@ export default function AdminCreateBusiness() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Новый салон</Text>
+      <Text style={styles.title}>{t('common.3')}</Text>
 
-      <Text style={styles.section}>Салон</Text>
-      <Text style={styles.label}>Категория</Text>
+      <Text style={styles.section}>{t('common.4')}</Text>
+      <Text style={styles.label}>{t('common.5')}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
         {categories.map((c) => (
           <PressableScale key={c.id} style={[styles.chip, categoryId === c.id && styles.chipActive]} onPress={() => setCategoryId(c.id)}>
-            <Text style={[styles.chipText, categoryId === c.id && styles.chipTextActive]}>{c.name_ru}</Text>
+            <Text style={[styles.chipText, categoryId === c.id && styles.chipTextActive]}>{categoryName(c)}</Text>
           </PressableScale>
         ))}
       </ScrollView>
-      <TextInput style={styles.input} placeholder="Название салона" placeholderTextColor={COLORS.sub} value={name} onChangeText={setName} />
-      <TextInput style={styles.input} placeholder="Город" placeholderTextColor={COLORS.sub} value={city} onChangeText={setCity} />
-      <TextInput style={styles.input} placeholder="Район" placeholderTextColor={COLORS.sub} value={district} onChangeText={setDistrict} />
-      <TextInput style={styles.input} placeholder="Адрес" placeholderTextColor={COLORS.sub} value={address} onChangeText={setAddress} />
-      <TextInput style={styles.input} placeholder="Телефон салона" placeholderTextColor={COLORS.sub} keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
+      <TextInput style={styles.input} placeholder={t('admin_tabs_create.12')} placeholderTextColor={COLORS.sub} value={name} onChangeText={setName} />
+      <TextInput style={styles.input} placeholder={t('common.6')} placeholderTextColor={COLORS.sub} value={city} onChangeText={setCity} />
+      <TextInput style={styles.input} placeholder={t('common.7')} placeholderTextColor={COLORS.sub} value={district} onChangeText={setDistrict} />
+      <TextInput style={styles.input} placeholder={t('common.8')} placeholderTextColor={COLORS.sub} value={address} onChangeText={setAddress} />
+      <TextInput style={styles.input} placeholder={t('admin_tabs_create.13')} placeholderTextColor={COLORS.sub} keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
 
-      <Text style={styles.section}>Подписка</Text>
+      <Text style={styles.section}>{t('common.9')}</Text>
       <View style={styles.chipRowWrap}>
         {PERIODS.map((m) => (
           <PressableScale key={m} style={[styles.chip, months === m && styles.chipActive]} onPress={() => setMonths(m)}>
-            <Text style={[styles.chipText, months === m && styles.chipTextActive]}>{m} мес.</Text>
+            <Text style={[styles.chipText, months === m && styles.chipTextActive]}>{m}{' '}{t('common.10')}</Text>
           </PressableScale>
         ))}
       </View>
-      <Text style={styles.hint}>Оплачено до {formatDateRu(paidUntil)}</Text>
+      <Text style={styles.hint}>{t('admin_tabs_create.14')}{' '}{formatDateRu(paidUntil)}</Text>
 
-      <Text style={styles.section}>Владелец</Text>
-      <TextInput style={styles.input} placeholder="Имя" placeholderTextColor={COLORS.sub} value={ownerName} onChangeText={setOwnerName} />
+      <Text style={styles.section}>{t('common.11')}</Text>
+      <TextInput style={styles.input} placeholder={t('common.12')} placeholderTextColor={COLORS.sub} value={ownerName} onChangeText={setOwnerName} />
       <TextInput
         style={styles.input}
-        placeholder="Email — будет логином"
+        placeholder={t('admin_tabs_create.15')}
         placeholderTextColor={COLORS.sub}
         autoCapitalize="none"
         keyboardType="email-address"
@@ -141,7 +142,7 @@ export default function AdminCreateBusiness() {
       />
       <TextInput
         style={styles.input}
-        placeholder="WhatsApp владельца (+994…)"
+        placeholder={t('admin_tabs_create.16')}
         placeholderTextColor={COLORS.sub}
         keyboardType="phone-pad"
         value={ownerPhone}
@@ -151,7 +152,7 @@ export default function AdminCreateBusiness() {
       {error && <Text style={styles.error}>{error}</Text>}
 
       <PressableScale style={styles.button} onPress={handleSubmit} disabled={busy}>
-        {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.buttonText}>Создать салон и аккаунт</Text>}
+        {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.buttonText}>{t('admin_tabs_create.17')}</Text>}
       </PressableScale>
     </ScrollView>
   );

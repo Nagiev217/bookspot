@@ -8,6 +8,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { WifiOff } from 'lucide-react-native';
 import { COLORS, SPACING, FONT, TEXT_SIZE } from '@/theme/tokens';
+import { t } from '@/utils/i18n';
 
 export default function OfflineBanner() {
   const [offline, setOffline] = useState(false);
@@ -26,7 +27,7 @@ export default function OfflineBanner() {
   return (
     <View style={styles.banner}>
       <WifiOff size={14} color={COLORS.white} />
-      <Text style={styles.text}>Нет подключения к интернету</Text>
+      <Text style={styles.text}>{t('components_OfflineBanner.1')}</Text>
     </View>
   );
 }

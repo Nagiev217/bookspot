@@ -2,6 +2,8 @@
 // идёт через Edge Function manage-accounts (там service_role); подписка и
 // блокировка — через admin-RPC из 0022, которые сами проверяют роль.
 import { supabase } from './config';
+import { dayMonthShort } from '@/utils/i18n/dates';
+import { t } from '@/utils/i18n';
 
 // supabase.functions.invoke на не-2xx кладёт тело ответа в error.context —
 // достаём оттуда понятный русский текст, который вернула функция.
@@ -78,17 +80,16 @@ export function daysLeft(paidUntil) {
 
 // { label, tone } для бейджа подписки: tone = 'ok' | 'warn' | 'off'.
 export function subscriptionBadge({ status, paid_until: paidUntil }) {
-  if (status === 'blocked') return { label: 'Заблокирован', tone: 'off' };
-  if (!paidUntil) return { label: 'Без подписки', tone: 'ok' };
+  if (status === 'blocked') return { label: t('utils_supabase_admin.1'), tone: 'off' };
+  if (!paidUntil) return { label: t('utils_supabase_admin.2'), tone: 'ok' };
   const left = daysLeft(paidUntil);
   const date = formatDateRu(paidUntil);
-  if (left < 0) return { label: `Истекла ${date}`, tone: 'off' };
-  if (left <= 5) return { label: `До ${date} · осталось ${left} дн.`, tone: 'warn' };
-  return { label: `Активна до ${date}`, tone: 'ok' };
+  if (left < 0) return { label: t('utils_supabase_admin.3', { date }), tone: 'off' };
+  if (left <= 5) return { label: t('utils_supabase_admin.4', { date, left }), tone: 'warn' };
+  return { label: t('utils_supabase_admin.5', { date }), tone: 'ok' };
 }
 
-const MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 export function formatDateRu(iso) {
   const [y, m, d] = iso.split('-').map(Number);
-  return `${d} ${MONTHS[m - 1]} ${y}`;
+  return `${dayMonthShort(d, m - 1)} ${y}`;
 }

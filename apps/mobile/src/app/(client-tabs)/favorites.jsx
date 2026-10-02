@@ -13,6 +13,8 @@ import { useAuthStore } from '@/utils/auth/store';
 import { listFavoriteBusinesses } from '@/utils/supabase/favorites';
 import { useReducedMotion } from '@/utils/useReducedMotion';
 import SignInPrompt from '@/components/SignInPrompt';
+import { t } from '@/utils/i18n';
+import { friendlyError } from '@/utils/errors';
 
 export default function Favorites() {
   const uid = useAuthStore((s) => s.uid);
@@ -36,7 +38,7 @@ export default function Favorites() {
         setBusinesses(data);
         loadedOnce.current = true;
       })
-      .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить избранное'))
+      .catch((e) => !cancelled && setError(friendlyError(e, t('client_tabs_favorites.1'))))
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
@@ -62,10 +64,10 @@ export default function Favorites() {
   if (!uid) {
     return (
       <View style={styles.screen}>
-        <Text style={styles.title}>Избранное</Text>
+        <Text style={styles.title}>{t('common.43')}</Text>
         <SignInPrompt
-          title="Войдите, чтобы сохранять салоны"
-          subtitle="Избранное синхронизируется с вашим аккаунтом."
+          title={t('client_tabs_favorites.2')}
+          subtitle={t('client_tabs_favorites.3')}
           redirect="/(client-tabs)/favorites"
         />
       </View>
@@ -74,13 +76,13 @@ export default function Favorites() {
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.title}>Избранное</Text>
+      <Text style={styles.title}>{t('common.43')}</Text>
       {error && <Text style={styles.errorText}>{error}</Text>}
       {businesses.length === 0 ? (
         <View style={styles.center}>
           <View style={styles.icon} />
-          <Text style={styles.emptyTitle}>Пока пусто</Text>
-          <Text style={styles.emptySubtitle}>Нажмите на сердечко на странице салона, чтобы добавить его сюда.</Text>
+          <Text style={styles.emptyTitle}>{t('client_tabs_favorites.4')}</Text>
+          <Text style={styles.emptySubtitle}>{t('client_tabs_favorites.5')}</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
@@ -91,7 +93,7 @@ export default function Favorites() {
                   {b.logo_url ? (
                     <Image source={{ uri: b.logo_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                   ) : (
-                    <Text style={styles.photoLabel}>ФОТО</Text>
+                    <Text style={styles.photoLabel}>{t('common.44')}</Text>
                   )}
                 </View>
                 <Text style={styles.cardName}>{b.name}</Text>

@@ -6,14 +6,15 @@ import { MessageCircle, Share2 } from 'lucide-react-native';
 import PressableScale from '@/components/PressableScale';
 import { whatsappUrl } from '@/utils/contact';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
+import { t } from '@/utils/i18n';
 
 export function credentialsMessage({ name, email, password, businessName }) {
   return [
-    `Здравствуйте${name ? `, ${name}` : ''}!`,
-    businessName ? `Ваш доступ к BookSpot для «${businessName}»:` : 'Ваш доступ к BookSpot:',
-    `Логин: ${email}`,
-    `Временный пароль: ${password}`,
-    'При первом входе приложение попросит придумать свой пароль.',
+    t('components_CredentialsCard.1', { p0: name ? `, ${name}` : '' }),
+    businessName ? t('components_CredentialsCard.2', { businessName }) : t('components_CredentialsCard.3'),
+    t('components_CredentialsCard.4', { email }),
+    t('components_CredentialsCard.5', { password }),
+    t('components_CredentialsCard.6'),
   ].join('\n');
 }
 
@@ -24,7 +25,7 @@ export default function CredentialsCard({ title, name, email, password, phone, b
     try {
       await Linking.openURL(whatsappUrl(message, phone));
     } catch {
-      Alert.alert('WhatsApp не открылся', 'Отправьте данные через «Поделиться».');
+      Alert.alert(t('common.36'), t('components_CredentialsCard.7'));
     }
   }
 
@@ -32,22 +33,22 @@ export default function CredentialsCard({ title, name, email, password, phone, b
     <View style={styles.card}>
       <Text style={styles.title}>{title}</Text>
       <View style={styles.row}>
-        <Text style={styles.key}>Логин</Text>
+        <Text style={styles.key}>{t('components_CredentialsCard.8')}</Text>
         <Text style={styles.value} selectable>{email}</Text>
       </View>
       <View style={styles.row}>
-        <Text style={styles.key}>Временный пароль</Text>
+        <Text style={styles.key}>{t('components_CredentialsCard.9')}</Text>
         <Text style={[styles.value, styles.password]} selectable>{password}</Text>
       </View>
-      <Text style={styles.hint}>Пароль показывается один раз. Если потеряется — сбросьте его, появится новый.</Text>
+      <Text style={styles.hint}>{t('components_CredentialsCard.10')}</Text>
 
       <PressableScale style={styles.waButton} onPress={sendWhatsapp}>
         <MessageCircle size={18} color={COLORS.white} />
-        <Text style={styles.waText}>Отправить в WhatsApp</Text>
+        <Text style={styles.waText}>{t('components_CredentialsCard.11')}</Text>
       </PressableScale>
       <PressableScale style={styles.shareButton} onPress={() => Share.share({ message })}>
         <Share2 size={16} color={COLORS.ink} />
-        <Text style={styles.shareText}>Поделиться или скопировать</Text>
+        <Text style={styles.shareText}>{t('components_CredentialsCard.12')}</Text>
       </PressableScale>
     </View>
   );

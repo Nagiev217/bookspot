@@ -4,7 +4,7 @@
 import { supabase } from './config';
 
 export async function listCategories() {
-  const { data, error } = await supabase.from('categories').select('id, name_ru, icon, parent_id').order('id');
+  const { data, error } = await supabase.from('categories').select('id, name_az, name_ru, name_en, icon, parent_id').order('id');
   if (error) throw error;
   return data;
 }

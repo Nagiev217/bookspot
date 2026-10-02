@@ -13,9 +13,10 @@ import { daysLeft, formatDateRu } from '@/utils/supabase/admin';
 import { PARTNER_WHATSAPP, hasPartnerWhatsapp, whatsappUrl } from '@/utils/contact';
 import { bakuToday } from '@/components/DateTimeGrid';
 import PressableScale from '@/components/PressableScale';
+import { dowFull, dayMonth } from '@/utils/i18n/dates';
+import { t } from '@/utils/i18n';
+import { friendlyError } from '@/utils/errors';
 
-const DOW_FULL = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
-const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 
 function formatTime(isoUtc) {
   const d = new Date(new Date(isoUtc).getTime() + 4 * 3600000);
@@ -26,7 +27,7 @@ function localDateOf(isoUtc) {
 }
 function formatDateLabel(iso) {
   const d = new Date(`${iso}T00:00:00Z`);
-  return `${DOW_FULL[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+  return `${dowFull(d.getUTCDay())}, ${dayMonth(d.getUTCDate(), d.getUTCMonth())}`;
 }
 
 export default function BusinessToday() {
@@ -90,7 +91,7 @@ export default function BusinessToday() {
             setNextDay(null);
           }
         })
-        .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить'))
+        .catch((e) => !cancelled && setError(friendlyError(e, t('common.20'))))
         .finally(() => !cancelled && setLoading(false));
       return () => {
         cancelled = true;
@@ -99,7 +100,7 @@ export default function BusinessToday() {
   );
 
   const todayDate = new Date(Date.now() + 4 * 3600000);
-  const dateLabel = `${DOW_FULL[todayDate.getUTCDay()]}, ${todayDate.getUTCDate()} ${MONTHS[todayDate.getUTCMonth()]}`;
+  const dateLabel = `${dowFull(todayDate.getUTCDay())}, ${dayMonth(todayDate.getUTCDate(), todayDate.getUTCMonth())}`;
   const revenue = todayBookings.reduce((sum, b) => sum + Number(b.price), 0);
   const showingNextDay = todayBookings.length === 0 && !!nextDay;
   const bookings = showingNextDay ? nextDay.bookings : todayBookings;
@@ -111,12 +112,12 @@ export default function BusinessToday() {
     left === null || left > 5
       ? null
       : left < 0
-        ? { expired: true, title: `Подписка закончилась ${formatDateRu(business.paid_until)} — салон скрыт из каталога` }
-        : { expired: false, title: `Подписка до ${formatDateRu(business.paid_until)} · осталось ${left} дн.` };
+        ? { expired: true, title: t('business_tabs_index.1', { p0: formatDateRu(business.paid_until) }) }
+        : { expired: false, title: t('business_tabs_index.2', { p0: formatDateRu(business.paid_until), left }) };
 
   async function openPartnerWhatsapp() {
     if (!hasPartnerWhatsapp()) return;
-    Linking.openURL(whatsappUrl(`Здравствуйте! Хочу продлить подписку для «${business?.name}».`, PARTNER_WHATSAPP)).catch(() => {});
+    Linking.openURL(whatsappUrl(t('business_tabs_index.3', { p0: business?.name }), PARTNER_WHATSAPP)).catch(() => {});
   }
 
   if (loading) {
@@ -129,7 +130,7 @@ export default function BusinessToday() {
   if (error || !businessId) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{error || 'Нет доступа к бизнесу — войдите под аккаунтом владельца'}</Text>
+        <Text style={styles.errorText}>{error || t('common.25')}</Text>
       </View>
     );
   }
@@ -147,26 +148,24 @@ export default function BusinessToday() {
       <View style={styles.kpiRow}>
         <View style={styles.kpiCard}>
           <Text style={styles.kpiValue}>{todayBookings.length}</Text>
-          <Text style={styles.kpiLabel}>Записей сегодня</Text>
+          <Text style={styles.kpiLabel}>{t('business_tabs_index.4')}</Text>
         </View>
         <View style={styles.kpiCard}>
           <Text style={styles.kpiValue}>{revenue} ₼</Text>
-          <Text style={styles.kpiLabel}>Выручка</Text>
+          <Text style={styles.kpiLabel}>{t('business_tabs_index.5')}</Text>
         </View>
       </View>
 
       {business && !business.published_at && (
         isOwner ? (
           <PressableScale style={styles.setupBanner} onPress={() => router.push(`/salon-setup/${businessId}`)}>
-            <Text style={styles.setupTitle}>Салон не виден клиентам</Text>
-            <Text style={styles.setupText}>
-              Завершите настройку{setupDone !== null ? ` (${setupDone}/5)` : ''} и опубликуйте салон
-            </Text>
+            <Text style={styles.setupTitle}>{t('business_tabs_index.6')}</Text>
+            <Text style={styles.setupText}>{t('business_tabs_index.7')}{setupDone !== null ? ` (${setupDone}/5)` : ''}{' '}{t('business_tabs_index.8')}</Text>
           </PressableScale>
         ) : (
           <View style={styles.setupBanner}>
-            <Text style={styles.setupTitle}>Салон ещё настраивается владельцем</Text>
-            <Text style={styles.setupText}>Записи появятся после публикации</Text>
+            <Text style={styles.setupTitle}>{t('business_tabs_index.9')}</Text>
+            <Text style={styles.setupText}>{t('business_tabs_index.10')}</Text>
           </View>
         )
       )}
@@ -174,7 +173,7 @@ export default function BusinessToday() {
       {isOwner && subscription && (
         <PressableScale style={[styles.subBanner, subscription.expired && styles.subBannerOff]} onPress={openPartnerWhatsapp}>
           <Text style={[styles.subTitle, subscription.expired && { color: COLORS.danger }]}>{subscription.title}</Text>
-          <Text style={styles.subText}>Продлите подписку в WhatsApp</Text>
+          <Text style={styles.subText}>{t('business_tabs_index.11')}</Text>
         </PressableScale>
       )}
 
@@ -182,7 +181,7 @@ export default function BusinessToday() {
           только своё расписание (0022). */}
       {isOwner && (
         <PressableScale style={styles.quickButton} onPress={() => router.push(`/manual-booking/${businessId}`)}>
-          <Text style={styles.quickButtonText}>+ Запись вручную</Text>
+          <Text style={styles.quickButtonText}>{t('business_tabs_index.12')}</Text>
         </PressableScale>
       )}
 
@@ -190,24 +189,24 @@ export default function BusinessToday() {
       {requests.length > 0 && (
         <>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Заявки · {requests.length}</Text>
+            <Text style={styles.sectionTitle}>{t('business_tabs_index.13')}{' '}{requests.length}</Text>
           </View>
           {requests.map((r) => {
             const pending = r.status === 'pending';
             return (
               <PressableScale key={r.id} style={[styles.requestCard, pending && styles.requestCardPending]} onPress={() => router.push(`/booking-request/${r.id}`)}>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.agendaClient}>{r.client_name || 'Клиент'}</Text>
+                  <Text style={styles.agendaClient}>{r.client_name || t('common.32')}</Text>
                   <Text style={styles.agendaService}>
                     {r.service_name} · {formatDateLabel(localDateOf(r.starts_at))}, {formatTime(r.starts_at)}
                   </Text>
                   <Text style={[styles.requestHint, pending && { color: COLORS.warning }]}>
                     {pending
-                      ? `Ответьте до ${formatTime(r.expires_at)}${r.masters?.name ? ` · ${r.masters.name}` : ''}`
-                      : `Ждём ответа клиента на ваше время`}
+                      ? t('business_tabs_index.14', { p0: formatTime(r.expires_at), p1: r.masters?.name ? ` · ${r.masters.name}` : '' })
+                      : t('business_tabs_index.15')}
                   </Text>
                 </View>
-                <Text style={[styles.requestAction, !pending && { color: COLORS.sub }]}>{pending ? 'Ответить' : 'Открыть'}</Text>
+                <Text style={[styles.requestAction, !pending && { color: COLORS.sub }]}>{pending ? t('business_tabs_index.16') : t('business_tabs_index.17')}</Text>
               </PressableScale>
             );
           })}
@@ -216,22 +215,22 @@ export default function BusinessToday() {
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>
-          {showingNextDay ? `Ближайшая запись — ${formatDateLabel(nextDay.date)}` : 'Расписание на сегодня'}
+          {showingNextDay ? t('business_tabs_index.18', { p0: formatDateLabel(nextDay.date) }) : t('business_tabs_index.19')}
         </Text>
         <PressableScale onPress={() => router.push('/(business-tabs)/calendar')}>
-          <Text style={styles.sectionLink}>Календарь</Text>
+          <Text style={styles.sectionLink}>{t('common.33')}</Text>
         </PressableScale>
       </View>
 
       {bookings.length === 0 ? (
-        <Text style={styles.emptyText}>Записей пока нет.</Text>
+        <Text style={styles.emptyText}>{t('business_tabs_index.20')}</Text>
       ) : (
         bookings.map((b) => (
           <View key={b.id} style={styles.agendaRow}>
             <Text style={styles.agendaTime}>{formatTime(b.starts_at)}</Text>
             <View style={styles.agendaCard}>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.agendaClient}>{b.client_name || 'Без имени'}</Text>
+                <Text style={styles.agendaClient}>{b.client_name || t('common.22')}</Text>
                 <Text style={styles.agendaService}>{b.service_name}</Text>
               </View>
               <Text style={styles.agendaPrice}>{b.price} ₼</Text>

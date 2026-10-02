@@ -13,6 +13,7 @@ import StarBadge from '@/components/StarBadge';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { tintFor } from '@/utils/tint';
 import { getMasterPublic, listMasterServices, listMasterReviews, getBusiness } from '@/utils/supabase/catalog';
+import { t, tn } from '@/utils/i18n';
 
 function formatReviewDate(isoUtc) {
   const d = new Date(new Date(isoUtc).getTime() + 4 * 3600000);
@@ -20,21 +21,9 @@ function formatReviewDate(isoUtc) {
 }
 
 // 1 отзыв, 2–4 отзыва, 5+ и 11–14 отзывов.
-function reviewsLabel(n) {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return `${n} отзыв`;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} отзыва`;
-  return `${n} отзывов`;
-}
+const reviewsLabel = (n) => tn('plural.reviews', n);
 
-function yearsLabel(n) {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return `${n} год`;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} года`;
-  return `${n} лет`;
-}
+const yearsLabel = (n) => tn('plural.years', n);
 
 export default function MasterInfo() {
   const { masterId } = useLocalSearchParams();
@@ -62,7 +51,7 @@ export default function MasterInfo() {
           setReviews(r);
           setBusiness(b);
         })
-        .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить мастера'))
+        .catch((e) => !cancelled && setError(friendlyError(e, t('master_info_masterId.7'))))
         .finally(() => !cancelled && setLoading(false));
       return () => {
         cancelled = true;
@@ -80,7 +69,7 @@ export default function MasterInfo() {
   if (error || !master) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{error || 'Мастер не найден'}</Text>
+        <Text style={styles.errorText}>{error || t('master_info_masterId.8')}</Text>
       </View>
     );
   }
@@ -99,7 +88,7 @@ export default function MasterInfo() {
         {/* Обложка: фото мастера во всю ширину, как в макете. */}
         <View style={[styles.hero, { backgroundColor: tintFor(master.id)[0] }]}>
           {master.photo_url && <Image source={{ uri: master.photo_url }} style={styles.heroImg} contentFit="cover" />}
-          <PressableScale style={styles.backButton} onPress={() => router.back()} accessibilityLabel="Назад">
+          <PressableScale style={styles.backButton} onPress={() => router.back()} accessibilityLabel={t('common.40')}>
             <ArrowLeft size={17} color={COLORS.ink} />
           </PressableScale>
         </View>
@@ -121,7 +110,7 @@ export default function MasterInfo() {
           {(master.experience_years !== null || reviews.length > 0) && (
             <View style={styles.chipRow}>
               {master.experience_years !== null && (
-                <Text style={styles.chip}>Опыт {yearsLabel(master.experience_years)}</Text>
+                <Text style={styles.chip}>{t('master_info_masterId.9')}{' '}{yearsLabel(master.experience_years)}</Text>
               )}
               {reviews.length > 0 && <Text style={styles.chip}>{reviewsLabel(reviews.length)}</Text>}
             </View>
@@ -129,23 +118,23 @@ export default function MasterInfo() {
 
           {master.bio?.trim() ? (
             <>
-              <Text style={styles.sectionTitle}>О себе</Text>
+              <Text style={styles.sectionTitle}>{t('common.71')}</Text>
               <Text style={styles.about}>{master.bio.trim()}</Text>
             </>
           ) : null}
 
-          <Text style={styles.sectionTitle}>Услуги</Text>
+          <Text style={styles.sectionTitle}>{t('common.48')}</Text>
           {!master.active ? (
-            <Text style={styles.emptyText}>Мастер сейчас не принимает записи.</Text>
+            <Text style={styles.emptyText}>{t('master_info_masterId.10')}</Text>
           ) : services.length === 0 ? (
-            <Text style={styles.emptyText}>Пока нет услуг.</Text>
+            <Text style={styles.emptyText}>{t('common.72')}</Text>
           ) : (
             <View style={{ gap: SPACING.sm }}>
               {services.map((s) => (
                 <PressableScale key={s.id} style={styles.serviceRow} onPress={() => book(s.id)}>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.serviceName}>{s.name}</Text>
-                    <Text style={styles.serviceDur}>{s.duration_min} мин</Text>
+                    <Text style={styles.serviceDur}>{s.duration_min}{' '}{t('common.55')}</Text>
                   </View>
                   <Text style={styles.servicePrice}>{s.price} ₼</Text>
                 </PressableScale>
@@ -155,7 +144,7 @@ export default function MasterInfo() {
 
           {reviews.length > 0 && (
             <>
-              <Text style={styles.sectionTitle}>Отзывы</Text>
+              <Text style={styles.sectionTitle}>{t('common.73')}</Text>
               <View style={{ gap: SPACING.sm }}>
                 {reviews.slice(0, 10).map((r) => (
                   <View key={r.id} style={styles.reviewCard}>
@@ -176,7 +165,7 @@ export default function MasterInfo() {
       {canBook && (
         <View style={styles.ctaBar}>
           <PressableScale style={styles.ctaButton} onPress={() => book(services[0].id)}>
-            <Text style={styles.ctaText}>Записаться к мастеру</Text>
+            <Text style={styles.ctaText}>{t('master_info_masterId.11')}</Text>
           </PressableScale>
         </View>
       )}

@@ -230,6 +230,28 @@ async function main() {
     const sm = man.data?.[0]?.id && (await status(man.data[0].id));
     check('ручная запись владельца сразу confirmed', !man.error && sm?.status === 'confirmed', man.error?.message || sm?.status);
 
+    // ── 10. Push на языке получателя (0031): profiles.lang ──────────────
+    await client2.client.from('profiles').update({ lang: 'az' }).eq('id', client2.uid);
+    await staff.client.from('profiles').update({ lang: 'en' }).eq('id', staff.uid);
+    const r7 = await book(client2, mA.id, '09:00');
+    const b7 = r7.data?.[0]?.id;
+    const o7 = await outbox(b7);
+    const staffNote = o7.find((n) => n.user_id === staff.uid);
+    const ownerNote = o7.find((n) => n.user_id === owner.uid);
+    check(
+      'заявка: мастеру (en) — по-английски, владельцу (ru) — по-русски',
+      staffNote?.title === 'New request' && ownerNote?.title === 'Новая заявка',
+      JSON.stringify(o7)
+    );
+    await staff.client.rpc('accept_booking', { p_booking_id: b7 });
+    const o7b = await outbox(b7);
+    check(
+      'подтверждение и напоминание клиенту (az) — по-азербайджански',
+      o7b.some((n) => n.user_id === client2.uid && n.title === 'Yazılış təsdiqləndi') &&
+        o7b.some((n) => n.user_id === client2.uid && n.title === 'Yazılış xatırlatması'),
+      JSON.stringify(o7b.filter((n) => n.user_id === client2.uid))
+    );
+
     console.log(failed === 0 ? '\nВсе проверки пройдены.' : `\n${failed} проверок провалено.`);
   } finally {
     if (created.businessId) {

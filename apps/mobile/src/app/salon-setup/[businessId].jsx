@@ -9,37 +9,39 @@ import { ArrowLeft, Check, ChevronRight } from 'lucide-react-native';
 import PressableScale from '@/components/PressableScale';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { getSetupStatus, publishBusiness } from '@/utils/supabase/business';
+import { t } from '@/utils/i18n';
+import { friendlyError } from '@/utils/errors';
 
 function stepsFor(businessId, status) {
   return [
     {
       key: 'description',
-      title: 'Добавьте описание салона',
-      text: 'Пара предложений о салоне — от 30 символов. Клиенты увидят это в карточке.',
+      title: t('salon_setup_businessId.1'),
+      text: t('salon_setup_businessId.2'),
       href: `/business-settings/${businessId}`,
     },
     {
       key: 'photos',
-      title: `Добавьте фото салона (${status?.photos_count ?? 0}/5)`,
-      text: 'Интерьер и работы мастеров. Первое фото станет обложкой в каталоге.',
+      title: t('salon_setup_businessId.3', { p0: status?.photos_count ?? 0 }),
+      text: t('salon_setup_businessId.4'),
       href: `/business-photos/${businessId}`,
     },
     {
       key: 'masters',
-      title: 'Добавьте мастеров',
-      text: 'Кто принимает клиентов. Позже каждому можно выдать свой вход в приложение.',
+      title: t('salon_setup_businessId.5'),
+      text: t('salon_setup_businessId.6'),
       href: '/(business-tabs)/team',
     },
     {
       key: 'schedule',
-      title: 'Задайте расписание мастера',
-      text: 'Рабочие дни и часы — по ним клиенты видят свободное время. Откройте мастера в «Команде».',
+      title: t('salon_setup_businessId.7'),
+      text: t('salon_setup_businessId.8'),
       href: '/(business-tabs)/team',
     },
     {
       key: 'services',
-      title: 'Добавьте услуги',
-      text: 'Название, цена, длительность — и отметьте мастеров, которые её выполняют.',
+      title: t('salon_setup_businessId.9'),
+      text: t('salon_setup_businessId.10'),
       href: `/services/${businessId}`,
     },
   ];
@@ -59,7 +61,7 @@ export default function SalonSetupScreen() {
       let cancelled = false;
       getSetupStatus(businessId)
         .then((s) => !cancelled && setStatus(s))
-        .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить'))
+        .catch((e) => !cancelled && setError(friendlyError(e, t('common.20'))))
         .finally(() => !cancelled && setLoading(false));
       return () => {
         cancelled = true;
@@ -81,11 +83,11 @@ export default function SalonSetupScreen() {
     setError(null);
     try {
       await publishBusiness(businessId);
-      Alert.alert('Салон опубликован', 'Клиенты уже видят его в каталоге и могут записаться.', [
-        { text: 'Отлично', onPress: () => router.replace('/(business-tabs)') },
+      Alert.alert(t('salon_setup_businessId.11'), t('salon_setup_businessId.12'), [
+        { text: t('salon_setup_businessId.13'), onPress: () => router.replace('/(business-tabs)') },
       ]);
     } catch (e) {
-      setError(e.message || 'Не удалось опубликовать');
+      setError(friendlyError(e, t('salon_setup_businessId.14')));
     } finally {
       setPublishing(false);
     }
@@ -102,17 +104,17 @@ export default function SalonSetupScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <PressableScale style={styles.backButton} onPress={close} accessibilityLabel="Закрыть">
+        <PressableScale style={styles.backButton} onPress={close} accessibilityLabel={t('salon_setup_businessId.15')}>
           <ArrowLeft size={17} color={COLORS.ink} />
         </PressableScale>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>{status?.published ? 'Салон опубликован' : 'Настройте ваш салон'}</Text>
+        <Text style={styles.title}>{status?.published ? t('salon_setup_businessId.11') : t('salon_setup_businessId.16')}</Text>
         <Text style={styles.subtitle}>
           {status?.published
-            ? 'Клиенты видят салон в каталоге. Всё это можно менять в любой момент.'
-            : 'Пока салон не виден клиентам. Заполните пункты ниже и опубликуйте его.'}
+            ? t('salon_setup_businessId.17')
+            : t('salon_setup_businessId.18')}
         </Text>
 
         <View style={styles.progressRow}>
@@ -120,7 +122,7 @@ export default function SalonSetupScreen() {
             <View style={[styles.progressFill, { width: `${(doneCount / steps.length) * 100}%` }]} />
           </View>
           <Text style={styles.progressText}>
-            {doneCount} из {steps.length}
+            {doneCount}{' '}{t('salon_setup_businessId.19')}{' '}{steps.length}
           </Text>
         </View>
 
@@ -153,7 +155,7 @@ export default function SalonSetupScreen() {
             {publishing ? (
               <ActivityIndicator color={COLORS.white} />
             ) : (
-              <Text style={styles.publishText}>{allDone ? 'Опубликовать салон' : `Осталось пунктов: ${steps.length - doneCount}`}</Text>
+              <Text style={styles.publishText}>{allDone ? t('salon_setup_businessId.20') : t('salon_setup_businessId.21', { p0: steps.length - doneCount })}</Text>
             )}
           </PressableScale>
         </View>

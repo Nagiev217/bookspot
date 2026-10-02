@@ -11,6 +11,8 @@ import { ArrowLeft, Camera } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { getMyBusiness, updateBusiness, listBusinessPhotos } from '@/utils/supabase/business';
 import { listCategories } from '@/utils/supabase/catalog';
+import { t, categoryName } from '@/utils/i18n';
+import { friendlyError } from '@/utils/errors';
 
 export default function BusinessSettingsScreen() {
   const { businessId } = useLocalSearchParams();
@@ -46,7 +48,7 @@ export default function BusinessSettingsScreen() {
             cancelWindowHours: String(b.cancel_window_hours),
           });
         })
-        .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить'))
+        .catch((e) => !cancelled && setError(friendlyError(e, t('common.20'))))
         .finally(() => !cancelled && setLoading(false));
       return () => {
         cancelled = true;
@@ -62,11 +64,11 @@ export default function BusinessSettingsScreen() {
     const slotStepMin = Number(form.slotStepMin);
     const bufferMin = Number(form.bufferMin);
     const cancelWindowHours = Number(form.cancelWindowHours);
-    if (!name) return setError('Введите название');
-    if (!city) return setError('Введите город');
-    if (!Number.isInteger(slotStepMin) || slotStepMin <= 0) return setError('Шаг слота — целое число минут больше 0');
-    if (!Number.isInteger(bufferMin) || bufferMin < 0) return setError('Буфер — целое число минут, 0 или больше');
-    if (!Number.isInteger(cancelWindowHours) || cancelWindowHours < 0) return setError('Окно отмены — целое число часов, 0 или больше');
+    if (!name) return setError(t('business_settings_businessId.1'));
+    if (!city) return setError(t('common.2'));
+    if (!Number.isInteger(slotStepMin) || slotStepMin <= 0) return setError(t('business_settings_businessId.2'));
+    if (!Number.isInteger(bufferMin) || bufferMin < 0) return setError(t('business_settings_businessId.3'));
+    if (!Number.isInteger(cancelWindowHours) || cancelWindowHours < 0) return setError(t('business_settings_businessId.4'));
 
     setSaving(true);
     try {
@@ -82,9 +84,9 @@ export default function BusinessSettingsScreen() {
         buffer_min: bufferMin,
         cancel_window_hours: cancelWindowHours,
       });
-      setInfo('Сохранено');
+      setInfo(t('common.64'));
     } catch (e) {
-      setError(e.message || 'Не удалось сохранить');
+      setError(friendlyError(e, t('common.65')));
     } finally {
       setSaving(false);
     }
@@ -104,7 +106,7 @@ export default function BusinessSettingsScreen() {
         <PressableScale style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={17} color={COLORS.ink} />
         </PressableScale>
-        <Text style={styles.title}>Настройки бизнеса</Text>
+        <Text style={styles.title}>{t('common.66')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -113,13 +115,13 @@ export default function BusinessSettingsScreen() {
           {photoUrl ? <Image source={{ uri: photoUrl }} style={styles.photoImg} contentFit="cover" /> : null}
           <View style={styles.photoOverlay}>
             <Camera size={20} color={COLORS.white} />
-            <Text style={styles.photoOverlayText}>Фото салона ({photoCount}/5)</Text>
+            <Text style={styles.photoOverlayText}>{t('business_settings_businessId.5')}{photoCount}/5)</Text>
           </View>
         </PressableScale>
 
-        <TextInput style={styles.input} placeholder="Название" placeholderTextColor={COLORS.sub} value={form.name} onChangeText={(v) => setForm((f) => ({ ...f, name: v }))} />
+        <TextInput style={styles.input} placeholder={t('common.67')} placeholderTextColor={COLORS.sub} value={form.name} onChangeText={(v) => setForm((f) => ({ ...f, name: v }))} />
 
-        <Text style={styles.label}>Категория</Text>
+        <Text style={styles.label}>{t('common.5')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
           {categories.map((c) => (
             <PressableScale
@@ -127,17 +129,17 @@ export default function BusinessSettingsScreen() {
               style={[styles.chip, form.categoryId === c.id && styles.chipActive]}
               onPress={() => setForm((f) => ({ ...f, categoryId: c.id }))}
             >
-              <Text style={[styles.chipText, form.categoryId === c.id && styles.chipTextActive]}>{c.name_ru}</Text>
+              <Text style={[styles.chipText, form.categoryId === c.id && styles.chipTextActive]}>{categoryName(c)}</Text>
             </PressableScale>
           ))}
         </ScrollView>
 
-        <TextInput style={styles.input} placeholder="Город" placeholderTextColor={COLORS.sub} value={form.city} onChangeText={(v) => setForm((f) => ({ ...f, city: v }))} />
-        <TextInput style={styles.input} placeholder="Район" placeholderTextColor={COLORS.sub} value={form.district} onChangeText={(v) => setForm((f) => ({ ...f, district: v }))} />
-        <TextInput style={styles.input} placeholder="Адрес" placeholderTextColor={COLORS.sub} value={form.address} onChangeText={(v) => setForm((f) => ({ ...f, address: v }))} />
+        <TextInput style={styles.input} placeholder={t('common.6')} placeholderTextColor={COLORS.sub} value={form.city} onChangeText={(v) => setForm((f) => ({ ...f, city: v }))} />
+        <TextInput style={styles.input} placeholder={t('common.7')} placeholderTextColor={COLORS.sub} value={form.district} onChangeText={(v) => setForm((f) => ({ ...f, district: v }))} />
+        <TextInput style={styles.input} placeholder={t('common.8')} placeholderTextColor={COLORS.sub} value={form.address} onChangeText={(v) => setForm((f) => ({ ...f, address: v }))} />
         <TextInput
           style={styles.input}
-          placeholder="Телефон"
+          placeholder={t('business_settings_businessId.6')}
           placeholderTextColor={COLORS.sub}
           keyboardType="phone-pad"
           value={form.phone}
@@ -145,28 +147,27 @@ export default function BusinessSettingsScreen() {
         />
         <TextInput
           style={[styles.input, styles.textarea]}
-          placeholder="Описание салона"
+          placeholder={t('business_settings_businessId.7')}
           placeholderTextColor={COLORS.sub}
           multiline
           value={form.description}
           onChangeText={(v) => setForm((f) => ({ ...f, description: v }))}
         />
-        <Text style={styles.hint}>
-          Минимум 30 символов — клиенты увидят это в карточке салона ({form.description.trim().length}/30)
+        <Text style={styles.hint}>{t('business_settings_businessId.8')}{form.description.trim().length}/30)
         </Text>
 
-        <Text style={styles.sectionTitle}>Параметры бронирования</Text>
+        <Text style={styles.sectionTitle}>{t('business_settings_businessId.9')}</Text>
         <View style={styles.row3}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.label}>Шаг слота, мин</Text>
+            <Text style={styles.label}>{t('business_settings_businessId.10')}</Text>
             <TextInput style={styles.input} keyboardType="number-pad" value={form.slotStepMin} onChangeText={(v) => setForm((f) => ({ ...f, slotStepMin: v }))} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.label}>Буфер, мин</Text>
+            <Text style={styles.label}>{t('business_settings_businessId.11')}</Text>
             <TextInput style={styles.input} keyboardType="number-pad" value={form.bufferMin} onChangeText={(v) => setForm((f) => ({ ...f, bufferMin: v }))} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.label}>Окно отмены, ч</Text>
+            <Text style={styles.label}>{t('business_settings_businessId.12')}</Text>
             <TextInput style={styles.input} keyboardType="number-pad" value={form.cancelWindowHours} onChangeText={(v) => setForm((f) => ({ ...f, cancelWindowHours: v }))} />
           </View>
         </View>
@@ -175,7 +176,7 @@ export default function BusinessSettingsScreen() {
         {info && <Text style={styles.info}>{info}</Text>}
 
         <PressableScale style={styles.saveButton} onPress={handleSave} disabled={saving}>
-          {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.saveButtonText}>Сохранить</Text>}
+          {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.saveButtonText}>{t('common.68')}</Text>}
         </PressableScale>
       </ScrollView>
     </View>

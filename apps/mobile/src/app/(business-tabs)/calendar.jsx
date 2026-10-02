@@ -12,8 +12,9 @@ import { useAuthStore } from '@/utils/auth/store';
 import { listMasters } from '@/utils/supabase/catalog';
 import { listBusinessBookings, listBusinessHistory, completeBooking } from '@/utils/supabase/business';
 import { bakuToday, addDaysISO } from '@/components/DateTimeGrid';
+import { dowShort, dayMonthShort } from '@/utils/i18n/dates';
+import { t, tn } from '@/utils/i18n';
 
-const DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 const EASE_IN_OUT = Easing.bezier(0.77, 0, 0.175, 1); // пилюля движется по экрану, не входит/выходит
 const DISPLAY_START = 9 * 60;
 const DISPLAY_END = 21 * 60;
@@ -66,7 +67,7 @@ function useCalendarData(businessId, view, selectedDate) {
         if (view === 'history') setHistoryBookings(hist);
         loadedOnce.current = true;
       })
-      .catch((e) => !cancelled && setError(e.message || 'Не удалось загрузить'))
+      .catch((e) => !cancelled && setError(friendlyError(e, t('common.20'))))
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
@@ -108,7 +109,7 @@ export default function BusinessCalendar() {
   // так не приходят с сервера (политика bookings в 0022).
   const staffMasterId = useAuthStore((s) => (s.role === 'staff' ? s.masterId : null));
   const masters = staffMasterId ? allMasters.filter((m) => m.id === staffMasterId) : allMasters;
-  const masterName = useCallback((id) => masters.find((m) => m.id === id)?.name || 'Мастер', [masters]);
+  const masterName = useCallback((id) => masters.find((m) => m.id === id)?.name || t('common.21'), [masters]);
 
   // Отметить визит завершённым/неявкой можно только для уже прошедшего
   // времени — то же самое complete_booking проверяет и на сервере
@@ -124,16 +125,16 @@ export default function BusinessCalendar() {
     if (b.status !== 'confirmed') return;
     const isPast = new Date(b.starts_at).getTime() <= Date.now();
     if (!isPast) {
-      Alert.alert(b.client_name || 'Без имени', `${b.service_name}\n\nОтметить визит можно только после времени начала записи.`);
+      Alert.alert(b.client_name || t('common.22'), t('business_tabs_calendar.1', { service_name: b.service_name }));
       return;
     }
     Alert.alert(
-      b.client_name || 'Без имени',
+      b.client_name || t('common.22'),
       b.service_name,
       [
-        { text: 'Отмена', style: 'cancel' },
-        { text: 'Не пришёл', style: 'destructive', onPress: () => runComplete(b.id, 'no_show') },
-        { text: 'Пришёл', onPress: () => runComplete(b.id, 'completed') },
+        { text: t('common.23'), style: 'cancel' },
+        { text: t('business_tabs_calendar.2'), style: 'destructive', onPress: () => runComplete(b.id, 'no_show') },
+        { text: t('business_tabs_calendar.3'), onPress: () => runComplete(b.id, 'completed') },
       ]
     );
   }
@@ -143,7 +144,7 @@ export default function BusinessCalendar() {
       await completeBooking(bookingId, status);
       reload();
     } catch (e) {
-      Alert.alert('Не удалось обновить статус', e.message || 'Попробуйте ещё раз');
+      Alert.alert(t('business_tabs_calendar.4'), friendlyError(e, t('common.24')));
     }
   }
 
@@ -157,7 +158,7 @@ export default function BusinessCalendar() {
   if (error || !businessId) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{error || 'Нет доступа к бизнесу — войдите под аккаунтом владельца'}</Text>
+        <Text style={styles.errorText}>{error || t('common.25')}</Text>
       </View>
     );
   }
@@ -166,7 +167,7 @@ export default function BusinessCalendar() {
     <View style={styles.screen}>
       <View style={styles.headerBar}>
         <View style={styles.headerRow}>
-          <Text style={styles.title}>Расписание</Text>
+          <Text style={styles.title}>{t('common.26')}</Text>
           <View style={styles.segment}>
             {segLayouts.day && segLayouts.week && segLayouts.history && <Animated.View style={[styles.segPill, pillStyle]} />}
             <Pressable
@@ -177,7 +178,7 @@ export default function BusinessCalendar() {
               }}
               onPress={() => setView('day')}
             >
-              <Text style={[styles.segText, view === 'day' && styles.segTextOn]}>День</Text>
+              <Text style={[styles.segText, view === 'day' && styles.segTextOn]}>{t('business_tabs_calendar.5')}</Text>
             </Pressable>
             <Pressable
               style={styles.segTab}
@@ -187,7 +188,7 @@ export default function BusinessCalendar() {
               }}
               onPress={() => setView('week')}
             >
-              <Text style={[styles.segText, view === 'week' && styles.segTextOn]}>Неделя</Text>
+              <Text style={[styles.segText, view === 'week' && styles.segTextOn]}>{t('business_tabs_calendar.6')}</Text>
             </Pressable>
             <Pressable
               style={styles.segTab}
@@ -197,7 +198,7 @@ export default function BusinessCalendar() {
               }}
               onPress={() => setView('history')}
             >
-              <Text style={[styles.segText, view === 'history' && styles.segTextOn]}>История</Text>
+              <Text style={[styles.segText, view === 'history' && styles.segTextOn]}>{t('common.27')}</Text>
             </Pressable>
           </View>
         </View>
@@ -208,7 +209,7 @@ export default function BusinessCalendar() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daysRow}>
             {dateList.map((iso, i) => (
               <PressableScale key={iso} style={[styles.dayChip, dayIdx === i && styles.dayChipOn]} onPress={() => setDayIdx(i)}>
-                <Text style={[styles.dayDow, dayIdx === i && styles.dayTextOn]}>{DOW[dowOf(iso)]}</Text>
+                <Text style={[styles.dayDow, dayIdx === i && styles.dayTextOn]}>{dowShort(dowOf(iso))}</Text>
                 <Text style={[styles.dayNum, dayIdx === i && styles.dayTextOn]}>{iso.slice(8, 10)}</Text>
               </PressableScale>
             ))}
@@ -218,7 +219,7 @@ export default function BusinessCalendar() {
 
       {view === 'day' ? (
         masters.length === 0 ? (
-          <Text style={styles.emptyText}>В этом бизнесе пока нет мастеров.</Text>
+          <Text style={styles.emptyText}>{t('common.28')}</Text>
         ) : (
           <ScrollView>
             <View style={styles.staffHeader}>
@@ -268,8 +269,8 @@ export default function BusinessCalendar() {
                             onPress={() => handleBookingTap(b)}
                           >
                             <Text numberOfLines={1} style={styles.blockClient}>
-                              {isRequest ? (b.status === 'pending' ? 'Заявка · ' : 'Ждём клиента · ') : ''}
-                              {b.client_name || 'Без имени'}
+                              {isRequest ? (b.status === 'pending' ? t('business_tabs_calendar.7') : t('business_tabs_calendar.8')) : ''}
+                              {b.client_name || t('common.22')}
                             </Text>
                             {height > 40 && <Text numberOfLines={1} style={styles.blockService}>{b.service_name}</Text>}
                             {/* Точка-подсказка: прошедшую бронь можно тапнуть и отметить визит. */}
@@ -294,10 +295,10 @@ export default function BusinessCalendar() {
               <View key={iso} style={styles.weekCard}>
                 <View style={styles.weekRow}>
                   <Text style={styles.weekLabel}>
-                    {DOW[dowOf(iso)]}, {iso.slice(8, 10)} сент
+                    {dowShort(dowOf(iso))}, {dayMonthShort(Number(iso.slice(8, 10)), Number(iso.slice(5, 7)) - 1)}
                   </Text>
                   <Text style={styles.weekMeta}>
-                    {dayBookings.length} записей · {revenue} ₼
+                    {tn('plural.bookings', dayBookings.length)} · {revenue} ₼
                   </Text>
                 </View>
               </View>
@@ -305,7 +306,7 @@ export default function BusinessCalendar() {
           })}
         </ScrollView>
       ) : historyBookings.length === 0 ? (
-        <Text style={styles.emptyText}>Истории визитов пока нет.</Text>
+        <Text style={styles.emptyText}>{t('business_tabs_calendar.10')}</Text>
       ) : (
         <ScrollView contentContainerStyle={styles.weekList}>
           {historyBookings.map((b) => {
@@ -320,7 +321,7 @@ export default function BusinessCalendar() {
                 onPress={() => handleBookingTap(b)}
               >
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.weekLabel}>{b.client_name || 'Без имени'}</Text>
+                  <Text style={styles.weekLabel}>{b.client_name || t('common.22')}</Text>
                   <Text style={styles.historySub}>
                     {b.service_name} · {masterName(b.master_id)}
                   </Text>
@@ -342,15 +343,15 @@ export default function BusinessCalendar() {
 function historyStatus(status, isPast) {
   switch (status) {
     case 'completed':
-      return { label: 'Завершён', color: COLORS.success };
+      return { label: t('business_tabs_calendar.11'), color: COLORS.success };
     case 'no_show':
-      return { label: 'Неявка', color: COLORS.danger };
+      return { label: t('common.29'), color: COLORS.danger };
     case 'cancelled':
-      return { label: 'Отменена', color: COLORS.subLight };
+      return { label: t('common.30'), color: COLORS.subLight };
     default:
       // status === 'confirmed', но время уже прошло — владелец ещё не
       // отметил визит (тап всё ещё открывает "Пришёл"/"Не пришёл").
-      return isPast ? { label: 'Ожидает отметки', color: COLORS.warning } : { label: 'Подтверждено', color: COLORS.indigo };
+      return isPast ? { label: t('business_tabs_calendar.12'), color: COLORS.warning } : { label: t('common.31'), color: COLORS.indigo };
   }
 }
 
