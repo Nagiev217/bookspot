@@ -2,7 +2,7 @@
 // Имя, активность и расписание по-прежнему меняет только владелец, поэтому
 // сохраняем через RPC update_my_master_profile (0026), а не UPDATE masters.
 import { useCallback, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect } from 'expo-router';
@@ -13,6 +13,7 @@ import { useAuthStore } from '@/utils/auth/store';
 import { getMaster, uploadMasterPhotoFile, updateMyMasterProfile } from '@/utils/supabase/business';
 import { t } from '@/utils/i18n';
 import { friendlyError } from '@/utils/errors';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 const BIO_MAX = 500;
 
@@ -121,7 +122,7 @@ export default function MyMasterProfile() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <View style={styles.screen}>
       <View style={styles.header}>
         <PressableScale style={styles.backButton} onPress={() => router.back()} accessibilityLabel={t('common.40')}>
           <ArrowLeft size={17} color={COLORS.ink} />
@@ -129,7 +130,7 @@ export default function MyMasterProfile() {
         <Text style={styles.title}>{t('my_master_profile.3')}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView bottomOffset={24} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
         <PressableScale style={styles.avatar} onPress={handlePickPhoto} disabled={uploading} accessibilityLabel={t('my_master_profile.4')}>
           {photoUrl ? <Image source={{ uri: photoUrl }} style={styles.avatarImg} contentFit="cover" /> : null}
           <View style={styles.avatarOverlay}>
@@ -178,8 +179,8 @@ export default function MyMasterProfile() {
         <PressableScale style={styles.saveButton} onPress={handleSave} disabled={saving}>
           {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.saveText}>{t('common.68')}</Text>}
         </PressableScale>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }
 

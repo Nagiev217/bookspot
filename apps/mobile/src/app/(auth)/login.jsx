@@ -8,6 +8,7 @@ import { useAuthStore } from '@/utils/auth/store';
 import { friendlyError } from '@/utils/errors';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { t } from '@/utils/i18n';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 export default function Login() {
   // Ставится экранами, требующими аккаунта (бронь, избранное), когда гость
@@ -54,7 +55,12 @@ export default function Login() {
   }
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAwareScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.screen}
+      bottomOffset={24}
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={styles.title}>BookSpot</Text>
       <Text style={styles.subtitle}>{t('auth_login.1')}</Text>
 
@@ -92,7 +98,7 @@ export default function Login() {
       >{t('auth_login.4')}</Link>
 
       <Link href="/(client-tabs)" style={styles.backLink}>{t('common.18')}</Link>
-    </View>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -108,7 +114,10 @@ function mapAuthError(e) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, justifyContent: 'center', padding: SPACING.xl, backgroundColor: COLORS.white },
+  scroll: { flex: 1, backgroundColor: COLORS.white },
+  // flexGrow, а не flex: внутри прокрутки форма по-прежнему по центру экрана,
+  // но при открытой клавиатуре может уехать вверх.
+  screen: { flexGrow: 1, justifyContent: 'center', padding: SPACING.xl, backgroundColor: COLORS.white },
   title: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.xxl, color: COLORS.text, letterSpacing: -0.4 },
   subtitle: { fontFamily: FONT.regular, fontSize: TEXT_SIZE.md, color: COLORS.sub, marginTop: SPACING.xs, marginBottom: SPACING.xl },
   warning: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.warning, marginBottom: SPACING.md },

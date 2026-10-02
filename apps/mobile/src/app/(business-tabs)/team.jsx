@@ -3,7 +3,7 @@
 // не визуальная имитация. Полное редактирование (расписание, будущие
 // выходные, активность) — на экране master/[masterId].
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import PressableScale from '@/components/PressableScale';
 import { router, useFocusEffect } from 'expo-router';
@@ -17,6 +17,7 @@ import CredentialsCard from '@/components/CredentialsCard';
 import { bakuToday } from '@/components/DateTimeGrid';
 import { t } from '@/utils/i18n';
 import { friendlyError } from '@/utils/errors';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 export default function BusinessTeam() {
   const businessId = useAuthStore((s) => s.businessId);
@@ -184,7 +185,7 @@ export default function BusinessTeam() {
 
       {error && <Text style={styles.errorText}>{error}</Text>}
 
-      <ScrollView contentContainerStyle={styles.list}>
+      <KeyboardAwareScrollView bottomOffset={24} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.list}>
         {addingName !== null && (
           <View style={styles.addForm}>
             <TextInput
@@ -281,7 +282,7 @@ export default function BusinessTeam() {
             );
           })
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

@@ -14,6 +14,7 @@ import { getMyBusiness, updateBusiness, listBusinessPhotos } from '@/utils/supab
 import { listCategories } from '@/utils/supabase/catalog';
 import { t, categoryName } from '@/utils/i18n';
 import { friendlyError } from '@/utils/errors';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 export default function BusinessSettingsScreen() {
   const { businessId } = useLocalSearchParams();
@@ -112,7 +113,7 @@ export default function BusinessSettingsScreen() {
         <Text style={styles.title}>{t('common.66')}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAwareScrollView bottomOffset={24} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
         {/* Фото — отдельный экран-галерея (до 5, 0024); здесь только обложка. */}
         <PressableScale style={styles.photoBox} onPress={() => router.push(`/business-photos/${businessId}`)}>
           {photoUrl ? <Image source={{ uri: photoUrl }} style={styles.photoImg} contentFit="cover" /> : null}
@@ -191,7 +192,7 @@ export default function BusinessSettingsScreen() {
         <PressableScale style={styles.saveButton} onPress={handleSave} disabled={saving}>
           {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.saveButtonText}>{t('common.68')}</Text>}
         </PressableScale>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

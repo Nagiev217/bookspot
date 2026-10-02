@@ -2,7 +2,7 @@
 // Та же услуга→мастер→дата→время последовательность, что в booking flow
 // клиента, плюс форма имени/телефона в конце.
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TextInput } from 'react-native';
 import PressableScale from '@/components/PressableScale';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
@@ -14,6 +14,7 @@ import { getAvailability } from '@/utils/supabase/booking';
 import DateTimeGrid, { bakuToday } from '@/components/DateTimeGrid';
 import { t } from '@/utils/i18n';
 import { friendlyError } from '@/utils/errors';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 const steps = () => [t('common.58'), t('common.21'), t('common.60'), t('common.32')];
 
@@ -126,7 +127,7 @@ export default function ManualBooking() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <KeyboardAwareScrollView bottomOffset={24} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body}>
         {saveError && <Text style={styles.errorInline}>{saveError}</Text>}
 
         {step === 1 && (
@@ -205,7 +206,7 @@ export default function ManualBooking() {
             </PressableScale>
           </View>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

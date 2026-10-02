@@ -2,7 +2,7 @@
 // одном экране (не отдельный роут на форму: полей мало, лишний переход
 // туда-обратно ничего не даёт).
 import { useCallback, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator, Switch } from 'react-native';
 import PressableScale from '@/components/PressableScale';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react-native';
@@ -18,6 +18,7 @@ import {
 } from '@/utils/supabase/business';
 import { t } from '@/utils/i18n';
 import { friendlyError } from '@/utils/errors';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 const emptyForm = { id: null, name: '', price: '', durationMin: '', active: true, masterIds: [] };
 
@@ -120,7 +121,7 @@ export default function ServicesScreen() {
       {loading ? (
         <ActivityIndicator style={{ marginTop: SPACING.xxl }} color={COLORS.indigo} />
       ) : (
-        <ScrollView contentContainerStyle={styles.list}>
+        <KeyboardAwareScrollView bottomOffset={24} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.list}>
           {error && !form && <Text style={styles.error}>{error}</Text>}
 
           {services.length === 0 ? (
@@ -200,7 +201,7 @@ export default function ServicesScreen() {
               </View>
             </View>
           )}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       )}
     </View>
   );

@@ -20,6 +20,7 @@ import OfflineBanner from '@/components/OfflineBanner';
 import PressableScale from '@/components/PressableScale';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { t, useLang, loadSavedLang, takeReturnRoute } from '@/utils/i18n';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -134,6 +135,7 @@ export default function RootLayout() {
   if (!fontsLoaded || !langReady) return null;
 
   return (
+    <KeyboardProvider>
     <View style={{ flex: 1 }}>
       {/* key={lang}: при смене языка навигация перемонтируется и все экраны
           перечитывают тексты (t() — обычная функция, не хук). */}
@@ -169,6 +171,7 @@ export default function RootLayout() {
       </Stack>
       <OfflineBanner />
     </View>
+    </KeyboardProvider>
   );
 }
 

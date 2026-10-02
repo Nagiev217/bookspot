@@ -10,6 +10,7 @@ import { createBusinessWithOwner, bakuTodayISO, addMonthsISO, formatDateRu } fro
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { t, categoryName } from '@/utils/i18n';
 import { friendlyError } from '@/utils/errors';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 const PERIODS = [1, 3, 6, 12];
 
@@ -78,7 +79,7 @@ export default function AdminCreateBusiness() {
 
   if (result) {
     return (
-      <ScrollView contentContainerStyle={styles.screen}>
+      <KeyboardAwareScrollView bottomOffset={24} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.screen}>
         <Text style={styles.title}>{t('admin_tabs_create.6')}</Text>
         <Text style={styles.subtitle}>
           «{result.businessName}{t('admin_tabs_create.7')}{' '}{formatDateRu(paidUntil)}{t('admin_tabs_create.8')}</Text>
@@ -96,12 +97,12 @@ export default function AdminCreateBusiness() {
         <PressableScale style={styles.secondary} onPress={reset}>
           <Text style={styles.secondaryText}>{t('admin_tabs_create.11')}</Text>
         </PressableScale>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView bottomOffset={24} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.screen}>
       <Text style={styles.title}>{t('common.3')}</Text>
 
       <Text style={styles.section}>{t('common.4')}</Text>
@@ -154,7 +155,7 @@ export default function AdminCreateBusiness() {
       <PressableScale style={styles.button} onPress={handleSubmit} disabled={busy}>
         {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.buttonText}>{t('admin_tabs_create.17')}</Text>}
       </PressableScale>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
 import PressableScale from '@/components/PressableScale';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -9,6 +9,7 @@ import { useAuthStore } from '@/utils/auth/store';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { PRIVACY_POLICY_URL, TERMS_URL } from '@/utils/legal';
 import { t, getLang } from '@/utils/i18n';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 export default function Register() {
   const { redirect } = useLocalSearchParams();
@@ -54,7 +55,7 @@ export default function Register() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
+    <KeyboardAwareScrollView bottomOffset={24} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.screen}>
       <Text style={styles.title}>{t('auth_register.3')}</Text>
 
       <TextInput
@@ -101,7 +102,7 @@ export default function Register() {
       >{t('auth_register.10')}</Link>
 
       <Link href="/(client-tabs)" style={styles.backLink}>{t('common.18')}</Link>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

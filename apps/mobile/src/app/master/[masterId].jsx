@@ -3,7 +3,7 @@
 // расписании — это просто второй интервал в том же дне недели, отдельного
 // типа "custom_hours" для него не нужно.
 import { useCallback, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator, Switch } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import PressableScale from '@/components/PressableScale';
@@ -23,6 +23,7 @@ import { bakuToday, addDaysISO } from '@/components/DateTimeGrid';
 import { dowShort } from '@/utils/i18n/dates';
 import { t } from '@/utils/i18n';
 import { friendlyError } from '@/utils/errors';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 const HHMM_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -193,7 +194,7 @@ export default function MasterDetail() {
         <Text style={styles.title}>{t('common.21')}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAwareScrollView bottomOffset={24} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
         <PressableScale style={styles.photoBox} onPress={handlePickPhoto} disabled={uploadingPhoto}>
           {photoUrl ? <Image source={{ uri: photoUrl }} style={styles.photoImg} contentFit="cover" /> : null}
           <View style={styles.photoOverlay}>
@@ -284,7 +285,7 @@ export default function MasterDetail() {
 
         {error && <Text style={styles.error}>{error}</Text>}
         {info && <Text style={styles.info}>{info}</Text>}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

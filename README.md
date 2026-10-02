@@ -243,6 +243,7 @@ npm run purge-demo          # remove demo salons before release
 - **Texts** go through `t('key')` from `utils/i18n` — never a literal in a screen. A new string needs the key in all three of `utils/i18n/locales/{az,ru,en}.js`; counts use `tn()` (Russian has three plural forms). `t()` is a plain function, so never compute translated text at module level — language changes remount the navigation and only render-time calls pick it up. New server error texts get a line in `utils/errors.js`.
 - **Design tokens** come only from `src/theme/tokens.js` (indigo `#3D4EDB`, Manrope) — no hard-coded colors in screens.
 - **Taps** go through the shared `PressableScale`.
+- **Forms** scroll in `KeyboardAwareScrollView` (react-native-keyboard-controller, `KeyboardProvider` in the root layout) so the keyboard never covers the focused field; a bottom submit bar uses `KeyboardStickyView`. Plain `KeyboardAvoidingView` is unreliable with Android edge-to-edge.
 
 ## Status and release checklist
 

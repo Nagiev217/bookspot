@@ -4,7 +4,7 @@
 // заходе). create_review (0019_reviews.sql) сам проверяет, что бронь
 // принадлежит вызывающему и что визит завершён — здесь это не дублируется.
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TextInput } from 'react-native';
 import PressableScale from '@/components/PressableScale';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Star } from 'lucide-react-native';
@@ -13,6 +13,7 @@ import { getBooking } from '@/utils/supabase/booking';
 import { getReviewForBooking, createReview, updateReview } from '@/utils/supabase/reviews';
 import { friendlyError } from '@/utils/errors';
 import { t } from '@/utils/i18n';
+import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 
 export default function ReviewScreen() {
   const { bookingId } = useLocalSearchParams();
@@ -95,7 +96,7 @@ export default function ReviewScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <KeyboardAwareScrollView bottomOffset={110} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body}>
         {saveError && <Text style={styles.errorInline}>{saveError}</Text>}
 
         <View style={styles.starsRow}>
@@ -115,13 +116,13 @@ export default function ReviewScreen() {
           value={comment}
           onChangeText={setComment}
         />
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
-      <View style={styles.ctaBar}>
+      <KeyboardStickyView style={styles.ctaBar}>
         <PressableScale style={[styles.ctaButton, (rating < 1 || saving) && styles.ctaButtonOff]} disabled={rating < 1 || saving} onPress={handleSubmit}>
           {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.ctaText}>{existingReview ? t('common.68') : t('review_bookingId.4')}</Text>}
         </PressableScale>
-      </View>
+      </KeyboardStickyView>
     </View>
   );
 }
