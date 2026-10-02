@@ -14,6 +14,7 @@ import { listReviews } from '@/utils/supabase/reviews';
 import { listBusinessPhotos } from '@/utils/supabase/business';
 import { useAuthStore } from '@/utils/auth/store';
 import StarBadge from '@/components/StarBadge';
+import SalonLocation from '@/components/SalonLocation';
 import { t, tn } from '@/utils/i18n';
 
 // Азербайджан — UTC+4 без перехода на летнее время (та же ручная арифметика,
@@ -165,16 +166,11 @@ export default function SalonDetail() {
             </View>
           )}
 
-          {(business.description?.trim() || business.address) && (
+          {(business.description?.trim() || business.address || business.lat != null) && (
             <>
               <Text style={styles.sectionTitle}>{t('salon_idx.5')}</Text>
               {business.description?.trim() ? <Text style={styles.about}>{business.description.trim()}</Text> : null}
-              {business.address ? (
-                <Text style={styles.address}>
-                  {business.city}
-                  {business.district ? `, ${business.district}` : ''}, {business.address}
-                </Text>
-              ) : null}
+              <SalonLocation business={business} />
             </>
           )}
 
@@ -264,7 +260,6 @@ const styles = StyleSheet.create({
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,.55)' },
   dotActive: { width: 18, backgroundColor: COLORS.white },
   about: { fontFamily: FONT.regular, fontSize: TEXT_SIZE.md, color: '#3A4256', lineHeight: 21 },
-  address: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginTop: SPACING.sm },
   backButton: {
     position: 'absolute',
     left: 20,

@@ -1,3 +1,4 @@
 {
-  "NSPhotoLibraryUsageDescription": "Salonun və ustaların fotolarını yükləmək üçün fotolara giriş lazımdır."
+  "NSPhotoLibraryUsageDescription": "Salonun və ustaların fotolarını yükləmək üçün fotolara giriş lazımdır.",
+  "NSLocationWhenInUseUsageDescription": "Yaxınlığınızdakı salonları göstərmək və salonunuzu xəritədə qeyd etmək üçün məkan lazımdır."
 }

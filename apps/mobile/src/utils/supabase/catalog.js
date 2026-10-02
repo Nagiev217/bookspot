@@ -26,7 +26,7 @@ function onlyPublic(q, prefix = '') {
 }
 
 export async function listBusinesses({ city, categoryId } = {}) {
-  let q = onlyPublic(supabase.from('businesses').select('id, name, city, district, category_id, logo_url'));
+  let q = onlyPublic(supabase.from('businesses').select('id, name, city, district, category_id, logo_url, address, lat, lng, services(price, active)'));
   if (city) q = q.eq('city', city);
   if (categoryId) q = q.eq('category_id', categoryId);
   const { data, error } = await q.order('name');
@@ -42,11 +42,11 @@ export async function searchBusinesses(query, { categoryId } = {}) {
   const q = query?.trim();
   if (!q) return listBusinesses({ categoryId });
 
-  let byName = onlyPublic(supabase.from('businesses').select('id, name, city, district, category_id, logo_url')).ilike('name', `%${q}%`);
+  let byName = onlyPublic(supabase.from('businesses').select('id, name, city, district, category_id, logo_url, address, lat, lng, services(price, active)')).ilike('name', `%${q}%`);
   if (categoryId) byName = byName.eq('category_id', categoryId);
 
   let byService = onlyPublic(
-    supabase.from('services').select('business:businesses!inner(id, name, city, district, category_id, status, logo_url)'),
+    supabase.from('services').select('business:businesses!inner(id, name, city, district, category_id, status, logo_url, address, lat, lng, services(price, active))'),
     'business.'
   ).ilike('name', `%${q}%`);
   if (categoryId) byService = byService.eq('business.category_id', categoryId);

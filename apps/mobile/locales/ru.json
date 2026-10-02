@@ -1,3 +1,4 @@
 {
-  "NSPhotoLibraryUsageDescription": "Нужен доступ к фото, чтобы загрузить фотографии салона и мастеров."
+  "NSPhotoLibraryUsageDescription": "Нужен доступ к фото, чтобы загрузить фотографии салона и мастеров.",
+  "NSLocationWhenInUseUsageDescription": "Геолокация нужна, чтобы показать салоны рядом с вами и отметить свой салон на карте."
 }

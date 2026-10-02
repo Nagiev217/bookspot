@@ -83,6 +83,7 @@ const SERVER_MESSAGES = {
 // Пункты чек-листа из publish_business (0025).
 const SETUP_ITEMS = {
   'описание (от 30 символов)': 'server.setup.description',
+  'адрес на карте': 'server.setup.location',
   'фото салона': 'server.setup.photos',
   'мастера': 'server.setup.masters',
   'расписание мастера': 'server.setup.schedule',

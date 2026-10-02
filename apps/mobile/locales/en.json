@@ -1,3 +1,4 @@
 {
-  "NSPhotoLibraryUsageDescription": "Photo access is needed to upload photos of the salon and its masters."
+  "NSPhotoLibraryUsageDescription": "Photo access is needed to upload photos of the salon and its masters.",
+  "NSLocationWhenInUseUsageDescription": "Location is used to show salons near you and to mark your salon on the map."
 }

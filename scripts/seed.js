@@ -104,14 +104,14 @@ async function ensureBusiness(ownerUid) {
     p_category_id: 'barber',
     p_city: 'Баку',
     p_district: 'Ичеришехер',
-    p_address: null,
+    p_address: 'ул. Асаф Зейналлы, 7',
     p_phone: '+994501234567',
     p_paid_until: null,
   });
   if (rpcErr) throw rpcErr;
   // Новый салон скрыт, пока не пройдён чек-лист (0024). Тестовым фикстурам
   // он не нужен — публикуем сразу через service_role.
-  await admin.from('businesses').update({ published_at: new Date().toISOString() }).eq('id', businessId);
+  await admin.from('businesses').update({ published_at: new Date().toISOString(), lat: 40.3664, lng: 49.8372 }).eq('id', businessId);
   // Сид-владелец входит с известным паролем — смена временного пароля ему не нужна.
   await admin.from('profiles').update({ must_change_password: false }).eq('id', ownerUid);
   console.log(`✓ Создан бизнес: Atelier Nizami (${businessId})`);

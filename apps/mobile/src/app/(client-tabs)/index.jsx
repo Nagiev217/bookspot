@@ -16,12 +16,26 @@ import { listCategories, listBusinesses } from '@/utils/supabase/catalog';
 import { useReducedMotion } from '@/utils/useReducedMotion';
 import { t, categoryName } from '@/utils/i18n';
 import { friendlyError } from '@/utils/errors';
+import * as Location from 'expo-location';
+import { hasLocation, distanceKm, formatDistance } from '@/utils/maps';
 
 export default function Home() {
   const [categories, setCategories] = useState([]);
   const [businesses, setBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userLoc, setUserLoc] = useState(null);
+
+  // «Рядом с вами» по-настоящему: если геолокация уже разрешена (здесь не
+  // спрашиваем — запрос только с карты в поиске), ближайшие салоны первыми.
+  useEffect(() => {
+    Location.getForegroundPermissionsAsync()
+      .then((p) => (p.granted ? Location.getLastKnownPositionAsync() : null))
+      .then((pos) => pos && setUserLoc({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }))
+      .catch(() => {});
+  }, []);
+  const distanceOf = (b) => (userLoc && hasLocation(b) ? distanceKm(userLoc, { latitude: b.lat, longitude: b.lng }) : null);
+  const sorted = userLoc ? [...businesses].sort((a, b) => (distanceOf(a) ?? Infinity) - (distanceOf(b) ?? Infinity)) : businesses;
   const reducedMotion = useReducedMotion();
 
   const load = useCallback(async () => {
@@ -97,7 +111,7 @@ export default function Home() {
             <Text style={styles.emptyText}>{t('client_tabs_index.5')}</Text>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandRow}>
-              {businesses.map((b, i) => (
+              {sorted.map((b, i) => (
                 <Animated.View key={b.id} entering={reducedMotion ? undefined : FadeIn.duration(220).delay(i * 30)}>
                   <PressableScale
                     style={({ pressed }) => [styles.brandCard, pressed && styles.cardPressed]}
@@ -114,6 +128,7 @@ export default function Home() {
                     <Text style={styles.brandMeta}>
                       {b.city}
                       {b.district ? ` · ${b.district}` : ''}
+                      {distanceOf(b) !== null ? ` · ${formatDistance(distanceOf(b))}` : ''}
                     </Text>
                   </PressableScale>
                 </Animated.View>

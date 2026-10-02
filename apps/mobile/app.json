@@ -12,7 +12,13 @@
       "buildNumber": "1",
       "supportsTablet": false,
       "infoPlist": {
-        "CFBundleAllowMixedLocalizations": true
+        "CFBundleAllowMixedLocalizations": true,
+        "LSApplicationQueriesSchemes": [
+          "comgooglemaps",
+          "waze",
+          "yandexmaps",
+          "yandexnavi"
+        ]
       }
     },
     "android": {
@@ -51,6 +57,12 @@
         "expo-notifications",
         {
           "color": "#2563EB"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Location is used to show salons near you and to mark your salon on the map."
         }
       ]
     ],

@@ -52,6 +52,7 @@ One app, two modes. Every user is a client; if the account owns a business, a **
 | Salon catalog by category (Barber, Beauty, Nails, Lashes, Massage, Tattoo), search by name or service | `(client-tabs)/index.jsx`, `search.jsx` |
 | **Guest browsing** — the catalog and free slots are available without signing up | `0014_guest_catalog.sql`, `SignInPrompt.jsx` |
 | Salon page: photos, services with price and duration, masters, rating and reviews | `salon/[idx].jsx` |
+| **Map and directions**: address with a mini map on the salon page, "Directions" opens Google Maps / Waze / Yandex / Apple Maps; map view with "from N ₼" pins in search; catalog sorted by distance when location is allowed | `components/SalonLocation.jsx`, `utils/maps.js`, `(client-tabs)/search.jsx` |
 | **Master page**: photo, bio, the master's services with one-tap booking, reviews of visits to them | `master-info/[masterId].jsx` |
 | Booking in 4 steps: service → master → date → time (only genuinely free slots) | `booking/[idx].jsx` |
 | **Booking requests**: a booking is a request until the master accepts it; the master can propose another time, which the client accepts or declines | `(client-tabs)/bookings.jsx`, `0029_booking_requests.sql` |
@@ -75,6 +76,7 @@ One app, two modes. Every user is a client; if the account owns a business, a **
 | Manual booking for phone-in clients | `manual-booking/[businessId].jsx` |
 | Services, masters, weekly schedules and masters' days off | `services/…`, `master/[masterId].jsx`, `(business-tabs)/team.jsx` |
 | **Setup checklist** for a new salon, publishing | `salon-setup/[businessId].jsx`, `0024_salon_onboarding.sql` |
+| Salon location on the map (search by address, "I'm here", or move the map), required to publish | `business-location/[businessId].jsx`, `0032_business_location.sql` |
 | Salon photo gallery (up to 5, first one is the cover), master photos (Supabase Storage) | `business-photos/[businessId].jsx`, `master/[masterId].jsx` |
 | "New booking" push | `0018_push_outbox.sql` |
 
@@ -189,6 +191,7 @@ SUPABASE_ACCESS_TOKEN=<same token> npx supabase db push
 | 0029 | Booking requests: pending → accepted / declined / another time proposed; 2-hour expiry via pg_cron |
 | 0030 | Security fix: server-only functions were executable by anon/authenticated |
 | 0031 | Category names and push notifications in az/ru/en (by `profiles.lang`) |
+| 0032 | Salon coordinates; "address on the map" added to the publish checklist |
 
 ## Push notifications
 

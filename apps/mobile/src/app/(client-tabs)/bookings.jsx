@@ -9,6 +9,7 @@ import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { tintFor } from '@/utils/tint';
 import { listMyBookings, respondToProposal, ACTIVE_STATUSES } from '@/utils/supabase/booking';
 import { friendlyError } from '@/utils/errors';
+import { hasLocation, openDirections } from '@/utils/maps';
 import { useAuthStore } from '@/utils/auth/store';
 import SignInPrompt from '@/components/SignInPrompt';
 import StarBadge from '@/components/StarBadge';
@@ -193,7 +194,15 @@ export default function Bookings() {
                     <PressableScale style={styles.outlineButton} onPress={() => router.push(`/reschedule/${b.id}`)}>
                       <Text style={styles.outlineButtonText}>{b.status === 'pending' ? t('client_tabs_bookings.17') : t('client_tabs_bookings.18')}</Text>
                     </PressableScale>
-                    <PressableScale style={styles.darkButton} onPress={() => router.push(`/salon/${b.business_id}`)}>
+                    {/* Маршрут — сразу в навигатор, если салон отмечен на карте (0032). */}
+                    <PressableScale
+                      style={styles.darkButton}
+                      onPress={() =>
+                        hasLocation(b.businesses)
+                          ? openDirections({ lat: b.businesses.lat, lng: b.businesses.lng, name: b.businesses.name })
+                          : router.push(`/salon/${b.business_id}`)
+                      }
+                    >
                       <Text style={styles.darkButtonText}>{t('client_tabs_bookings.19')}</Text>
                     </PressableScale>
                   </View>

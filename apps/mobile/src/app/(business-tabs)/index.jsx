@@ -67,7 +67,7 @@ export default function BusinessToday() {
             getSetupStatus(businessId)
               .then((s) => {
                 if (cancelled) return;
-                setSetupDone(['description', 'photos', 'masters', 'schedule', 'services'].filter((k) => s[k]).length);
+                setSetupDone(['description', 'location', 'photos', 'masters', 'schedule', 'services'].filter((k) => s[k]).length);
               })
               .catch(() => {});
             const { setupPromptShownFor, setAuth } = useAuthStore.getState();
@@ -160,7 +160,7 @@ export default function BusinessToday() {
         isOwner ? (
           <PressableScale style={styles.setupBanner} onPress={() => router.push(`/salon-setup/${businessId}`)}>
             <Text style={styles.setupTitle}>{t('business_tabs_index.6')}</Text>
-            <Text style={styles.setupText}>{t('business_tabs_index.7')}{setupDone !== null ? ` (${setupDone}/5)` : ''}{' '}{t('business_tabs_index.8')}</Text>
+            <Text style={styles.setupText}>{t('business_tabs_index.7')}{setupDone !== null ? ` (${setupDone}/6)` : ''}{' '}{t('business_tabs_index.8')}</Text>
           </PressableScale>
         ) : (
           <View style={styles.setupBanner}>

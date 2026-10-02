@@ -95,13 +95,13 @@ async function main() {
 
     // ── Пустой салон опубликовать нельзя ───────────────────────────────
     const st0 = await owner.client.rpc('business_setup_status', { p_business_id: bid });
-    const allFalse = st0.data && ['description', 'photos', 'masters', 'schedule', 'services'].every((k) => st0.data[k] === false);
-    check('чек-лист пустого салона: все пять пунктов не выполнены', !st0.error && allFalse, JSON.stringify(st0.data ?? st0.error));
+    const allFalse = st0.data && ['description', 'location', 'photos', 'masters', 'schedule', 'services'].every((k) => st0.data[k] === false);
+    check('чек-лист пустого салона: все шесть пунктов не выполнены', !st0.error && allFalse, JSON.stringify(st0.data ?? st0.error));
     const p0 = await owner.client.rpc('publish_business', { p_business_id: bid });
     const msg0 = p0.error?.message ?? '';
     check(
       'publish_business на пустом салоне — ошибка со всеми пунктами',
-      ['описание', 'фото', 'мастера', 'расписание', 'услуги'].every((w) => msg0.includes(w)),
+      ['описание', 'карте', 'фото', 'мастера', 'расписание', 'услуги'].every((w) => msg0.includes(w)),
       msg0
     );
     const direct = await owner.client.from('businesses').update({ published_at: new Date().toISOString() }).eq('id', bid);
@@ -157,7 +157,14 @@ async function main() {
     check('услуга без мастера не засчитана', (await status()).services === false);
     await owner.client.from('service_masters').insert({ service_id: svc.id, master_id: master.id });
     st = await status();
-    check('услуга с мастером засчитана — все пять пунктов готовы', ['description', 'photos', 'masters', 'schedule', 'services'].every((k) => st[k] === true), JSON.stringify(st));
+    check('услуга с мастером засчитана, место на карте ещё нет', st.services === true && st.location === false, JSON.stringify(st));
+    const pNoMap = await owner.client.rpc('publish_business', { p_business_id: bid });
+    check('без отметки на карте салон не публикуется (0032)', !!pNoMap.error?.message?.includes('карте'), pNoMap.error?.message);
+    const badLat = await owner.client.from('businesses').update({ lat: 40.4 }).eq('id', bid);
+    check('нельзя сохранить широту без долготы', !!badLat.error, badLat.error?.message);
+    const setLoc = await owner.client.from('businesses').update({ lat: 40.3777, lng: 49.892 }).eq('id', bid);
+    st = await status();
+    check('владелец отмечает салон на карте — все шесть пунктов готовы', !setLoc.error && ['description', 'location', 'photos', 'masters', 'schedule', 'services'].every((k) => st[k] === true), setLoc.error?.message || JSON.stringify(st));
 
     // ── До публикации записаться нельзя, публикует только владелец ─────
     const monday = nextWeekday(1);

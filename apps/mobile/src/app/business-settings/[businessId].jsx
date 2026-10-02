@@ -7,7 +7,8 @@ import { View, Text, TextInput, StyleSheet, ScrollView, ActivityIndicator } from
 import { Image } from 'expo-image';
 import PressableScale from '@/components/PressableScale';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { ArrowLeft, Camera } from 'lucide-react-native';
+import { ArrowLeft, Camera, MapPin, ChevronRight } from 'lucide-react-native';
+import { hasLocation } from '@/utils/maps';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { getMyBusiness, updateBusiness, listBusinessPhotos } from '@/utils/supabase/business';
 import { listCategories } from '@/utils/supabase/catalog';
@@ -24,6 +25,7 @@ export default function BusinessSettingsScreen() {
   const [info, setInfo] = useState(null);
   const [photoUrl, setPhotoUrl] = useState(null);
   const [photoCount, setPhotoCount] = useState(0);
+  const [located, setLocated] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -35,6 +37,7 @@ export default function BusinessSettingsScreen() {
           setCategories(cats);
           setPhotoUrl(photos[0]?.url ?? null);
           setPhotoCount(photos.length);
+          setLocated(hasLocation(b));
           setForm({
             name: b.name,
             categoryId: b.category_id,
@@ -119,6 +122,16 @@ export default function BusinessSettingsScreen() {
           </View>
         </PressableScale>
 
+        {/* Место на карте (0032) — отдельный экран с картой. */}
+        <PressableScale style={styles.locationRow} onPress={() => router.push(`/business-location/${businessId}`)}>
+          <MapPin size={20} color={located ? COLORS.indigo : COLORS.warning} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.locationTitle}>{t('map.addressOnMap')}</Text>
+            <Text style={[styles.locationSub, !located && { color: COLORS.warning }]}>{located ? t('map.marked') : t('map.notMarked')}</Text>
+          </View>
+          <ChevronRight size={18} color={COLORS.subLight} />
+        </PressableScale>
+
         <TextInput style={styles.input} placeholder={t('common.67')} placeholderTextColor={COLORS.sub} value={form.name} onChangeText={(v) => setForm((f) => ({ ...f, name: v }))} />
 
         <Text style={styles.label}>{t('common.5')}</Text>
@@ -196,6 +209,9 @@ const styles = StyleSheet.create({
   // photoBox задаёт размер сам, поэтому 100% — тот же результат, но рабочий.
   photoImg: { width: '100%', height: '100%' },
   photoOverlay: { alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: 'rgba(11,17,32,.35)', ...StyleSheet.absoluteFillObject },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, minHeight: 56, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.surfaceAlt },
+  locationTitle: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.ink },
+  locationSub: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginTop: 2 },
   photoOverlayText: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: COLORS.white },
   input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, padding: SPACING.md, fontFamily: FONT.regular, fontSize: TEXT_SIZE.md, color: COLORS.text },
   textarea: { minHeight: 80, textAlignVertical: 'top' },

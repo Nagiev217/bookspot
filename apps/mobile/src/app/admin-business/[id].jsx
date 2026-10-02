@@ -24,6 +24,7 @@ import { t } from '@/utils/i18n';
 const EXTEND = [1, 3, 6, 12];
 const setupSteps = () => [
   ['description', t('admin_business_id.1')],
+  ['location', t('map.addressOnMap')],
   ['photos', t('admin_business_id.2')],
   ['masters', t('common.47')],
   ['schedule', t('common.26')],

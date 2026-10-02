@@ -21,6 +21,12 @@ function stepsFor(businessId, status) {
       href: `/business-settings/${businessId}`,
     },
     {
+      key: 'location',
+      title: t('setup.location.title'),
+      text: t('setup.location.text'),
+      href: `/business-location/${businessId}`,
+    },
+    {
       key: 'photos',
       title: t('salon_setup_businessId.3', { p0: status?.photos_count ?? 0 }),
       text: t('salon_setup_businessId.4'),

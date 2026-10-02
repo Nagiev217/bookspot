@@ -42,7 +42,7 @@ export async function createBooking({ businessId, masterId, serviceId, date, sta
 export async function listMyBookings() {
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, business_id, master_id, service_id, service_name, price, starts_at, ends_at, status, requested_starts_at, expires_at, cancel_reason, masters(name), businesses(name, city, district), reviews(id, rating)')
+    .select('id, business_id, master_id, service_id, service_name, price, starts_at, ends_at, status, requested_starts_at, expires_at, cancel_reason, masters(name), businesses(name, city, district, address, lat, lng), reviews(id, rating)')
     .order('starts_at', { ascending: false });
   if (error) throw error;
   return data;
