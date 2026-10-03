@@ -468,6 +468,7 @@ export default {
   'server.cityRequired': "City is required",
   'server.clientNameRequired': "Enter the client's name",
   'server.experienceRange': "Experience — 0 to 70 years",
+  'server.leadTime': "You can book no later than 1 hour before the start",
   'server.masterHasAccess': "This master already has access",
   'server.masterNoService': "This master doesn't offer the selected service",
   'server.masterNotFound': "Master not found",

@@ -7,7 +7,7 @@ import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Check, Clock } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { tintFor } from '@/utils/tint';
-import { getBusiness, listServices, listMasters } from '@/utils/supabase/catalog';
+import { getBusiness, listServices, listMasters, listServiceMasters } from '@/utils/supabase/catalog';
 import { getAvailability, createBooking } from '@/utils/supabase/booking';
 import { useAuthStore } from '@/utils/auth/store';
 import { registerForPush } from '@/utils/notifications';
@@ -50,6 +50,7 @@ export default function Booking() {
   const [business, setBusiness] = useState(null);
   const [services, setServices] = useState([]);
   const [masters, setMasters] = useState([]);
+  const [serviceMasters, setServiceMasters] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   // Предвыбор со страницы мастера (master-info) — только при первой
@@ -59,12 +60,13 @@ export default function Booking() {
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-      Promise.all([getBusiness(businessId), listServices(businessId), listMasters(businessId)])
-        .then(([b, s, m]) => {
+      Promise.all([getBusiness(businessId), listServices(businessId), listMasters(businessId), listServiceMasters(businessId)])
+        .then(([b, s, m, sm]) => {
           if (cancelled) return;
           setBusiness(b);
           setServices(s);
           setMasters(m);
+          setServiceMasters(sm);
           const initial = params.serviceId ? s.findIndex((x) => x.id === params.serviceId) : 0;
           setServiceIdx(initial >= 0 ? initial : 0);
           if (!prefilled.current && params.masterId) {
@@ -100,6 +102,15 @@ export default function Booking() {
 
   const master = masterIdx === null ? null : masters[masterIdx];
   const service = services[serviceIdx] ?? services[0];
+  // Мастера, которые делают выбранную услугу (service_masters). Остальным
+  // сервер всё равно откажет — показывать их нельзя.
+  const offersService = (m) => !!service && !!serviceMasters[service.id]?.has(m.id);
+
+  // Сменили услугу — выбранный мастер её не делает: выбор сбрасываем.
+  useEffect(() => {
+    if (master && service && !offersService(master)) setMasterIdx(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serviceIdx, serviceMasters]);
 
   const loadAvailability = useCallback(() => {
     if (!master || !service) return;
@@ -230,10 +241,10 @@ export default function Booking() {
 
         {step === 2 && (
           <View style={{ gap: SPACING.sm }}>
-            {masters.length === 0 ? (
+            {!masters.some(offersService) ? (
               <Text style={styles.rowSub}>{t('booking_idx.7')}</Text>
             ) : (
-              masters.map((m, i) => (
+              masters.map((m, i) => !offersService(m) ? null : (
                 <PressableScale key={m.id} style={[styles.row, masterIdx === i && styles.rowActive]} onPress={() => setMasterIdx(i)}>
                   <View style={[styles.masterThumb, { backgroundColor: tintFor(m.id)[0] }]} />
                   <View style={{ flex: 1, minWidth: 0 }}>

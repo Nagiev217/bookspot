@@ -469,6 +469,7 @@ export default {
   'server.cityRequired': "Не указан город",
   'server.clientNameRequired': "Укажите имя клиента",
   'server.experienceRange': "Опыт — от 0 до 70 лет",
+  'server.leadTime': "Записаться можно не раньше чем за 1 час до начала",
   'server.masterHasAccess': "У этого мастера уже есть доступ",
   'server.masterNoService': "Этот мастер не выполняет выбранную услугу",
   'server.masterNotFound': "Мастер не найден",

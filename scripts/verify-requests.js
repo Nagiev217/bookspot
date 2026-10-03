@@ -112,8 +112,26 @@ async function main() {
     const b1 = r1.data?.[0]?.id;
     const s1 = b1 && (await status(b1));
     check('запись клиента создаётся как заявка (pending)', !r1.error && s1?.status === 'pending', r1.error?.message || s1?.status);
+    // Срок ответа — 2 дневных часа (0033): днём ровно 2 ч, ночью отсчёт
+    // начинается с 09:00 по Баку.
     const expMin = s1 ? (new Date(s1.expires_at) - Date.now()) / 60000 : 0;
-    check('срок ответа — 2 часа', expMin > 115 && expMin <= 121, `${expMin.toFixed(1)} мин`);
+    const bakuHour = new Date(Date.now() + 4 * 3600e3).getUTCHours();
+    const daytime = bakuHour >= 9 && bakuHour < 20;
+    check(
+      'срок ответа — 2 дневных часа',
+      daytime ? expMin > 115 && expMin <= 121 : expMin > 121 && expMin <= 14 * 60,
+      `${expMin.toFixed(1)} мин, час в Баку ${bakuHour}`
+    );
+
+    // Минимальное время до записи (0033) и отсутствие прошедших слотов.
+    const todayBaku = new Date(Date.now() + 4 * 3600e3).toISOString().slice(0, 10);
+    const { data: todaySlots } = await admin.rpc('get_availability', { p_master_id: mA.id, p_service_id: svc.id, p_from: todayBaku, p_days: 1 });
+    const minHM = new Date(Date.now() + 4 * 3600e3 + 3600e3).toISOString().slice(11, 16);
+    check('сегодня нет прошедших слотов и слотов ближе часа', (todaySlots || []).every((r) => r.slot_time >= minHM), (todaySlots || []).slice(0, 3).map((r) => r.slot_time).join(','));
+    const soon = new Date(Date.now() + 4 * 3600e3 + 20 * 60e3);
+    const soonHM = `${String(soon.getUTCHours()).padStart(2, '0')}:${String(Math.floor(soon.getUTCMinutes() / 15) * 15).padStart(2, '0')}`;
+    const tooSoon = await client.client.rpc('create_booking', { p_business_id: bid, p_master_id: mA.id, p_service_id: svc.id, p_date: soon.toISOString().slice(0, 10), p_start: soonHM });
+    check('запись меньше чем за час отклонена', !!tooSoon.error, tooSoon.error?.message);
 
     const o1 = await outbox(b1);
     const staffNotes = o1.filter((n) => n.type === 'new_booking_business');

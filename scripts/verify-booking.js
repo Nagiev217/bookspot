@@ -52,7 +52,11 @@ async function main() {
   const { data: service } = await client.from('services').select('id, duration_min').eq('business_id', business.id).eq('name', 'Стрижка + борода').single();
   if (!master || !service) throw new Error('Сид-данные не найдены — запустите npm run seed');
 
-  const date = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10); // завтра
+  // Ближайший будний день, не сегодня: у сид-мастера воскресенье выходной,
+  // а «завтра» в субботу давало ложный провал.
+  const d = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  while (d.getUTCDay() === 0) d.setUTCDate(d.getUTCDate() + 1);
+  const date = d.toISOString().slice(0, 10);
   const args = { p_business_id: business.id, p_master_id: master.id, p_service_id: service.id, p_date: date };
   const created = [];
 

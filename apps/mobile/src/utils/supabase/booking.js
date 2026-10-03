@@ -5,12 +5,13 @@ import { supabase } from './config';
 // Возвращает { "2026-09-20": ["10:00", "10:15", ...], ... } — сгруппировано
 // по дате, каждая строка уже "HH:MM" в местном времени Баку (сервер
 // форматирует, клиенту конвертировать нечего).
-export async function getAvailability({ masterId, serviceId, from, days = 7 }) {
+export async function getAvailability({ masterId, serviceId, from, days = 7, leadMinutes = 60 }) {
   const { data, error } = await supabase.rpc('get_availability', {
     p_master_id: masterId,
     p_service_id: serviceId,
     p_from: from,
     p_days: days,
+    p_lead_minutes: leadMinutes,
   });
   if (error) throw error;
   const byDate = {};

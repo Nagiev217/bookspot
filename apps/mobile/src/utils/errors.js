@@ -50,6 +50,7 @@ const SERVER_MESSAGES = {
   'Этот мастер не выполняет выбранную услугу': 'server.masterNoService',
   'Этот мастер не работает в выбранное время': 'server.masterNotWorking',
   'Нельзя записаться на прошедшее время': 'server.pastTime',
+  'Запись возможна не раньше чем через 1 час': 'server.leadTime',
   'Салон временно не принимает записи': 'server.salonClosed',
   'Салон не найден': 'server.salonNotFound',
   'Неверный формат времени': 'server.badTime',

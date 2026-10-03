@@ -60,7 +60,7 @@ export default function ManualBooking() {
   function goToTimeStep() {
     setStep(3);
     setAvailLoading(true);
-    getAvailability({ masterId: master.id, serviceId: service.id, from: bakuToday(), days: 14 })
+    getAvailability({ masterId: master.id, serviceId: service.id, from: bakuToday(), days: 14, leadMinutes: 0 })
       .then((map) => {
         setAvailability(map);
         const first = Object.keys(map).sort()[0];

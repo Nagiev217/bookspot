@@ -121,3 +121,15 @@ export async function listMasterReviews(masterId) {
   if (error) throw error;
   return data;
 }
+
+// Какие мастера делают какую услугу: { [serviceId]: Set(masterId) }.
+export async function listServiceMasters(businessId) {
+  const { data, error } = await supabase
+    .from('service_masters')
+    .select('service_id, master_id, service:services!inner(business_id)')
+    .eq('service.business_id', businessId);
+  if (error) throw error;
+  const map = {};
+  for (const r of data) (map[r.service_id] ??= new Set()).add(r.master_id);
+  return map;
+}

@@ -468,6 +468,7 @@ export default {
   'server.cityRequired': "Şəhər göstərilməyib",
   'server.clientNameRequired': "Müştərinin adını göstərin",
   'server.experienceRange': "Təcrübə — 0-dan 70 ilə qədər",
+  'server.leadTime': "Başlamağa ən azı 1 saat qalmış yazılmaq olar",
   'server.masterHasAccess': "Bu ustanın artıq girişi var",
   'server.masterNoService': "Bu usta seçilmiş xidməti göstərmir",
   'server.masterNotFound': "Usta tapılmadı",

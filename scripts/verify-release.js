@@ -151,7 +151,8 @@ async function main() {
     const pastBooking = await client.client.rpc('create_booking', {
       p_business_id: businessId, p_master_id: masterId, p_service_id: serviceId, p_date: yesterday, p_start: '10:00',
     });
-    check('бронь в прошлом отклонена', !!pastBooking.error?.message?.includes('прошедшее время'), pastBooking.error?.message);
+    // С 0033 раньше срабатывает проверка «не раньше чем через 1 час» — тоже верный отказ.
+    check('бронь в прошлом отклонена', /прошедшее время|не раньше чем через 1 час/.test(pastBooking.error?.message || ''), pastBooking.error?.message);
 
     const dayOffBooking = await client.client.rpc('create_booking', {
       p_business_id: businessId, p_master_id: masterId, p_service_id: serviceId, p_date: saturday, p_start: '10:00',
