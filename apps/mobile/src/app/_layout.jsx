@@ -121,7 +121,10 @@ export default function RootLayout() {
     // booking_cancelled приходит обеим сторонам — решает текущий режим.
     const sub = addNotificationResponseListener((data) => {
       const businessMode = useAuthStore.getState().mode === 'business';
-      if (data.type === 'review_request' && data.bookingId) {
+      const bizId = useAuthStore.getState().businessId;
+      if (data.type === 'new_review' && bizId) {
+        router.push(`/business-reviews/${bizId}`);
+      } else if (data.type === 'review_request' && data.bookingId) {
         router.push(`/review/${data.bookingId}`);
       } else if (data.type === 'new_booking_business' && data.bookingId) {
         router.push(`/booking-request/${data.bookingId}`);
@@ -168,6 +171,7 @@ export default function RootLayout() {
         <Stack.Screen name="salon-setup/[businessId]" options={{ gestureEnabled: true }} />
         <Stack.Screen name="my-master-profile" options={{ gestureEnabled: true }} />
         <Stack.Screen name="edit-profile" options={{ gestureEnabled: true }} />
+        <Stack.Screen name="business-reviews/[businessId]" options={{ gestureEnabled: true }} />
         <Stack.Screen name="master-info/[masterId]" options={{ gestureEnabled: true }} />
         <Stack.Screen name="booking-request/[bookingId]" options={{ gestureEnabled: true }} />
         <Stack.Screen name="master/[masterId]" options={{ presentation: 'modal', gestureEnabled: true }} />

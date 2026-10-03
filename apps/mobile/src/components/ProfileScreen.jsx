@@ -145,7 +145,10 @@ export default function ProfileScreen() {
 
       <View style={styles.group}>
         {workMode && <MenuRow label={switchLabel} onPress={switchMode} last={role !== 'business_owner' && role !== 'staff'} />}
-        {role === 'staff' && <MenuRow label={t('components_ProfileScreen.14')} onPress={() => router.push('/my-master-profile')} last />}
+        {role === 'staff' && <MenuRow label={t('components_ProfileScreen.14')} onPress={() => router.push('/my-master-profile')} />}
+        {(role === 'staff' || role === 'business_owner') && businessId && (
+          <MenuRow label={t('common.73')} onPress={() => router.push(`/business-reviews/${businessId}`)} last={role === 'staff'} />
+        )}
         {role === 'business_owner' && (
           <>
             <MenuRow label={t('common.48')} onPress={() => router.push(`/services/${businessId}`)} />

@@ -11,6 +11,7 @@ import { getBooking, getAvailability, rescheduleBooking, cancelBooking } from '@
 import { friendlyError } from '@/utils/errors';
 import { dowShort } from '@/utils/i18n/dates';
 import { t } from '@/utils/i18n';
+import { useAuthStore } from '@/utils/auth/store';
 
 const DAYS_WINDOW = 14;
 
@@ -28,6 +29,7 @@ function dowOf(iso) {
 
 export default function Reschedule() {
   const { bookingId } = useLocalSearchParams();
+  const uid = useAuthStore((s) => s.uid);
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -47,7 +49,9 @@ export default function Reschedule() {
           if (cancelled) return;
           setBooking(b);
           setAvailLoading(true);
-          return getAvailability({ masterId: b.master_id, serviceId: b.service_id, from: bakuToday(), days: DAYS_WINDOW });
+          // Салон переносит без ограничения «не раньше чем за час» (0033).
+          const lead = b.client_id === uid ? 60 : 0;
+          return getAvailability({ masterId: b.master_id, serviceId: b.service_id, from: bakuToday(), days: DAYS_WINDOW, leadMinutes: lead });
         })
         .then((map) => {
           if (cancelled || !map) return;
@@ -92,14 +96,17 @@ export default function Reschedule() {
     setSaveError(null);
     try {
       await rescheduleBooking({ bookingId, date: selectedDate, start: time });
-      Alert.alert(t('reschedule_bookingId.1'), t('reschedule_bookingId.2'));
-      router.replace('/(client-tabs)/bookings');
+      // Клиент перенёс — новое время снова ждёт мастера; салон перенёс —
+      // запись остаётся подтверждённой, клиент получит push (0035).
+      if (booking.client_id === uid) Alert.alert(t('reschedule_bookingId.1'), t('reschedule_bookingId.2'));
+      else Alert.alert(t('salonBooking.moved'), t('salonBooking.movedText'));
+      router.replace(booking.client_id === uid ? '/(client-tabs)/bookings' : '/(business-tabs)/calendar');
     } catch (e) {
       if (e.code === '23P01') {
         setSaveError(t('common.52'));
         setTime(null);
         setAvailLoading(true);
-        getAvailability({ masterId: booking.master_id, serviceId: booking.service_id, from: bakuToday(), days: DAYS_WINDOW })
+        getAvailability({ masterId: booking.master_id, serviceId: booking.service_id, from: bakuToday(), days: DAYS_WINDOW, leadMinutes: booking.client_id === uid ? 60 : 0 })
           .then(setAvailability)
           .finally(() => setAvailLoading(false));
       } else {
@@ -120,7 +127,7 @@ export default function Reschedule() {
           setCancelling(true);
           try {
             await cancelBooking(bookingId);
-            router.replace('/(client-tabs)/bookings');
+            router.replace(booking.client_id === uid ? '/(client-tabs)/bookings' : '/(business-tabs)/calendar');
           } catch (e) {
             Alert.alert(t('reschedule_bookingId.8'), friendlyError(e));
             setCancelling(false);

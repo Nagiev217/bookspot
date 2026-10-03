@@ -52,7 +52,7 @@ export async function listMyBookings() {
 export async function getBooking(bookingId) {
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, business_id, master_id, service_id, service_name, price, starts_at, ends_at, status, requested_starts_at, expires_at, cancel_reason, businesses(name, city, district)')
+    .select('id, client_id, business_id, master_id, service_id, service_name, price, starts_at, ends_at, status, requested_starts_at, expires_at, cancel_reason, businesses(name, city, district)')
     .eq('id', bookingId)
     .single();
   if (error) throw error;

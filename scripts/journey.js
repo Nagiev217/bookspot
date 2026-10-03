@@ -91,6 +91,19 @@ function nextWeekday(dow) {
     const { data: clientOut } = await admin.from('notification_outbox').select('title,body').eq('booking_id', bookingId).eq('user_id', client.uid);
     step(`  push клиенту (az): ${clientOut?.map((x) => x.title).join(' | ')}`);
 
+    // ── Владелец переносит подтверждённую запись (клиент позвонил) ──────
+    step('Владелец: переносит подтверждённую запись');
+    const later = slots?.[4]?.slot_time || '12:00';
+    const mv = await owner.client.rpc('reschedule_booking', { p_booking_id: bookingId, p_date: monday, p_start: later });
+    if (mv.error) note('перенос салоном: ' + mv.error.message);
+    const { data: afterMove } = await owner.client.from('bookings').select('status').eq('id', bookingId).single();
+    if (afterMove?.status !== 'confirmed') note('после переноса салоном запись перестала быть подтверждённой: ' + afterMove?.status);
+    const { data: movedOut } = await admin.from('notification_outbox').select('type,title').eq('booking_id', bookingId).eq('user_id', client.uid).eq('type', 'booking_rescheduled');
+    if (!movedOut?.length) note('клиент не узнаёт, что салон перенёс его запись');
+    else step(`  push клиенту: «${movedOut[0].title}»`);
+    const { data: rem } = await admin.from('notification_outbox').select('send_after').eq('booking_id', bookingId).eq('type', 'booking_reminder').is('sent_at', null);
+    if (rem?.length !== 1) note(`напоминаний о записи после переноса: ${rem?.length}, ожидалось 1`);
+
     // ── Визит прошёл → отзыв ───────────────────────────────────────────
     step('Визит прошёл: владелец отмечает, клиент оставляет отзыв');
     await admin.from('bookings').update({ starts_at: new Date(Date.now() - 3 * 3600e3).toISOString(), ends_at: new Date(Date.now() - 2.25 * 3600e3).toISOString() }).eq('id', bookingId);
@@ -107,6 +120,9 @@ function nextWeekday(dow) {
     step(`  рейтинг: ${biz?.rating_avg} (${biz?.review_count})`);
     const { data: reviewOut } = await admin.from('notification_outbox').select('title').eq('user_id', owner.uid).eq('booking_id', bookingId);
     if (!reviewOut?.some((x) => /отзыв|rəy|review/i.test(x.title))) note('владелец не получает уведомление о новом отзыве');
+    else step(`  push владельцу: «${reviewOut.find((x) => /отзыв|rəy|review/i.test(x.title)).title}»`);
+    const { data: ownerReviews } = await owner.client.from('reviews').select('id, masters(name), bookings(service_name)').eq('business_id', bid);
+    if (ownerReviews?.length !== 1 || !ownerReviews[0].bookings?.service_name) note('владелец не видит отзыв с услугой в бизнес-режиме');
     const { data: leftAsk } = await admin.from('notification_outbox').select('id').eq('booking_id', bookingId).eq('type', 'review_request').is('sent_at', null);
     if (leftAsk?.length) note('после отзыва просьба об отзыве всё ещё в очереди');
 

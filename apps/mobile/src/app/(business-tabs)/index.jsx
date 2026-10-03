@@ -14,7 +14,7 @@ import { PARTNER_WHATSAPP, hasPartnerWhatsapp, whatsappUrl } from '@/utils/conta
 import { bakuToday } from '@/components/DateTimeGrid';
 import PressableScale from '@/components/PressableScale';
 import { dowFull, dayMonth } from '@/utils/i18n/dates';
-import { t } from '@/utils/i18n';
+import { t, tn } from '@/utils/i18n';
 import { friendlyError } from '@/utils/errors';
 
 
@@ -154,6 +154,11 @@ export default function BusinessToday() {
           <Text style={styles.kpiValue}>{revenue} ₼</Text>
           <Text style={styles.kpiLabel}>{t('business_tabs_index.5')}</Text>
         </View>
+        {/* Рейтинг — вход в отзывы (0035: о новых приходит push). */}
+        <PressableScale style={styles.kpiCard} onPress={() => router.push(`/business-reviews/${businessId}`)}>
+          <Text style={styles.kpiValue}>{business?.review_count ? `★ ${Number(business.rating_avg).toFixed(1)}` : '—'}</Text>
+          <Text style={styles.kpiLabel}>{tn('plural.reviews', business?.review_count || 0)}</Text>
+        </PressableScale>
       </View>
 
       {business && !business.published_at && (
@@ -228,13 +233,13 @@ export default function BusinessToday() {
         bookings.map((b) => (
           <View key={b.id} style={styles.agendaRow}>
             <Text style={styles.agendaTime}>{formatTime(b.starts_at)}</Text>
-            <View style={styles.agendaCard}>
+            <PressableScale style={styles.agendaCard} onPress={() => router.push(`/booking-request/${b.id}`)}>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={styles.agendaClient}>{b.client_name || t('common.22')}</Text>
                 <Text style={styles.agendaService}>{b.service_name}</Text>
               </View>
               <Text style={styles.agendaPrice}>{b.price} ₼</Text>
-            </View>
+            </PressableScale>
           </View>
         ))
       )}

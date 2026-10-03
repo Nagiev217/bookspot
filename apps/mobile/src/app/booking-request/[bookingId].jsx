@@ -9,8 +9,9 @@ import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Phone } from 'lucide-react-native';
 import PressableScale from '@/components/PressableScale';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
-import { getBookingRequest } from '@/utils/supabase/business';
-import { getAvailability, acceptBooking, declineBooking, proposeBookingTime } from '@/utils/supabase/booking';
+import { getBookingRequest, completeBooking } from '@/utils/supabase/business';
+import { formatPhone } from '@/utils/phone';
+import { getAvailability, acceptBooking, declineBooking, proposeBookingTime, cancelBooking } from '@/utils/supabase/booking';
 import { bakuToday, addDaysISO } from '@/components/DateTimeGrid';
 import { friendlyError } from '@/utils/errors';
 import { dowShort, dayMonthShort } from '@/utils/i18n/dates';
@@ -92,6 +93,23 @@ export default function BookingRequest() {
     }
   }
 
+  // Подтверждённая запись: перенос — экран переноса (салон, без ограничения
+  // «за час»), отмена — с подтверждением, клиент получит push.
+  function handleCancelConfirmed() {
+    Alert.alert(t('salonBooking.cancelTitle'), t('salonBooking.cancelText'), [
+      { text: t('reschedule_bookingId.6'), style: 'cancel' },
+      {
+        text: t('reschedule_bookingId.7'),
+        style: 'destructive',
+        onPress: () => run('decline', () => cancelBooking(bookingId), () => router.back()),
+      },
+    ]);
+  }
+
+  function handleComplete(status) {
+    run('accept', () => completeBooking(bookingId, status), () => router.back());
+  }
+
   function handleAccept() {
     run('accept', () => acceptBooking(bookingId), () => {
       Alert.alert(t('booking_request_bookingId.2'), t('booking_request_bookingId.3'));
@@ -144,6 +162,8 @@ export default function BookingRequest() {
   const isPending = booking.status === 'pending';
   const isProposed = booking.status === 'proposed';
   const isOpen = isPending || isProposed;
+  const isConfirmed = booking.status === 'confirmed';
+  const isPast = new Date(booking.starts_at).getTime() <= Date.now();
   const dateList = Array.from({ length: DAYS_WINDOW }, (_, i) => addDaysISO(bakuToday(), i));
   const timesForSelected = (selectedDate && availability?.[selectedDate]) || [];
 
@@ -183,7 +203,7 @@ export default function BookingRequest() {
         <View style={styles.clientRow}>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={styles.clientName}>{booking.client_name || t('common.32')}</Text>
-            {booking.client_phone ? <Text style={styles.clientPhone}>{booking.client_phone}</Text> : null}
+            {booking.client_phone ? <Text style={styles.clientPhone}>{formatPhone(booking.client_phone)}</Text> : null}
           </View>
           {booking.client_phone ? (
             <PressableScale
@@ -261,6 +281,33 @@ export default function BookingRequest() {
           </Text>
         )}
       </ScrollView>
+
+      {isConfirmed && (
+        <View style={styles.ctaBar}>
+          {isPast ? (
+            <>
+              <Text style={styles.ctaHint}>{t('business_tabs_calendar.12')}</Text>
+              <View style={styles.secondaryRow}>
+                <PressableScale style={styles.dangerButton} disabled={!!busy} onPress={() => handleComplete('no_show')}>
+                  <Text style={styles.dangerText}>{t('business_tabs_calendar.2')}</Text>
+                </PressableScale>
+                <PressableScale style={[styles.primaryButton, { flex: 1 }]} disabled={!!busy} onPress={() => handleComplete('completed')}>
+                  {busy === 'accept' ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.primaryText}>{t('business_tabs_calendar.3')}</Text>}
+                </PressableScale>
+              </View>
+            </>
+          ) : (
+            <View style={styles.secondaryRow}>
+              <PressableScale style={styles.outlineButton} disabled={!!busy} onPress={() => router.push(`/reschedule/${bookingId}`)}>
+                <Text style={styles.outlineText}>{t('client_tabs_bookings.18')}</Text>
+              </PressableScale>
+              <PressableScale style={styles.dangerButton} disabled={!!busy} onPress={handleCancelConfirmed}>
+                {busy === 'decline' ? <ActivityIndicator color={COLORS.danger} /> : <Text style={styles.dangerText}>{t('reschedule_bookingId.7')}</Text>}
+              </PressableScale>
+            </View>
+          )}
+        </View>
+      )}
 
       {isOpen && (
         <View style={styles.ctaBar}>
@@ -365,6 +412,7 @@ const styles = StyleSheet.create({
   outlineButton: { flex: 1, height: 48, borderRadius: RADIUS.md, borderWidth: 1, borderColor: 'rgba(11,17,32,.12)', alignItems: 'center', justifyContent: 'center' },
   outlineText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.ink },
   dangerButton: { flex: 1, height: 48, borderRadius: RADIUS.md, borderWidth: 1, borderColor: 'rgba(208,65,47,.35)', alignItems: 'center', justifyContent: 'center' },
+  ctaHint: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: COLORS.sub, textAlign: 'center' },
   dangerButtonWide: { height: 50, borderRadius: RADIUS.md, borderWidth: 1, borderColor: 'rgba(208,65,47,.35)', alignItems: 'center', justifyContent: 'center' },
   dangerText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.danger },
   textButton: { height: 44, alignItems: 'center', justifyContent: 'center' },

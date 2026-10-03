@@ -333,3 +333,18 @@ export async function updateMyMasterProfile({ bio, photoUrl = null, specialty = 
   });
   if (error) throw error;
 }
+
+// Отзывы о салоне для бизнес-режима; masterId — только о конкретном мастере
+// (мастер со своим логином видит отзывы о себе).
+export async function listBusinessReviews(businessId, masterId = null) {
+  let q = supabase
+    .from('reviews')
+    .select('id, client_name, rating, comment, created_at, master_id, masters(name), bookings(service_name)')
+    .eq('business_id', businessId)
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if (masterId) q = q.eq('master_id', masterId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data;
+}

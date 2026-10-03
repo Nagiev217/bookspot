@@ -3,14 +3,14 @@
 // но рабочее для типичного салона; # ponytail: если появится мастер с
 // более ранним/поздним стартом, окно нужно будет считать динамически.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import PressableScale from '@/components/PressableScale';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { useAuthStore } from '@/utils/auth/store';
 import { listMasters } from '@/utils/supabase/catalog';
-import { listBusinessBookings, listBusinessHistory, completeBooking } from '@/utils/supabase/business';
+import { listBusinessBookings, listBusinessHistory } from '@/utils/supabase/business';
 import { bakuToday, addDaysISO } from '@/components/DateTimeGrid';
 import { dowShort, dayMonthShort } from '@/utils/i18n/dates';
 import { t, tn } from '@/utils/i18n';
@@ -111,41 +111,12 @@ export default function BusinessCalendar() {
   const masters = staffMasterId ? allMasters.filter((m) => m.id === staffMasterId) : allMasters;
   const masterName = useCallback((id) => masters.find((m) => m.id === id)?.name || t('common.21'), [masters]);
 
-  // Отметить визит завершённым/неявкой можно только для уже прошедшего
-  // времени — то же самое complete_booking проверяет и на сервере
-  // (0015_booking_lifecycle.sql). Раньше тап по ещё не начавшейся брони
-  // молча ничего не делал — выглядело как "не работает"; теперь для
-  // будущей брони показываем просто карточку без действий, а не тишину.
-  async function handleBookingTap(b) {
-    // Заявка (0029) — открываем экран ответа: принять / другое время / отклонить.
-    if (b.status === 'pending' || b.status === 'proposed') {
-      router.push(`/booking-request/${b.id}`);
-      return;
-    }
-    if (b.status !== 'confirmed') return;
-    const isPast = new Date(b.starts_at).getTime() <= Date.now();
-    if (!isPast) {
-      Alert.alert(b.client_name || t('common.22'), t('business_tabs_calendar.1', { service_name: b.service_name }));
-      return;
-    }
-    Alert.alert(
-      b.client_name || t('common.22'),
-      b.service_name,
-      [
-        { text: t('common.23'), style: 'cancel' },
-        { text: t('business_tabs_calendar.2'), style: 'destructive', onPress: () => runComplete(b.id, 'no_show') },
-        { text: t('business_tabs_calendar.3'), onPress: () => runComplete(b.id, 'completed') },
-      ]
-    );
-  }
-
-  async function runComplete(bookingId, status) {
-    try {
-      await completeBooking(bookingId, status);
-      reload();
-    } catch (e) {
-      Alert.alert(t('business_tabs_calendar.4'), friendlyError(e, t('common.24')));
-    }
+  // Любая активная запись открывает экран записи салона: заявка — принять /
+  // другое время / отклонить; подтверждённая — позвонить, перенести,
+  // отменить; прошедшая — «Пришёл / Не пришёл» (complete_booking).
+  function handleBookingTap(b) {
+    if (!['pending', 'proposed', 'confirmed'].includes(b.status)) return;
+    router.push(`/booking-request/${b.id}`);
   }
 
   if (loading) {

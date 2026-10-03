@@ -76,6 +76,8 @@ One app, two modes. Every user is a client; if the account owns a business, a **
 | Calendar: day view by master, week view with revenue, **visit history** | `(business-tabs)/calendar.jsx` |
 | **Answering requests**: accept, propose another free time, or decline; unanswered requests expire after 2 hours | `booking-request/[bookingId].jsx`, `(business-tabs)/index.jsx` |
 | Marking a visit: "Showed up" / "No-show" | `0015_booking_lifecycle.sql` |
+| **Booking screen for the salon** (from the calendar or Today): call the client, move or cancel a confirmed booking, mark a past one | `booking-request/[bookingId].jsx` |
+| **Reviews in business mode** — average, star breakdown, list (a master sees only their own); rating tile on Today; push on every new review | `business-reviews/[businessId].jsx` |
 | Manual booking for phone-in clients | `manual-booking/[businessId].jsx` |
 | Services, masters, weekly schedules and masters' days off | `services/…`, `master/[masterId].jsx`, `(business-tabs)/team.jsx` |
 | **Setup checklist** for a new salon, publishing | `salon-setup/[businessId].jsx`, `0024_salon_onboarding.sql` |
@@ -196,6 +198,7 @@ SUPABASE_ACCESS_TOKEN=<same token> npx supabase db push
 | 0031 | Category names and push notifications in az/ru/en (by `profiles.lang`) |
 | 0032 | Salon coordinates; "address on the map" added to the publish checklist |
 | 0033 | No past slots; clients book at least 1 hour ahead (walk-ins excluded); request reply time counts only 09:00–22:00 Baku hours |
+| 0035 | Client is told when the salon moves a booking; owner and master get a push for every new review |
 | 0034 | "How was your visit?" push an hour after a completed visit (never at night), dropped once the review is in |
 
 ## Push notifications
