@@ -1,6 +1,6 @@
-// Главная: категории, «Недавно просмотренные» (на устройстве, utils/recent),
-// «Поблизости» (по геолокации, салоны в радиусе NEARBY_KM с отметкой на
-// карте — 0032) и все салоны каталога.
+// Главная: категории, все салоны каталога, «Поблизости» (по геолокации,
+// салоны в радиусе NEARBY_KM с отметкой на карте — 0032) и «Недавно
+// просмотренные» (на устройстве, utils/recent).
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Linking } from 'react-native';
 import { Image } from 'expo-image';
@@ -182,17 +182,21 @@ export default function Home() {
             })}
           </ScrollView>
 
-          {recent.length > 0 && (
-            <>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>{t('home.recent')}</Text>
-              </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandRow}>
-                {recent.map((b, i) => (
-                  <SalonCard key={b.id} b={b} distance={distanceOf(b)} compact index={i} reducedMotion={reducedMotion} />
-                ))}
-              </ScrollView>
-            </>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t('common.13')}</Text>
+            <PressableScale onPress={() => router.push({ pathname: '/(client-tabs)/search', params: { title: t('common.46') } })}>
+              <Text style={styles.sectionLink}>{t('client_tabs_index.4')}</Text>
+            </PressableScale>
+          </View>
+
+          {businesses.length === 0 ? (
+            <Text style={styles.emptyText}>{t('client_tabs_index.5')}</Text>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandRow}>
+              {businesses.map((b, i) => (
+                <SalonCard key={b.id} b={b} distance={distanceOf(b)} index={i} reducedMotion={reducedMotion} />
+              ))}
+            </ScrollView>
           )}
 
           <View style={styles.sectionHeader}>
@@ -232,21 +236,17 @@ export default function Home() {
             </View>
           ) : null}
 
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('common.13')}</Text>
-            <PressableScale onPress={() => router.push({ pathname: '/(client-tabs)/search', params: { title: t('common.46') } })}>
-              <Text style={styles.sectionLink}>{t('client_tabs_index.4')}</Text>
-            </PressableScale>
-          </View>
-
-          {businesses.length === 0 ? (
-            <Text style={styles.emptyText}>{t('client_tabs_index.5')}</Text>
-          ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandRow}>
-              {businesses.map((b, i) => (
-                <SalonCard key={b.id} b={b} distance={distanceOf(b)} index={i} reducedMotion={reducedMotion} />
-              ))}
-            </ScrollView>
+          {recent.length > 0 && (
+            <>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>{t('home.recent')}</Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandRow}>
+                {recent.map((b, i) => (
+                  <SalonCard key={b.id} b={b} distance={distanceOf(b)} compact index={i} reducedMotion={reducedMotion} />
+                ))}
+              </ScrollView>
+            </>
           )}
         </>
       )}
