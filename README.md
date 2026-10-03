@@ -198,6 +198,7 @@ SUPABASE_ACCESS_TOKEN=<same token> npx supabase db push
 | 0031 | Category names and push notifications in az/ru/en (by `profiles.lang`) |
 | 0032 | Salon coordinates; "address on the map" added to the publish checklist |
 | 0033 | No past slots; clients book at least 1 hour ahead (walk-ins excluded); request reply time counts only 09:00–22:00 Baku hours |
+| 0036 | Security fixes from the audit: staff login can only be linked via "Grant access"; rating is review-derived only (and recomputes on review edits); reviews no longer expose client_id; the temp-password flag clears only after a real password change; booking-settings ranges |
 | 0035 | Client is told when the salon moves a booking; owner and master get a push for every new review |
 | 0034 | "How was your visit?" push an hour after a completed visit (never at night), dropped once the review is in |
 
@@ -238,6 +239,7 @@ npm run verify-admin        # admin, owner and staff roles, subscription
 npm run verify-onboarding   # new salon stays hidden until the setup checklist is done and published
 npm run verify-master-profile  # staff edits own avatar and bio only; clients see the master page
 npm run verify-requests     # booking requests: accept, decline, propose another time, expiry
+npm run verify-security     # the audit holes stay closed (staff hijack, rating, review client_id, temp password)
 npm run journey             # end-to-end walk as a real client and owner; prints anything that looks off
 npm run seed                # test catalog
 npm run purge-demo          # remove demo salons before release

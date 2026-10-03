@@ -14,6 +14,7 @@
     "verify-master-profile": "node --env-file=.env verify-master-profile.js",
     "verify-requests": "node --env-file=.env verify-requests.js",
     "journey": "node --env-file=.env journey.js",
+    "verify-security": "node --env-file=.env verify-security.js",
     "make-admin": "node --env-file=.env make-admin.js"
   },
   "dependencies": {

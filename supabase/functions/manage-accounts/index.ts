@@ -105,6 +105,9 @@ Deno.serve(async (req) => {
           await admin.auth.admin.deleteUser(userId);
           throw new HttpError(400, error.message);
         }
+        // Отпечаток временного пароля (0036): снять «смените пароль» можно
+        // только после реальной смены.
+        await admin.rpc('mark_temp_password', { p_user_id: userId });
         return json({ businessId, email, password });
       }
 
@@ -123,6 +126,9 @@ Deno.serve(async (req) => {
           await admin.auth.admin.deleteUser(userId);
           throw new HttpError(400, error.message);
         }
+        // Отпечаток временного пароля (0036): снять «смените пароль» можно
+        // только после реальной смены.
+        await admin.rpc('mark_temp_password', { p_user_id: userId });
         return json({ email, password });
       }
 
@@ -142,6 +148,9 @@ Deno.serve(async (req) => {
         const { data: u, error } = await admin.auth.admin.updateUserById(targetId, { password });
         if (error) throw new HttpError(400, error.message);
         await admin.from('profiles').update({ must_change_password: true }).eq('id', targetId);
+        // Отпечаток временного пароля (0036): снять «смените пароль» можно
+        // только после реальной смены.
+        await admin.rpc('mark_temp_password', { p_user_id: targetId });
         return json({ email: u.user?.email, password });
       }
 
