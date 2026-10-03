@@ -133,3 +133,20 @@ export async function listServiceMasters(businessId) {
   for (const r of data) (map[r.service_id] ??= new Set()).add(r.master_id);
   return map;
 }
+
+// Часы работы салона по дням недели: с самого раннего начала до самого
+// позднего конца среди активных мастеров. { [dow]: [startMin, endMin] }.
+export async function listBusinessHours(businessId) {
+  const { data, error } = await supabase
+    .from('master_schedule')
+    .select('day_of_week, start_min, end_min, master:masters!inner(business_id, active)')
+    .eq('master.business_id', businessId)
+    .eq('master.active', true);
+  if (error) throw error;
+  const hours = {};
+  for (const r of data) {
+    const h = hours[r.day_of_week];
+    hours[r.day_of_week] = h ? [Math.min(h[0], r.start_min), Math.max(h[1], r.end_min)] : [r.start_min, r.end_min];
+  }
+  return hours;
+}

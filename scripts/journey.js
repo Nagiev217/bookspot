@@ -23,7 +23,7 @@ const note = (s) => {
 async function signUp(label, name) {
   const email = `journey-${label}-${stamp}@bookspot.dev`;
   const c = createClient(URL, ANON, opts);
-  const { data, error } = await c.auth.signUp({ email, password: 'Journey123!', options: { data: { name, lang: 'az' } } });
+  const { data, error } = await c.auth.signUp({ email, password: 'Journey123!', options: { data: { name, phone: '+994501234567', lang: 'az' } } });
   if (error) throw error;
   if (!data.session) note(`регистрация ${label}: сессии нет сразу (нужно подтверждение email)`);
   return { uid: data.user.id, client: c, email };
@@ -96,14 +96,19 @@ function nextWeekday(dow) {
     await admin.from('bookings').update({ starts_at: new Date(Date.now() - 3 * 3600e3).toISOString(), ends_at: new Date(Date.now() - 2.25 * 3600e3).toISOString() }).eq('id', bookingId);
     const comp = await owner.client.rpc('complete_booking', { p_booking_id: bookingId, p_status: 'completed' });
     if (comp.error) note('отметка визита: ' + comp.error.message);
+    // Просьба об отзыве (0034) — до того, как клиент его оставил: после
+    // отзыва неотправленная просьба удаляется.
+    const { data: askReview } = await admin.from('notification_outbox').select('title,send_after').eq('user_id', client.uid).eq('booking_id', bookingId).eq('type', 'review_request');
+    if (!askReview?.length) note('клиенту после визита не приходит просьба оставить отзыв');
+    else step(`  просьба об отзыве: «${askReview[0].title}», уйдёт ${new Date(askReview[0].send_after).toISOString().slice(11, 16)} UTC`);
     const rv = await client.client.rpc('create_review', { p_booking_id: bookingId, p_rating: 5, p_comment: 'Əla!' });
     if (rv.error) note('отзыв: ' + rv.error.message);
     const { data: biz } = await anon.from('businesses').select('rating_avg,review_count').eq('id', bid).single();
     step(`  рейтинг: ${biz?.rating_avg} (${biz?.review_count})`);
     const { data: reviewOut } = await admin.from('notification_outbox').select('title').eq('user_id', owner.uid).eq('booking_id', bookingId);
     if (!reviewOut?.some((x) => /отзыв|rəy|review/i.test(x.title))) note('владелец не получает уведомление о новом отзыве');
-    const { data: askReview } = await admin.from('notification_outbox').select('title').eq('user_id', client.uid).eq('booking_id', bookingId);
-    if (!askReview?.some((x) => /отзыв|rəy|review/i.test(x.title))) note('клиенту после визита не приходит просьба оставить отзыв');
+    const { data: leftAsk } = await admin.from('notification_outbox').select('id').eq('booking_id', bookingId).eq('type', 'review_request').is('sent_at', null);
+    if (leftAsk?.length) note('после отзыва просьба об отзыве всё ещё в очереди');
 
     // ── Повторная запись, отмена в окне ────────────────────────────────
     step('Клиент: вторая запись на завтра и отмена');

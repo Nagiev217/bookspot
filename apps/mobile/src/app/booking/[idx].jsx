@@ -2,7 +2,7 @@
 // дата/время из get_availability, запись — через create_booking (RPC,
 // EXCLUDE-constraint на bookings защищает от двойного бронирования).
 import { useCallback, useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TextInput } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Check, Clock } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -12,6 +12,9 @@ import { getAvailability, createBooking } from '@/utils/supabase/booking';
 import { useAuthStore } from '@/utils/auth/store';
 import { registerForPush } from '@/utils/notifications';
 import { friendlyError } from '@/utils/errors';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { getMyContact, updateProfile } from '@/utils/supabase/profile';
+import { normalizePhone } from '@/utils/phone';
 import PressableScale from '@/components/PressableScale';
 import { dowShort, dayMonth } from '@/utils/i18n/dates';
 import { t, tn } from '@/utils/i18n';
@@ -51,6 +54,16 @@ export default function Booking() {
   const [services, setServices] = useState([]);
   const [masters, setMasters] = useState([]);
   const [serviceMasters, setServiceMasters] = useState({});
+  // Телефон клиента: без него салону нечем связаться по заявке. У старых
+  // аккаунтов его может не быть — тогда спрашиваем на последнем шаге.
+  const [hasPhone, setHasPhone] = useState(true);
+  const [phoneInput, setPhoneInput] = useState('');
+  useEffect(() => {
+    if (!uid) return;
+    getMyContact(uid)
+      .then((c) => setHasPhone(!!c.phone))
+      .catch(() => {});
+  }, [uid]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   // Предвыбор со страницы мастера (master-info) — только при первой
@@ -75,7 +88,8 @@ export default function Booking() {
             if (mi >= 0) {
               setMasterIdx(mi);
               // Услуга и мастер уже выбраны — сразу к выбору даты.
-              if (initial >= 0 && params.serviceId) setStep(3);
+              // Только если мастер всё ещё делает эту услугу — иначе пусть выберет другого.
+              if (initial >= 0 && params.serviceId && sm[params.serviceId]?.has(params.masterId)) setStep(3);
             }
           }
         })
@@ -170,9 +184,22 @@ export default function Booking() {
         router.push({ pathname: '/(auth)/login', params: { redirect: `/booking/${businessId}` } });
         return;
       }
+      let phoneToSave = null;
+      if (!hasPhone) {
+        phoneToSave = normalizePhone(phoneInput);
+        if (!phoneToSave) {
+          setConfirmError(t('profile.phoneInvalid'));
+          return;
+        }
+      }
       setConfirming(true);
       setConfirmError(null);
       try {
+        // Сначала профиль: create_booking копирует телефон из него в запись.
+        if (phoneToSave) {
+          await updateProfile(uid, { phone: phoneToSave });
+          setHasPhone(true);
+        }
         const booking = await createBooking({
           businessId: business.id,
           masterId: master.id,
@@ -222,7 +249,7 @@ export default function Booking() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <KeyboardAwareScrollView bottomOffset={170} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body}>
         {confirmError && <Text style={styles.errorInline}>{confirmError}</Text>}
 
         {step === 1 && (
@@ -303,7 +330,23 @@ export default function Booking() {
               })}
             </View>
           ))}
-      </ScrollView>
+
+        {step === 4 && uid && !hasPhone && (
+          <View style={styles.phoneBox}>
+            <Text style={styles.phoneLabel}>{t('profile.phoneForSalon')}</Text>
+            <TextInput
+              style={styles.phoneInput}
+              value={phoneInput}
+              onChangeText={setPhoneInput}
+              placeholder={t('profile.phonePlaceholder')}
+              placeholderTextColor={COLORS.sub}
+              keyboardType="phone-pad"
+              textContentType="telephoneNumber"
+              autoComplete="tel"
+            />
+          </View>
+        )}
+      </KeyboardAwareScrollView>
 
       <View style={styles.ctaBar}>
         <View style={styles.summaryRow}>
@@ -444,6 +487,9 @@ const styles = StyleSheet.create({
   timeSlotActive: { backgroundColor: COLORS.indigo, borderColor: COLORS.indigo },
   timeText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.ink },
   timeTextActive: { color: COLORS.white },
+  phoneBox: { marginTop: SPACING.xl, gap: SPACING.sm },
+  phoneLabel: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: COLORS.ink },
+  phoneInput: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, padding: SPACING.md, fontFamily: FONT.regular, fontSize: TEXT_SIZE.md, color: COLORS.text },
   ctaBar: {
     position: 'absolute',
     left: 0,

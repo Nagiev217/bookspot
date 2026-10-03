@@ -1,14 +1,16 @@
 // Страница салона — реальные данные из Supabase (businesses/services/masters).
 // [idx] теперь принимает uuid бизнеса, а не индекс мок-массива.
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, useWindowDimensions, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { ArrowLeft, Heart } from 'lucide-react-native';
+import { ArrowLeft, Heart, Phone } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { tintFor } from '@/utils/tint';
 import PressableScale from '@/components/PressableScale';
-import { getBusiness, listServices, listMasters } from '@/utils/supabase/catalog';
+import { getBusiness, listServices, listMasters, listBusinessHours } from '@/utils/supabase/catalog';
+import SalonHours from '@/components/SalonHours';
+import { formatPhone } from '@/utils/phone';
 import { isFavorite, addFavorite, removeFavorite } from '@/utils/supabase/favorites';
 import { listReviews } from '@/utils/supabase/reviews';
 import { listBusinessPhotos } from '@/utils/supabase/business';
@@ -36,6 +38,7 @@ export default function SalonDetail() {
   const [masters, setMasters] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [photos, setPhotos] = useState([]);
+  const [hours, setHours] = useState(null);
   const [photoIndex, setPhotoIndex] = useState(0);
   const { width: screenWidth } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
@@ -55,8 +58,9 @@ export default function SalonDetail() {
         uid ? isFavorite(uid, businessId) : false,
         listReviews(businessId),
         listBusinessPhotos(businessId).catch(() => []),
+        listBusinessHours(businessId).catch(() => null),
       ])
-        .then(([b, s, m, fav, rv, ph]) => {
+        .then(([b, s, m, fav, rv, ph, hrs]) => {
           if (cancelled) return;
           setBusiness(b);
           setServices(s);
@@ -64,6 +68,7 @@ export default function SalonDetail() {
           setFavorite(fav);
           setReviews(rv);
           setPhotos(ph);
+          setHours(hrs);
         })
         .catch((e) => !cancelled && setError(friendlyError(e, t('salon_idx.4'))))
         .finally(() => !cancelled && setLoading(false));
@@ -162,15 +167,24 @@ export default function SalonDetail() {
 
           {business.phone && (
             <View style={styles.tagRow}>
-              <Text style={styles.tag}>{business.phone}</Text>
+              {/* Звонок в салон в один тап. */}
+              <PressableScale
+                style={styles.phoneTag}
+                onPress={() => Linking.openURL(`tel:${business.phone.replace(/[^+\d]/g, '')}`).catch(() => {})}
+                accessibilityLabel={t('salon.call')}
+              >
+                <Phone size={15} color={COLORS.indigo} />
+                <Text style={styles.phoneTagText}>{formatPhone(business.phone)}</Text>
+              </PressableScale>
             </View>
           )}
 
-          {(business.description?.trim() || business.address || business.lat != null) && (
+          {(business.description?.trim() || business.address || business.lat != null || (hours && Object.keys(hours).length > 0)) && (
             <>
               <Text style={styles.sectionTitle}>{t('salon_idx.5')}</Text>
               {business.description?.trim() ? <Text style={styles.about}>{business.description.trim()}</Text> : null}
               <SalonLocation business={business} />
+              <SalonHours hours={hours} />
             </>
           )}
 
@@ -289,6 +303,8 @@ const styles = StyleSheet.create({
   meta: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.md, color: COLORS.sub },
   ratingBadge: { paddingLeft: SPACING.sm, borderLeftWidth: 1, borderLeftColor: COLORS.border },
   tagRow: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.lg },
+  phoneTag: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40, paddingHorizontal: 12, borderRadius: RADIUS.sm, backgroundColor: COLORS.indigo50 },
+  phoneTagText: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: COLORS.indigo },
   tag: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.sm, color: '#3A4256', backgroundColor: COLORS.surface, borderRadius: RADIUS.sm, paddingVertical: 9, paddingHorizontal: 12 },
   sectionTitle: { fontFamily: FONT.bold, fontSize: 16, color: COLORS.ink, letterSpacing: -0.3, marginTop: SPACING.xxl, marginBottom: SPACING.md },
   serviceRow: {

@@ -242,6 +242,13 @@ export default function Bookings() {
                         <Text style={styles.reviewButtonText}>{t('common.42')}</Text>
                       </PressableScale>
                     ))}
+                  {/* Постоянный клиент: та же услуга у того же мастера — сразу к выбору даты. */}
+                  <PressableScale
+                    style={styles.rebookButton}
+                    onPress={() => router.push({ pathname: `/booking/${b.business_id}`, params: { serviceId: b.service_id, masterId: b.master_id } })}
+                  >
+                    <Text style={styles.rebookText}>{t('bookings.rebook')}</Text>
+                  </PressableScale>
                 </View>
               );
             })
@@ -311,6 +318,8 @@ const styles = StyleSheet.create({
   pastCard: { borderWidth: 1, borderColor: COLORS.borderLight, borderRadius: RADIUS.md, overflow: 'hidden' },
   pastRow: { flexDirection: 'row', gap: SPACING.md, alignItems: 'center', padding: SPACING.sm },
   pastThumb: { width: 54, height: 54, borderRadius: 17, opacity: 0.75 },
+  rebookButton: { margin: SPACING.sm, marginTop: 0, height: 40, borderRadius: 12, backgroundColor: COLORS.indigo50, alignItems: 'center', justifyContent: 'center' },
+  rebookText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.indigo },
   reviewButton: { margin: SPACING.sm, marginTop: 0, height: 40, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(11,17,32,.12)', alignItems: 'center', justifyContent: 'center' },
   reviewButtonText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.ink },
   reviewRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, margin: SPACING.sm, marginTop: 0, padding: SPACING.sm, backgroundColor: COLORS.surface, borderRadius: 12 },

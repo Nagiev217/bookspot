@@ -60,6 +60,9 @@ One app, two modes. Every user is a client; if the account owns a business, a **
 | "My bookings": upcoming and history | `(client-tabs)/bookings.jsx` |
 | **Reviews** — 1–5 rating and a comment, only after a completed visit, editable by the author | `review/[bookingId].jsx`, `0019_reviews.sql` |
 | Favorite salons | `(client-tabs)/favorites.jsx` |
+| Phone at sign-up (salons call it about a request), "My details" to edit name and phone; asked on the last booking step if missing | `edit-profile.jsx`, `utils/phone.js` |
+| Salon card: tap-to-call phone, opening hours with "open now · until 19:00" | `components/SalonHours.jsx` |
+| "Book again" in history — same service and master, straight to the date | `(client-tabs)/bookings.jsx` |
 | Push: booking confirmation, 2-hour reminder, cancellation | `utils/notifications.js`, `0018_push_outbox.sql` |
 | Account deletion (App Store guideline 5.1.1(v)) — bookings are anonymized, not deleted | `ProfileScreen.jsx`, `0013_delete_account.sql` |
 | Privacy policy and terms of use | `utils/legal.js`, `docs/legal/` |
@@ -193,6 +196,7 @@ SUPABASE_ACCESS_TOKEN=<same token> npx supabase db push
 | 0031 | Category names and push notifications in az/ru/en (by `profiles.lang`) |
 | 0032 | Salon coordinates; "address on the map" added to the publish checklist |
 | 0033 | No past slots; clients book at least 1 hour ahead (walk-ins excluded); request reply time counts only 09:00–22:00 Baku hours |
+| 0034 | "How was your visit?" push an hour after a completed visit (never at night), dropped once the review is in |
 
 ## Push notifications
 

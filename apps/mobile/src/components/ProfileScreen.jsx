@@ -4,13 +4,14 @@
 // дизайна (там статичное демо-имя "Лейла Мамедова" и выдуманная
 // статистика) здесь показаны только реальные данные аккаунта — без
 // придуманных цифр.
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { LogOut, ChevronRight, Trash2 } from 'lucide-react-native';
+import { LogOut, ChevronRight, Trash2, UserRound } from 'lucide-react-native';
 import { supabase } from '@/utils/supabase/config';
-import { deleteMyAccount } from '@/utils/supabase/profile';
+import { deleteMyAccount, getMyContact } from '@/utils/supabase/profile';
+import { formatPhone } from '@/utils/phone';
 import { useAuthStore } from '@/utils/auth/store';
 import { setCachedMode } from '@/utils/auth/roleCache';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
@@ -23,6 +24,14 @@ import { friendlyError } from '@/utils/errors';
 
 export default function ProfileScreen() {
   const { uid, role, businessId, mode, setMode } = useAuthStore();
+  const [contact, setContact] = useState(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!uid) return;
+      getMyContact(uid).then(setContact).catch(() => {});
+    }, [uid])
+  );
   const isBusinessSide = role === 'business_owner' || role === 'staff';
   // Второй режим, кроме клиентского: админка или бизнес-режим.
   const workMode = role === 'admin' ? 'admin' : isBusinessSide ? 'business' : null;
@@ -120,12 +129,19 @@ export default function ProfileScreen() {
     <ScrollView contentContainerStyle={styles.screen}>
       <Text style={styles.title}>{t('common.14')}</Text>
 
-      <View style={styles.card}>
-        <View style={styles.avatar} />
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.role}>{roleLabel(role)}</Text>
+      {/* Карточка — вход в «Мои данные». Без телефона салон не дозвонится. */}
+      <PressableScale style={styles.card} onPress={() => router.push('/edit-profile')}>
+        <View style={styles.avatar}>
+          <UserRound size={22} color={COLORS.sub} />
         </View>
-      </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.cardName} numberOfLines={1}>{contact?.name || roleLabel(role)}</Text>
+          <Text style={[styles.role, contact && !contact.phone && { color: COLORS.warning }]} numberOfLines={1}>
+            {contact ? (contact.phone ? formatPhone(contact.phone) : t('profile.addPhone')) : roleLabel(role)}
+          </Text>
+        </View>
+        <ChevronRight size={18} color={COLORS.subLight} />
+      </PressableScale>
 
       <View style={styles.group}>
         {workMode && <MenuRow label={switchLabel} onPress={switchMode} last={role !== 'business_owner' && role !== 'staff'} />}
@@ -195,8 +211,9 @@ const styles = StyleSheet.create({
   screen: { flexGrow: 1, padding: SPACING.xl, paddingTop: 56, backgroundColor: COLORS.white },
   title: { fontFamily: FONT.extrabold, fontSize: TEXT_SIZE.xxl, color: COLORS.ink, letterSpacing: -0.6, marginBottom: SPACING.lg },
   card: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, marginBottom: SPACING.xxl },
-  avatar: { width: 60, height: 60, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface },
-  role: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.lg, color: COLORS.ink },
+  avatar: { width: 60, height: 60, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center' },
+  cardName: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.lg, color: COLORS.ink },
+  role: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginTop: 3 },
   group: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: SPACING.xl },
   menuRow: {
     flexDirection: 'row',

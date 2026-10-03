@@ -80,3 +80,13 @@ export async function deleteMyAccount() {
   if (error) throw error;
   await supabase.auth.signOut();
 }
+
+// Имя, телефон и email — для профиля и «Моих данных».
+export async function getMyContact(uid) {
+  const [{ data, error }, { data: auth }] = await Promise.all([
+    supabase.from('profiles').select('name, phone').eq('id', uid).single(),
+    supabase.auth.getUser(),
+  ]);
+  if (error) throw error;
+  return { name: data.name, phone: data.phone, email: auth?.user?.email ?? '' };
+}

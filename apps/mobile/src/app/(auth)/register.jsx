@@ -9,6 +9,7 @@ import { useAuthStore } from '@/utils/auth/store';
 import { COLORS, SPACING, RADIUS, FONT, TEXT_SIZE } from '@/theme/tokens';
 import { PRIVACY_POLICY_URL, TERMS_URL } from '@/utils/legal';
 import { t, getLang } from '@/utils/i18n';
+import { normalizePhone } from '@/utils/phone';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 export default function Register() {
@@ -16,6 +17,7 @@ export default function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState(null);
   const [info, setInfo] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -26,6 +28,9 @@ export default function Register() {
     setInfo(null);
     if (!name.trim()) return setError(t('common.19'));
     if (!email.trim() || !password) return setError(t('common.16'));
+    // Телефон обязателен: по нему салон связывается с клиентом по заявке.
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) return setError(t('profile.phoneInvalid'));
     if (password.length < 6) return setError(t('auth_register.1'));
 
     setBusy(true);
@@ -35,7 +40,7 @@ export default function Register() {
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { data: { name: name.trim(), lang: getLang() } },
+        options: { data: { name: name.trim(), phone: normalizedPhone, lang: getLang() } },
       });
       if (signUpError) throw signUpError;
 
@@ -64,6 +69,16 @@ export default function Register() {
         placeholderTextColor={COLORS.sub}
         value={name}
         onChangeText={setName}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder={t('profile.phonePlaceholder')}
+        placeholderTextColor={COLORS.sub}
+        keyboardType="phone-pad"
+        textContentType="telephoneNumber"
+        autoComplete="tel"
+        value={phone}
+        onChangeText={setPhone}
       />
       <TextInput
         style={styles.input}
