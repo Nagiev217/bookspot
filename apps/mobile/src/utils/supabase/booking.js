@@ -107,3 +107,26 @@ export async function proposeBookingTime({ bookingId, date, start }) {
   if (error) throw error;
   return data[0];
 }
+
+// Профиль клиента: завершённые визиты, избранное и отзывы — только своё
+// (RLS: bookings клиента, favorites владельца строки). Отзывы считаем через
+// записи: client_id отзывов закрыт для чтения (0036).
+export async function getMyStats(uid) {
+  const [visits, favs, reviewed] = await Promise.all([
+    supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('client_id', uid).eq('status', 'completed'),
+    supabase.from('favorites').select('business_id', { count: 'exact', head: true }).eq('user_id', uid),
+    supabase.from('bookings').select('id, reviews!inner(id)', { count: 'exact', head: true }).eq('client_id', uid),
+  ]);
+  for (const r of [visits, favs, reviewed]) if (r.error) throw r.error;
+  return { visits: visits.count ?? 0, favorites: favs.count ?? 0, reviews: reviewed.count ?? 0 };
+}
+
+export async function listMyReviews(uid) {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('id, business_id, service_name, starts_at, businesses(name), reviews!inner(id, rating, comment, created_at)')
+    .eq('client_id', uid)
+    .order('starts_at', { ascending: false });
+  if (error) throw error;
+  return data.map((b) => ({ ...b, review: Array.isArray(b.reviews) ? b.reviews[0] : b.reviews }));
+}

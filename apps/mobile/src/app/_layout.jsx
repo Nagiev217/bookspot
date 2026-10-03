@@ -171,6 +171,7 @@ export default function RootLayout() {
         <Stack.Screen name="salon-setup/[businessId]" options={{ gestureEnabled: true }} />
         <Stack.Screen name="my-master-profile" options={{ gestureEnabled: true }} />
         <Stack.Screen name="edit-profile" options={{ gestureEnabled: true }} />
+        <Stack.Screen name="my-reviews" options={{ gestureEnabled: true }} />
         <Stack.Screen name="business-reviews/[businessId]" options={{ gestureEnabled: true }} />
         <Stack.Screen name="master-info/[masterId]" options={{ gestureEnabled: true }} />
         <Stack.Screen name="booking-request/[bookingId]" options={{ gestureEnabled: true }} />

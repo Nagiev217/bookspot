@@ -1,16 +1,33 @@
-// Общий экран профиля для Client и Business режимов — избегаем двух копий
-// одной и той же логики (переключатель режима, выход, язык). Визуальный
-// стиль перенесён из дизайн-canvas "Salon Booking App"; в отличие от
-// дизайна (там статичное демо-имя "Лейла Мамедова" и выдуманная
-// статистика) здесь показаны только реальные данные аккаунта — без
-// придуманных цифр.
+// Профиль — по макету «Salon Booking App» (экран isProfile), общий для
+// клиентского и бизнес-режима. Отличия от макета — только там, где у
+// макета демо-данные или несуществующие функции:
+//   • статистика — настоящая (визиты, избранное, отзывы), а не «4.9»;
+//   • тёмная карточка «Salonn Plus» (такой подписки нет) — переключатель
+//     Клиент ⇄ Бизнес/Админ; обычному клиенту — «Стать партнёром»;
+//   • «Способ оплаты» — информационная строка «На месте», без перехода.
+// Удаление аккаунта остаётся — его требует App Store (5.1.1(v)).
 import { useCallback, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, Linking } from 'react-native';
+import { router, useFocusEffect, useSegments } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { LogOut, ChevronRight, Trash2, UserRound } from 'lucide-react-native';
+import * as Notifications from 'expo-notifications';
+import {
+  ChevronRight,
+  Trash2,
+  CreditCard,
+  Heart,
+  MessageSquare,
+  Bell,
+  Globe,
+  CircleQuestionMark,
+  Star,
+  Scissors,
+  Settings,
+  UserRound,
+} from 'lucide-react-native';
 import { supabase } from '@/utils/supabase/config';
-import { deleteMyAccount, getMyContact } from '@/utils/supabase/profile';
+import { deleteMyAccount, getMyContact, saveMyLang } from '@/utils/supabase/profile';
+import { getMyStats } from '@/utils/supabase/booking';
 import { formatPhone } from '@/utils/phone';
 import { useAuthStore } from '@/utils/auth/store';
 import { setCachedMode } from '@/utils/auth/roleCache';
@@ -19,72 +36,97 @@ import { PRIVACY_POLICY_URL, TERMS_URL } from '@/utils/legal';
 import PressableScale from '@/components/PressableScale';
 import SignInPrompt from '@/components/SignInPrompt';
 import LanguagePicker from '@/components/LanguagePicker';
-import { t } from '@/utils/i18n';
+import { t, LANGUAGES, useLang, setLang } from '@/utils/i18n';
 import { friendlyError } from '@/utils/errors';
+
+function initials(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  return (parts[0]?.[0] || '') + (parts[1]?.[0] || '') || '·';
+}
 
 export default function ProfileScreen() {
   const { uid, role, businessId, mode, setMode } = useAuthStore();
+  const lang = useLang((s) => s.lang);
+  const segments = useSegments();
   const [contact, setContact] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [notifOn, setNotifOn] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const isBusinessSide = role === 'business_owner' || role === 'staff';
+  // Второй режим, кроме клиентского: админка или бизнес-режим.
+  const workMode = role === 'admin' ? 'admin' : isBusinessSide ? 'business' : null;
 
   useFocusEffect(
     useCallback(() => {
       if (!uid) return;
       getMyContact(uid).then(setContact).catch(() => {});
+      getMyStats(uid).then(setStats).catch(() => {});
+      Notifications.getPermissionsAsync()
+        .then((p) => setNotifOn(p.granted))
+        .catch(() => setNotifOn(null));
     }, [uid])
   );
-  const isBusinessSide = role === 'business_owner' || role === 'staff';
-  // Второй режим, кроме клиентского: админка или бизнес-режим.
-  const workMode = role === 'admin' ? 'admin' : isBusinessSide ? 'business' : null;
-  const [deleting, setDeleting] = useState(false);
 
   async function switchMode() {
     const next = mode === 'client' ? workMode : 'client';
     await setCachedMode(uid, next);
     setMode(next);
-    // Не router.replace('/') — у (client-tabs)/index и (business-tabs)/index
-    // группы не входят в URL, поэтому их путь тоже резолвится в "/". Если
-    // мы уже "на /", replace('/') становится no-op и гейт в index.jsx
-    // не перерендеривается. Переключаем на конкретную группу напрямую.
+    // Не router.replace('/') — группы (client-tabs)/(business-tabs) не входят
+    // в URL, replace('/') оказался бы no-op. Переключаем на группу напрямую.
     router.replace(next === 'admin' ? '/(admin-tabs)' : next === 'business' ? '/(business-tabs)' : '/(client-tabs)');
   }
-
-  const switchLabel =
-    mode !== 'client' ? t('components_ProfileScreen.1') : workMode === 'admin' ? t('components_ProfileScreen.2') : t('components_ProfileScreen.3');
 
   async function handleSignOut() {
     await supabase.auth.signOut();
     router.replace('/(auth)/login');
   }
 
-  function openPrivacyPolicy() {
-    WebBrowser.openBrowserAsync(PRIVACY_POLICY_URL);
-  }
+  const openPrivacyPolicy = () => WebBrowser.openBrowserAsync(PRIVACY_POLICY_URL);
+  const openTerms = () => WebBrowser.openBrowserAsync(TERMS_URL);
 
-  function openTerms() {
-    WebBrowser.openBrowserAsync(TERMS_URL);
-  }
-
-  // Двухшаговое подтверждение — необратимое действие. Владелец активного
-  // бизнеса получит здесь же ошибку от RPC (delete_my_account сама это
-  // проверяет на сервере) с понятным текстом, почему нельзя.
-  function handleDeleteAccount() {
+  // Три языка — ровно три кнопки, больше Android в Alert не показывает;
+  // закрыть можно тапом мимо.
+  function chooseLanguage() {
     Alert.alert(
-      t('components_ProfileScreen.4'),
-      t('components_ProfileScreen.5'),
-      [
-        { text: t('common.23'), style: 'cancel' },
-        {
-          text: t('common.63'),
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert(t('components_ProfileScreen.6'), t('components_ProfileScreen.7'), [
-              { text: t('common.23'), style: 'cancel' },
-              { text: t('components_ProfileScreen.8'), style: 'destructive', onPress: confirmDeleteAccount },
-            ]);
-          },
-        },
-      ]
+      t('lang.title'),
+      undefined,
+      LANGUAGES.map((l) => ({
+        text: l.label,
+        onPress: () => setLang(l.code, (c) => saveMyLang(c).catch(() => {}), `/${segments.join('/')}`),
+      })),
+      { cancelable: true }
     );
+  }
+
+  function openHelp() {
+    Alert.alert(
+      t('profile.help'),
+      undefined,
+      [
+        { text: t('components_ProfileScreen.12'), onPress: openPrivacyPolicy },
+        { text: t('components_ProfileScreen.13'), onPress: openTerms },
+        { text: t('common.40'), style: 'cancel' },
+      ],
+      { cancelable: true }
+    );
+  }
+
+  // Двухшаговое подтверждение — необратимое действие.
+  function handleDeleteAccount() {
+    Alert.alert(t('components_ProfileScreen.4'), t('components_ProfileScreen.5'), [
+      { text: t('common.23'), style: 'cancel' },
+      {
+        text: t('common.63'),
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert(t('components_ProfileScreen.6'), t('components_ProfileScreen.7'), [
+            { text: t('common.23'), style: 'cancel' },
+            { text: t('components_ProfileScreen.8'), style: 'destructive', onPress: confirmDeleteAccount },
+          ]);
+        },
+      },
+    ]);
   }
 
   async function confirmDeleteAccount() {
@@ -99,18 +141,12 @@ export default function ProfileScreen() {
     }
   }
 
-  // Гость (каталог доступен без входа, см. index.jsx) — весь остальной
-  // экран завязан на аккаунт (роль, режим, удаление аккаунта), поэтому для
-  // гостя это просто приглашение войти, а не урезанная версия того же UI.
+  // Гость — приглашение войти, язык и юридические ссылки.
   if (!uid) {
     return (
-      <View style={styles.screen}>
+      <View style={styles.guest}>
         <Text style={styles.title}>{t('common.14')}</Text>
-        <SignInPrompt
-          title={t('components_ProfileScreen.10')}
-          subtitle={t('components_ProfileScreen.11')}
-          redirect="/(client-tabs)/profile"
-        />
+        <SignInPrompt title={t('components_ProfileScreen.10')} subtitle={t('components_ProfileScreen.11')} redirect="/(client-tabs)/profile" />
         <LanguagePicker />
         <View style={styles.legalRow}>
           <Pressable onPress={openPrivacyPolicy}>
@@ -125,75 +161,154 @@ export default function ProfileScreen() {
     );
   }
 
+  // Тёмная карточка: переключение режима или «Стать партнёром».
+  const switchCard = workMode
+    ? mode === 'client'
+      ? {
+          title: workMode === 'admin' ? t('profile.adminTitle') : t('profile.businessTitle'),
+          text: workMode === 'admin' ? t('profile.adminText') : t('profile.businessText'),
+          button: t('profile.switchGo'),
+          onPress: switchMode,
+        }
+      : { title: t('profile.clientTitle'), text: t('profile.clientText'), button: t('profile.switchGo'), onPress: switchMode }
+    : role === 'client'
+      ? { title: t('profile.partnerTitle'), text: t('profile.partnerText'), button: t('profile.more'), onPress: () => router.push('/(client-tabs)/become-partner') }
+      : null;
+
+  const clientMode = mode === 'client';
+  const langLabel = LANGUAGES.find((l) => l.code === lang)?.label;
+
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.title}>{t('common.14')}</Text>
+      <View style={styles.top}>
+        <Text style={styles.title}>{t('common.14')}</Text>
 
-      {/* Карточка — вход в «Мои данные». Без телефона салон не дозвонится. */}
-      <PressableScale style={styles.card} onPress={() => router.push('/edit-profile')}>
-        <View style={styles.avatar}>
-          <UserRound size={22} color={COLORS.sub} />
+        <View style={styles.userRow}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials(contact?.name).toUpperCase()}</Text>
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.userName} numberOfLines={1}>
+              {contact?.name || roleLabel(role)}
+            </Text>
+            <Text style={[styles.userPhone, contact && !contact.phone && { color: COLORS.warning }]} numberOfLines={1}>
+              {contact ? (contact.phone ? formatPhone(contact.phone) : t('profile.addPhone')) : ' '}
+            </Text>
+          </View>
+          <PressableScale style={styles.editButton} onPress={() => router.push('/edit-profile')}>
+            <Text style={styles.editText}>{t('profile.edit')}</Text>
+          </PressableScale>
         </View>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.cardName} numberOfLines={1}>{contact?.name || roleLabel(role)}</Text>
-          <Text style={[styles.role, contact && !contact.phone && { color: COLORS.warning }]} numberOfLines={1}>
-            {contact ? (contact.phone ? formatPhone(contact.phone) : t('profile.addPhone')) : roleLabel(role)}
-          </Text>
-        </View>
-        <ChevronRight size={18} color={COLORS.subLight} />
-      </PressableScale>
 
-      <View style={styles.group}>
-        {workMode && <MenuRow label={switchLabel} onPress={switchMode} last={role !== 'business_owner' && role !== 'staff'} />}
-        {role === 'staff' && <MenuRow label={t('components_ProfileScreen.14')} onPress={() => router.push('/my-master-profile')} />}
-        {(role === 'staff' || role === 'business_owner') && businessId && (
-          <MenuRow label={t('common.73')} onPress={() => router.push(`/business-reviews/${businessId}`)} last={role === 'staff'} />
+        {clientMode && (
+          <View style={styles.statsRow}>
+            {[
+              { v: stats?.visits, k: t('profile.statVisits') },
+              { v: stats?.favorites, k: t('profile.statFavorites') },
+              { v: stats?.reviews, k: t('profile.statReviews') },
+            ].map((s) => (
+              <View key={s.k} style={styles.stat}>
+                <Text style={styles.statValue}>{s.v ?? '—'}</Text>
+                <Text style={styles.statLabel}>{s.k}</Text>
+              </View>
+            ))}
+          </View>
         )}
-        {role === 'business_owner' && (
-          <>
-            <MenuRow label={t('common.48')} onPress={() => router.push(`/services/${businessId}`)} />
-            <MenuRow label={t('common.66')} onPress={() => router.push(`/business-settings/${businessId}`)} last />
-          </>
-        )}
-        {role === 'client' && (
-          <MenuRow label={t('common.37')} onPress={() => router.push('/(client-tabs)/become-partner')} last />
+
+        {switchCard && (
+          <View style={styles.darkCard}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.darkTitle}>{switchCard.title}</Text>
+              <Text style={styles.darkText}>{switchCard.text}</Text>
+            </View>
+            <PressableScale style={styles.darkButton} onPress={switchCard.onPress}>
+              <Text style={styles.darkButtonText}>{switchCard.button}</Text>
+            </PressableScale>
+          </View>
         )}
       </View>
 
-      <LanguagePicker />
-
-      <View style={styles.group}>
-        <MenuRow label={t('components_ProfileScreen.12')} onPress={openPrivacyPolicy} />
-        <MenuRow label={t('components_ProfileScreen.13')} onPress={openTerms} last />
-      </View>
-
-      <PressableScale style={styles.signOutButton} onPress={handleSignOut}>
-        <LogOut size={18} color={COLORS.danger} />
-        <Text style={styles.signOutText}>{t('common.15')}</Text>
-      </PressableScale>
-
-      <PressableScale style={styles.deleteRow} onPress={handleDeleteAccount} disabled={deleting}>
-        {deleting ? (
-          <ActivityIndicator color={COLORS.danger} />
+      <View style={styles.groups}>
+        {clientMode ? (
+          <Group title={t('profile.groupAccount')}>
+            <Row Icon={CreditCard} label={t('profile.payment')} hint={t('profile.paymentOnSite')} />
+            <Row Icon={Heart} label={t('common.43')} hint={stats ? String(stats.favorites) : ''} onPress={() => router.push('/(client-tabs)/favorites')} />
+            <Row Icon={MessageSquare} label={t('profile.myReviews')} hint={stats ? String(stats.reviews) : ''} onPress={() => router.push('/my-reviews')} last />
+          </Group>
         ) : (
-          <>
-            <Trash2 size={16} color="#B6BCC8" />
-            <Text style={styles.deleteText}>{t('components_ProfileScreen.15')}</Text>
-          </>
+          isBusinessSide &&
+          businessId && (
+            <Group title={t('profile.groupBusiness')}>
+              <Row Icon={Star} label={t('common.73')} onPress={() => router.push(`/business-reviews/${businessId}`)} />
+              {role === 'staff' && <Row Icon={UserRound} label={t('components_ProfileScreen.14')} onPress={() => router.push('/my-master-profile')} last />}
+              {role === 'business_owner' && (
+                <>
+                  <Row Icon={Scissors} label={t('common.48')} onPress={() => router.push(`/services/${businessId}`)} />
+                  <Row Icon={Settings} label={t('common.66')} onPress={() => router.push(`/business-settings/${businessId}`)} last />
+                </>
+              )}
+            </Group>
+          )
         )}
-      </PressableScale>
 
-      <Text style={styles.version}>{t('components_ProfileScreen.16')}</Text>
+        <Group title={t('profile.groupSettings')}>
+          <Row
+            Icon={Bell}
+            label={t('profile.notifications')}
+            hint={notifOn === null ? '' : notifOn ? t('profile.on') : t('profile.off')}
+            onPress={() => Linking.openSettings().catch(() => {})}
+          />
+          <Row Icon={Globe} label={t('lang.title')} hint={langLabel} onPress={chooseLanguage} />
+          <Row Icon={CircleQuestionMark} label={t('profile.help')} onPress={openHelp} last />
+        </Group>
+
+        <PressableScale style={styles.signOutButton} onPress={handleSignOut}>
+          <Text style={styles.signOutText}>{t('common.15')}</Text>
+        </PressableScale>
+
+        <PressableScale style={styles.deleteRow} onPress={handleDeleteAccount} disabled={deleting}>
+          {deleting ? (
+            <ActivityIndicator color={COLORS.danger} />
+          ) : (
+            <>
+              <Trash2 size={15} color="#B6BCC8" />
+              <Text style={styles.deleteText}>{t('components_ProfileScreen.15')}</Text>
+            </>
+          )}
+        </PressableScale>
+
+        <Text style={styles.version}>{t('components_ProfileScreen.16')}</Text>
+      </View>
     </ScrollView>
   );
 }
 
-function MenuRow({ label, onPress, last }) {
+function Group({ title, children }) {
   return (
-    <PressableScale style={[styles.menuRow, last && styles.menuRowLast]} onPress={onPress}>
-      <Text style={styles.menuLabel}>{label}</Text>
-      <ChevronRight size={15} color="#C3C8D4" />
+    <View style={styles.group}>
+      <Text style={styles.groupTitle}>{title}</Text>
+      <View style={styles.groupBox}>{children}</View>
+    </View>
+  );
+}
+
+// Строка меню из макета: иконка, название, подсказка справа, шеврон.
+// Без onPress — информационная строка (без шеврона и нажатия).
+function Row({ Icon, label, hint, onPress, last }) {
+  const content = (
+    <>
+      <Icon size={19} color={COLORS.indigo} strokeWidth={1.7} />
+      <Text style={styles.rowLabel}>{label}</Text>
+      {hint ? <Text style={styles.rowHint}>{hint}</Text> : null}
+      {onPress && <ChevronRight size={15} color="#C3C8D4" />}
+    </>
+  );
+  return onPress ? (
+    <PressableScale style={[styles.row, last && styles.rowLast]} onPress={onPress}>
+      {content}
     </PressableScale>
+  ) : (
+    <View style={[styles.row, last && styles.rowLast]}>{content}</View>
   );
 }
 
@@ -211,48 +326,41 @@ function roleLabel(role) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flexGrow: 1, padding: SPACING.xl, paddingTop: 56, backgroundColor: COLORS.white },
-  title: { fontFamily: FONT.extrabold, fontSize: TEXT_SIZE.xxl, color: COLORS.ink, letterSpacing: -0.6, marginBottom: SPACING.lg },
-  card: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, marginBottom: SPACING.xxl },
-  avatar: { width: 60, height: 60, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center' },
-  cardName: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.lg, color: COLORS.ink },
-  role: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub, marginTop: 3 },
-  group: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: SPACING.xl },
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 15,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
-  },
-  menuRowLast: { borderBottomWidth: 0 },
-  menuLabel: { fontFamily: FONT.semibold, fontSize: TEXT_SIZE.md, color: COLORS.ink },
+  screen: { flexGrow: 1, paddingBottom: 30, backgroundColor: COLORS.white },
+  guest: { flex: 1, padding: SPACING.xl, paddingTop: 56, backgroundColor: COLORS.white },
+  top: { paddingTop: 56, paddingHorizontal: SPACING.xl, paddingBottom: 4 },
+  title: { fontFamily: FONT.extrabold, fontSize: 26, color: COLORS.ink, letterSpacing: -0.8, lineHeight: 32 },
+  userRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 20 },
+  avatar: { width: 72, height: 72, borderRadius: 26, backgroundColor: '#DCE1F0', alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontFamily: FONT.extrabold, fontSize: 24, color: '#5B6478', letterSpacing: -0.5 },
+  userName: { fontFamily: FONT.bold, fontSize: 18, color: COLORS.ink, letterSpacing: -0.4 },
+  userPhone: { fontFamily: FONT.medium, fontSize: 13, color: COLORS.sub, marginTop: 3 },
+  editButton: { minHeight: 44, paddingHorizontal: 14, borderRadius: 13, borderWidth: 1, borderColor: 'rgba(11,17,32,.12)', alignItems: 'center', justifyContent: 'center' },
+  editText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.ink },
+  statsRow: { flexDirection: 'row', gap: 10, marginTop: 20 },
+  stat: { flex: 1, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 20, backgroundColor: COLORS.surfaceAlt },
+  statValue: { fontFamily: FONT.extrabold, fontSize: 20, color: COLORS.ink, letterSpacing: -0.4 },
+  statLabel: { fontFamily: FONT.medium, fontSize: 11.5, color: COLORS.sub, marginTop: 6 },
+  darkCard: { flexDirection: 'row', alignItems: 'center', gap: 13, marginTop: 22, padding: SPACING.lg, borderRadius: 22, backgroundColor: COLORS.ink },
+  darkTitle: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.white },
+  darkText: { fontFamily: FONT.medium, fontSize: 12, color: 'rgba(255,255,255,.6)', marginTop: 4, lineHeight: 17 },
+  darkButton: { minHeight: 44, paddingHorizontal: 14, borderRadius: 13, backgroundColor: COLORS.indigo, alignItems: 'center', justifyContent: 'center' },
+  darkButtonText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.sm, color: COLORS.white },
+  groups: { paddingTop: 22, paddingHorizontal: SPACING.xl },
+  group: { marginBottom: 22 },
+  groupTitle: { fontFamily: FONT.semibold, fontSize: 11, color: COLORS.sub, letterSpacing: 1.3, textTransform: 'uppercase', marginBottom: 10 },
+  groupBox: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 22, overflow: 'hidden' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, paddingVertical: 15, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: COLORS.borderLight, backgroundColor: COLORS.white },
+  rowLast: { borderBottomWidth: 0 },
+  rowLabel: { flex: 1, fontFamily: FONT.semibold, fontSize: TEXT_SIZE.md, color: COLORS.ink },
+  rowHint: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: COLORS.sub },
+  signOutButton: { height: 50, borderRadius: RADIUS.md, borderWidth: 1, borderColor: 'rgba(11,17,32,.1)', alignItems: 'center', justifyContent: 'center' },
+  signOutText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.danger },
+  // Приглушённее «Выйти» — не частое действие, случайный тап не должен быть лёгким.
+  deleteRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, height: 44, marginTop: SPACING.sm },
+  deleteText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: '#B6BCC8' },
+  version: { textAlign: 'center', fontFamily: FONT.medium, fontSize: 11.5, color: '#B6BCC8', marginTop: 14 },
   legalRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginTop: SPACING.xl },
   legalLink: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.xs, color: COLORS.sub, textDecorationLine: 'underline' },
   legalDot: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.xs, color: COLORS.subLight },
-  signOutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    height: 50,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: 'rgba(11,17,32,.1)',
-  },
-  signOutText: { fontFamily: FONT.bold, fontSize: TEXT_SIZE.md, color: COLORS.danger },
-  // Визуально приглушённее, чем "Выйти" — не первичное и не частое
-  // действие, случайный тап не должен быть таким же лёгким, как выход.
-  deleteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    height: 44,
-    marginTop: SPACING.sm,
-  },
-  deleteText: { fontFamily: FONT.medium, fontSize: TEXT_SIZE.sm, color: '#B6BCC8' },
-  version: { textAlign: 'center', fontFamily: FONT.medium, fontSize: TEXT_SIZE.xs, color: '#B6BCC8', marginTop: SPACING.md },
 });
