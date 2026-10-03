@@ -26,14 +26,15 @@ function minPrice(b) {
 }
 
 export default function Search() {
-  const { title, categoryId, q: initialQuery } = useLocalSearchParams();
+  const { title, categoryId, q: initialQuery, map: openMap } = useLocalSearchParams();
   const [query, setQuery] = useState(initialQuery || '');
   const [businesses, setBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const loadedOnce = useRef(false);
   const reducedMotion = useReducedMotion();
-  const [mapMode, setMapMode] = useState(false);
+  // «Карта» из «Поблизости» на главной открывает поиск сразу в режиме карты.
+  const [mapMode, setMapMode] = useState(openMap === '1');
   const [userLoc, setUserLoc] = useState(null);
   const mapRef = useRef(null);
 

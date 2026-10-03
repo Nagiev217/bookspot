@@ -10,6 +10,7 @@ import { tintFor } from '@/utils/tint';
 import PressableScale from '@/components/PressableScale';
 import { getBusiness, listServices, listMasters, listBusinessHours } from '@/utils/supabase/catalog';
 import SalonHours from '@/components/SalonHours';
+import { addRecentSalon } from '@/utils/recent';
 import { formatPhone } from '@/utils/phone';
 import { isFavorite, addFavorite, removeFavorite } from '@/utils/supabase/favorites';
 import { listReviews } from '@/utils/supabase/reviews';
@@ -63,6 +64,7 @@ export default function SalonDetail() {
         .then(([b, s, m, fav, rv, ph, hrs]) => {
           if (cancelled) return;
           setBusiness(b);
+          addRecentSalon(b.id); // «Недавно просмотренные» на главной
           setServices(s);
           setMasters(m);
           setFavorite(fav);
